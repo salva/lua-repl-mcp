@@ -64,7 +64,15 @@ backlog `card-e`. Notifications queued successfully to root `project`
 That receipt did **not** establish adoption: root/card-e accepted briefs still
 contained superseded instructions. A supported Analyst follow-up requests a
 safe backlog-brief amendment or owning-planner adoption and inspection of the
-accepted text/version. It is pending, not represented as completed here. No
+accepted text/version. The follow-up completed: Analyst's supported brief write
+was rejected with `intervention_not_ready` while the runtime was running; no
+mutation occurred. Accepted `card-e` brief v1 still contains whole-SPEC staging
+and a named issue link; its dependency on `card-c` also bundles U10 rather than
+isolating U9/package readiness. Root was explicitly asked to correct both the
+accepted content and dependency at its next safe owning-planner boundary
+(notification `a57d5ef4-3426-40c2-9623-40880fc57809`); U11 owner received the same
+correction (`64218181-96d2-49f0-9d94-5680b9927785`). Adoption remains pending,
+not represented as completed here. No
 generated state was edited directly and no service/project restart was requested.
 The final review/test-watchdog correction is in follow-up commit `17ff8d4`;
 it does not change the product documentation requirements.
