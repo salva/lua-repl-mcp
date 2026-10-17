@@ -7,7 +7,9 @@ function M.new(limit)
   -- Earlier complete frames remain readable; overflow is sticky at its frame.
   function self:feed(bytes)
     if self.overflow then return nil,'input frame limit exceeded' end
-    local last=self.buffer:match('.*()\n')
+    -- Anchor the last-newline scan. An unanchored greedy pattern retries
+    -- every suffix when a partial frame has no newline (quadratic work).
+    local last=self.buffer:match('^.*()\n')
     local length=#self.buffer-(last or 0)
     local pos=1
     while pos<=#bytes do

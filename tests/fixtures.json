@@ -655,5 +655,21 @@
     "deadline": 60,
     "run": true,
     "expected_status": 0
+  },
+  {
+    "path": "u13_batch1_ingress.lua",
+    "kind": "process",
+    "wrapper": "u9_suite.py",
+    "deadline": 90,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u13_framing_progress.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 30,
+    "run": true,
+    "expected_status": 0
   }
 ]
