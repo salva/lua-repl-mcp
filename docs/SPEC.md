@@ -429,6 +429,10 @@ Exact status names and any pagination remain schema decisions.
 20. JSON arguments convert automatically to Lua values and are passed through
     chunk varargs. Nested nulls and positional null arguments retain their
     positions through a documented sentinel, without source-code interpolation.
+21. Ordinary Lua errors return diagnostics and available prior output without
+    terminating the session. Worker exit or premature internal transport closure
+    instead resolves pending executions and waits as failures and marks the
+    session terminated; unrelated sessions remain usable.
 
 ## 9. Lua version support
 
@@ -635,7 +639,64 @@ JSON shape on return is not implied. The result encoding remains to be finalized
 Whether execution returns synchronously or is retrieved with `session_wait`,
 the terminal result representation must be the same.
 
-## 13. Open implementation decisions
+## 13. Errors and worker failure
+
+### 13.1 Recoverable Lua errors
+
+Compile submitted chunks with error reporting and execute them through a
+protected Lua call, such as `xpcall`. Distinguish syntax/compilation failures
+from runtime failures. Report a safe error description, a traceback where
+available, and captured output produced before failure. Lua may throw values
+other than strings; diagnostic formatting must handle them without assuming
+arbitrary user-defined conversion routines will succeed.
+
+An ordinary Lua error produces a failed execution result but leaves the session
+available for subsequent execution. Prior state changes and external side
+effects are not rolled back. Execution status and session lifecycle status must
+be reported separately so a failed task is not mistaken for a dead interpreter.
+
+### 13.2 Hard failures and internal transport closure
+
+Hard errors, including memory exhaustion or native crashes, need not be
+recoverable within a worker. It is acceptable for the session process to die.
+The manager must monitor worker exit and the private transport: if the transport
+closes before a complete valid execution response is received, it must report
+a worker/transport failure to the client rather than wait indefinitely for a
+Lua-level exception response. It must also resolve pending session waits.
+
+The session is marked terminated and its in-memory state is lost. Reap a dead
+worker; if a worker has lost its transport but remains alive, terminate and reap
+it. Perform cleanup without blocking unrelated sessions. A complete response
+received before transport closure remains the execution result, but subsequent
+closure must still update the session lifecycle status appropriately.
+
+Report exit status, signal, and already captured output where available. An
+internal EOF alone does not prove memory exhaustion or any other particular
+cause; report unknown causes honestly. Explicit kill and manager-enforced hard
+timeout retain their specific outcomes rather than being overwritten by the
+expected transport closure during cleanup. Record a terminal outcome once and
+resolve affected requests consistently despite exit/EOF/timeout races.
+
+No worker-side diagnostic is guaranteed for a hard failure. Only output already
+delivered to the manager can be guaranteed available after process death;
+worker-buffered output may be lost. This protection applies to managed workers,
+not embedded handlers sharing their host process. Nor does it guarantee survival
+of the manager if host-wide memory exhaustion kills it as well.
+
+### 13.3 API and MCP error reporting
+
+Reject invalid arguments, unknown sessions, and unsupported or busy operations
+before executing code. Malformed MCP/JSON-RPC requests use protocol error
+responses; valid tool calls that fail use MCP tool-error results. The final
+schema must distinguish Lua errors, invalid operation/state, worker/transport
+failure, hard execution timeout, and explicit termination.
+
+Synchronous execution and `session_wait` return the same terminal error payload.
+A wait timeout alone returns pending status, not a failed execution. Once an
+async execution call has returned, later failure is reported through retained
+session status and `session_wait`, not a second response to the original call.
+
+## 14. Open implementation decisions
 
 The following have not yet been agreed:
 
