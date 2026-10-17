@@ -93,7 +93,7 @@ function M.record(kind,g,extra)
 end
 function M.encode(v,limits,checkpoint)
  local ok,e=M.validate(v,limits,checkpoint); if not ok then return nil,e end
- local s,err=c.encode(v,{max_bytes=(limits and limits.worker_bytes or M.max_frame),max_depth=(limits and limits.max_depth or 128)+5}); if not s then return nil,err end
+ local s,err=c.encode(v,{max_bytes=(limits and limits.worker_bytes or M.max_frame),max_depth=(limits and limits.max_depth or 128)+5,checkpoint=checkpoint}); if not s then return nil,err end
  if #s>(limits and limits.worker_bytes or M.max_frame) then return nil,'frame too large' end
  return s..'\n'
 end

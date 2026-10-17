@@ -847,5 +847,29 @@
     "deadline": 30,
     "run": true,
     "expected_status": 0
+  },
+  {
+    "path": "u13_worker_encoding.lua",
+    "kind": "process",
+    "wrapper": "u9_suite.py",
+    "deadline": 30,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u13_worker_encoding_control.lua",
+    "kind": "process",
+    "wrapper": "u9_suite.py",
+    "deadline": 40,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u13_result_encoding_control.lua",
+    "kind": "process",
+    "wrapper": "u9_suite.py",
+    "deadline": 40,
+    "run": true,
+    "expected_status": 0
   }
 ]
