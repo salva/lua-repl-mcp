@@ -7,10 +7,27 @@ local M={}; local B={}; B.__index=B
 local fields={'state','failure','files_complete','created_paths','cwd','result','result_at',
  'execution_generation','execution_deadline','termination_started','cleanup_deadline',
  'process_exit_confirmed','exit_reason','exit_status','startup_message','reaped'}
-local function guardian(fd,live,options)
+local function guardian(fd,control,live,options)
  local backend=native.new(options); local allocations={}; local lost=false; local last_id=0
  local ch=wire.new(fd,backend.limits.response_bytes)
  local commands={}
+ local ctl=wire.new(control,4096)
+ local controls={}
+ local admission=require('lua_repl_mcp.limits').admission(options.admission)
+ local pending_aborts={}
+ local function abort(cmd)
+  local w=allocations[cmd.id]
+  if w then
+   if w.state~='terminating' and w.state~='dead' then backend:abort(w,cmd.reason,cmd.started) end
+  else
+   -- Allocation can still be in bulk ingress. Keep its original origin and
+   -- prevent this command being lost merely because the channels reorder.
+   assert(cmd.id>last_id,'stale abort allocation')
+   local count=0; for _ in pairs(pending_aborts) do count=count+1 end
+   assert(pending_aborts[cmd.id] or count<admission.sessions,'guardian pending disposal bound')
+   pending_aborts[cmd.id]=cmd
+  end
+ end
  x.nonblock(live)
  x.s.signal(x.s.SIGINT,x.s.SIG_IGN); x.s.signal(x.s.SIGTERM,x.s.SIG_IGN)
  local function dispose()
@@ -21,6 +38,15 @@ local function guardian(fd,live,options)
   while true do
    local data,_,errno=x.u.read(live,1)
    if data=='' then dispose() elseif not data and not x.retryable(errno) then dispose() end
+   if not lost then
+    local open=wire.receive(ctl,function(items)
+     for _,cmd in ipairs(items) do
+      assert(cmd.op=='abort' and math.type(cmd.id)=='integer' and cmd.id>0,'invalid guardian control')
+      abort(cmd)
+     end
+    end)
+    if open==false then dispose() end
+   end
    if not lost and not wire.busy(ch) then
     local open=wire.receive(ch,function(fragment,done)
      for _,cmd in ipairs(fragment) do
@@ -38,9 +64,11 @@ local function guardian(fd,live,options)
        local count=0; for _ in pairs(allocations) do count=count+1 end
        assert(count<require('lua_repl_mcp.limits').admission(options.admission).sessions,'guardian capacity')
        local w=backend:allocate(cmd.options); allocations[id]=w
+       if pending_aborts[id] then abort(pending_aborts[id]); pending_aborts[id]=nil end
       else
        local w=assert(allocations[id],'stale allocation')
-       if cmd.op=='execute' then assert(backend:execute(w,cmd.input,cmd.deadline))
+       if cmd.op=='execute' then
+        if w.state~='terminating' and w.state~='dead' then assert(backend:execute(w,cmd.input,cmd.deadline)) end
        elseif cmd.op=='abort' then
         -- Commands carry the manager's original monotonic origin. Never reset
         -- an already running disposal when the liveness channel is lost.
@@ -65,10 +93,24 @@ local function guardian(fd,live,options)
     if open==false then dispose() end
    end
    backend:step(0)
+   if not lost then
+    -- Exit confirmation is small, once per allocation, and cannot depend on
+    -- result/path/diagnostic bulk delivery. Never send input-sized fields here.
+    for id,w in pairs(allocations) do
+     if w.state=='dead' and not w.control_dead_sent then
+      assert(#controls<admission.sessions,'guardian control disposal bound')
+      controls[#controls+1]={id=id,state='dead',failure=w.failure,
+       process_exit_confirmed=w.process_exit_confirmed,exit_reason=w.exit_reason,exit_status=w.exit_status}
+      w.control_dead_sent=true
+     end
+    end
+    if not wire.busy(ctl) and #controls>0 then wire.enqueue(ctl,controls); controls={} end
+    wire.flush(ctl)
+   end
    if lost then
     if #backend.workers==0 then break end
    else wire.flush(ch) end
-   local poll=lost and {} or {[live]={events={IN=true}},[fd]={events={IN=not wire.busy(ch),OUT=wire.busy(ch)}}}
+   local poll=lost and {} or {[live]={events={IN=true}},[control]={events={IN=true,OUT=wire.busy(ctl)}},[fd]={events={IN=not wire.busy(ch),OUT=wire.busy(ch)}}}
    x.p.poll(poll,5)
   end
  end)
@@ -76,7 +118,7 @@ local function guardian(fd,live,options)
   x.u.write(2,'guardian failure: '..tostring(err)..'\n')
   pcall(function() backend:shutdown() end)
  end
- x.u.close(fd); x.u.close(live); x.u._exit(ok and 0 or 1)
+ x.u.close(fd); x.u.close(control); x.u.close(live); x.u._exit(ok and 0 or 1)
 end
 function M.new(options)
  options=options or {}
@@ -84,29 +126,32 @@ function M.new(options)
  -- Native receive/deadline arbitration occurs in the guardian, before relay.
  -- A manager mirror can remain running while a validated result is in flight.
  b.owns_execution_deadlines=true
- setmetatable(b,B); b.commands={}; b.by_id={}; b.inflight=false
+ b.control_capacity=require('lua_repl_mcp.limits').admission(options.admission).sessions
+ setmetatable(b,B); b.commands={}; b.by_id={}; b.inflight=false; b.control_commands={}
  local owned={}
  local function keep(fd) owned[#owned+1]=fd; return fd end
  local ok,err=pcall(function()
   local r,w=x.u.pipe(); assert(r,w); keep(r); keep(w)
   local a,g=socket.socketpair(socket.AF_UNIX,socket.SOCK_STREAM,0); assert(a,g); keep(a); keep(g)
+  local ca,cg=socket.socketpair(socket.AF_UNIX,socket.SOCK_STREAM,0); assert(ca,cg); keep(ca); keep(cg)
   for _,fd in ipairs(owned) do x.clo(fd,true) end
   -- Configure parent endpoint before fork: construction failure cannot leave
   -- an untracked guardian, and no child exists until all descriptors are ready.
   local channel=wire.new(a,b.limits.response_bytes)
+  local control_channel=wire.new(ca,4096)
   x.nonblock(r)
   local pid=assert(x.u.fork())
   if pid==0 then
-   x.u.close(w); x.u.close(a)
+   x.u.close(w); x.u.close(a); x.u.close(ca)
    -- Close *all* unrelated manager descriptors before any worker can exist.
    local ok=pcall(function()
-    x.close_except(r,g)
-    guardian(g,r,options)
+    x.close_except(r,g,cg)
+    guardian(g,cg,r,options)
    end)
    x.u._exit(ok and 0 or 1)
   end
-  b.guardian_pid=pid; b.live=w; b.channel=channel
-  x.u.close(r); x.u.close(g); owned={}
+  b.guardian_pid=pid; b.live=w; b.channel=channel; b.control_channel=control_channel
+  x.u.close(r); x.u.close(g); x.u.close(cg); owned={}
  end)
  if not ok then for _,fd in ipairs(owned) do x.u.close(fd) end; error(err,0) end
  return b
@@ -134,7 +179,9 @@ end
 function B:abort(w,reason)
  if w.state=='terminating' or w.state=='dead' then return end
  native.methods.abort(self,w,reason)
- self:queue{op='abort',id=w.allocation_generation,reason=reason,started=w.termination_started}
+ assert(#self.control_commands<self.control_capacity,
+  'guardian abort capacity')
+ self.control_commands[#self.control_commands+1]={op='abort',id=w.allocation_generation,reason=reason,started=w.termination_started}
 end
 function B:termination_signal() end -- manager must never signal worker PIDs
 function B:graceful_close(w)
@@ -145,18 +192,32 @@ end
 function B:step(delay)
  if self.closed then return end
  local ok,err=pcall(function()
+  if not wire.busy(self.control_channel) and #self.control_commands>0 then
+   wire.enqueue(self.control_channel,self.control_commands); self.control_commands={}
+  end
+  wire.flush(self.control_channel)
+  local control_open=wire.receive(self.control_channel,function(items)
+   for _,v in ipairs(items) do
+    local w=self.by_id[v.id]
+    if w and w.state=='terminating' then
+     w.state='dead'; w.process_exit_confirmed=v.process_exit_confirmed
+     w.exit_reason=v.exit_reason; w.exit_status=v.exit_status
+    end
+   end
+  end)
+  assert(control_open~=false,'guardian control lost')
   wire.flush(self.channel)
   local open=wire.receive(self.channel,function(report,done)
    assert(self.inflight,'unsolicited guardian report'); if done then self.inflight=false end
    for _,v in ipairs(report) do
     local w=assert(self.by_id[v.id],'unknown guardian allocation')
     -- An accepted kill/deadline freezes the outcome before its command is sent.
-    if not w.dirty and (w.state~='terminating' or v.state=='dead') then
+    if not w.dirty and (w.state~='dead' or v.state=='dead') and (w.state~='terminating' or v.state=='dead') then
      local failure=w.state=='terminating' and w.failure
      for _,key in ipairs(fields) do w[key]=v[key] end
      w.failure=failure or w.failure
     end
-    if w.state=='dead' then
+    if v.state=='dead' and w.state=='dead' then
      self:queue{op='release',id=v.id}; self.by_id[v.id]=nil
     end
    end
@@ -174,11 +235,11 @@ function B:step(delay)
    wire.enqueue(self.channel,self.commands); self.commands={}; self.inflight=true
    wire.flush(self.channel)
   end
-  x.p.poll({[self.channel.fd]={events={IN=true,OUT=wire.busy(self.channel)}}},delay or 0)
+  x.p.poll({[self.control_channel.fd]={events={IN=true,OUT=wire.busy(self.control_channel)}},[self.channel.fd]={events={IN=true,OUT=wire.busy(self.channel)}}},delay or 0)
  end)
  if not ok then
   self.closed=true
-  x.u.close(self.live); self.live=nil; x.u.close(self.channel.fd)
+  x.u.close(self.live); self.live=nil; x.u.close(self.channel.fd); x.u.close(self.control_channel.fd)
   -- No PID fallback: after guardian loss child identity is not safely owned.
   for _,w in ipairs(self.workers) do
    w.failure=w.failure or 'transport_failed'; w.state='dead'; w.process_exit_confirmed=false
@@ -196,10 +257,10 @@ function B:shutdown()
  local deadline=self.clock()+1
  repeat
   local pid=x.w.wait(self.guardian_pid,x.w.WNOHANG)
-  if pid==self.guardian_pid then self.closed=true; x.u.close(self.channel.fd); return true end
+  if pid==self.guardian_pid then self.closed=true; x.u.close(self.channel.fd); x.u.close(self.control_channel.fd); return true end
   x.p.poll({},5)
  until self.clock()>=deadline
- self.closed=true; x.u.close(self.channel.fd)
+ self.closed=true; x.u.close(self.channel.fd); x.u.close(self.control_channel.fd)
  x.u.write(2,'guardian disposal exit unconfirmed\n'); return false
 end
 return M

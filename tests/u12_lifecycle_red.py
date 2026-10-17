@@ -16,12 +16,7 @@ import time
 from u12_environment import CWD, CLI
 
 
-def identity(pid):
-    try:
-        fields = Path(f'/proc/{pid}/stat').read_text().rsplit(')', 1)[1].split()
-        return fields[19], fields[0], int(fields[1])  # starttime, state, ppid
-    except FileNotFoundError:
-        return None
+from reap_oracle import identity, wait_disappeared
 
 
 def case(mode, state):
@@ -86,6 +81,9 @@ def case(mode, state):
             if current is None or current[0] != original[0] or current[1] == 'Z':
                 break
             time.sleep(.05)
+        if mode == signal.SIGKILL:
+            # Assert before this fixture exits and external-owner cleanup runs.
+            wait_disappeared(worker, original, deadline)
         current = identity(worker)
         alive = current is not None and current[0] == original[0] and current[1] != 'Z'
         expected_rc = -(signal.SIGKILL) if mode == signal.SIGKILL else 128 + mode

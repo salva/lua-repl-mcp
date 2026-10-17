@@ -21,8 +21,8 @@ function M.write_all(fd,text)
  return true
 end
 -- Portable close sweep: use the OS descriptor ceiling, not a guessed small cap.
-function M.close_except(a,b)
+function M.close_except(a,b,c)
  local n=assert(M.u.sysconf(M.u._SC_OPEN_MAX))
- for fd=3,n-1 do if fd~=a and fd~=b then M.u.close(fd) end end
+ for fd=3,n-1 do if fd~=a and fd~=b and fd~=c then M.u.close(fd) end end
 end
 return M
