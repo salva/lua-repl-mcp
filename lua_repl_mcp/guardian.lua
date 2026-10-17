@@ -10,7 +10,6 @@ local fields={'state','failure','files_complete','created_paths','cwd','result',
 local function guardian(fd,control,live,options)
  local backend=native.new(options); local allocations={}; local lost=false; local last_id=0
  local ch=wire.new(fd,backend.limits.response_bytes)
- local commands={}
  local ctl=wire.new(control,4096)
  local controls={}
  local admission=require('lua_repl_mcp.limits').admission(options.admission)
@@ -54,15 +53,11 @@ local function guardian(fd,control,live,options)
     end)
     if open==false then dispose() end
    end
-   if not lost and not wire.busy(ch) then
+   if not lost then
     local open=wire.receive(ch,function(fragment,done)
+     -- A complete bounded frame is an independent command unit. Later
+     -- commands in the sender batch are not a barrier to applying this one.
      for _,cmd in ipairs(fragment) do
-      assert(#commands<1024,'guardian command bound'); commands[#commands+1]=cmd
-     end
-     if not done then return end
-     local batch=commands; commands={}
-     assert(type(batch)=='table' and #batch<=1024,'guardian command bound')
-     for _,cmd in ipairs(batch) do
       if cmd.op=='shutdown' then dispose(); break end
       local id=cmd.id
       assert(math.type(id)=='integer' and id>0,'invalid allocation identity')
@@ -88,45 +83,70 @@ local function guardian(fd,control,live,options)
        else error('unknown guardian command') end
       end
      end
-     if not lost then
-      backend:step(0)
-      local report={}
-      for id,w in pairs(allocations) do
-       local v={id=id}; for _,key in ipairs(fields) do
-        if key~='result' then v[key]=w[key] end
-       end
-       -- Retain the guardian payload until manager ownership/discard is
-       -- acknowledged, but enqueue it exactly once for this generation.
-       if w.result and w.result_sent_generation~=w.execution_generation then
-        v.result=w.result; v.result_transfer=true
-        w.result_sent_generation=w.execution_generation
-       end
-       report[#report+1]=v
-      end
-      wire.enqueue(ch,report)
-     end
     end)
     if open==false then dispose() end
    end
    backend:step(0)
+   if not lost and not wire.busy(ch) then
+    local report={}
+    for id,w in pairs(allocations) do
+     -- Only changed bounded metadata is relayed, never periodic snapshots.
+     local changed=not w.reported
+     local prior=w.reported or {}
+     for _,key in ipairs(fields) do
+      if key~='result' and prior[key]~=w[key] then changed=true end
+     end
+     if prior.path_count~=#w.created_paths then changed=true end
+     local transfer=w.result and w.result_sent_generation~=w.execution_generation
+     if changed or transfer then
+      local v={id=id}; local saved={path_count=#w.created_paths}
+      for _,key in ipairs(fields) do
+       if key~='result' then v[key]=w[key]; saved[key]=w[key] end
+      end
+      if transfer then
+       v.result=w.result; v.result_transfer=true
+       w.result_sent_generation=w.execution_generation
+      end
+      w.reported=saved; report[#report+1]=v
+     end
+    end
+    if #report>0 then wire.enqueue(ch,report) end
+   end
    if not lost then
+    for id,w in pairs(allocations) do
+     if w.control_state~=w.state then
+      local v=controls[id] or {id=id}; controls[id]=v
+      v.observed_state=w.state; v.failure=w.failure
+      v.execution_generation=w.execution_generation
+      w.control_state=w.state
+     end
+     if w.result_at and w.validated_sent~=w.execution_generation then
+      local v=controls[id] or {id=id}; controls[id]=v
+      v.validated_generation=w.execution_generation; v.result_at=w.result_at
+      w.validated_sent=w.execution_generation
+     end
+    end
     -- Exit confirmation is small, once per allocation, and cannot depend on
     -- result/path/diagnostic bulk delivery. Never send input-sized fields here.
     for id,w in pairs(allocations) do
      if w.state=='dead' and not w.control_dead_sent then
-      assert(#controls<admission.sessions,'guardian control disposal bound')
-      controls[#controls+1]={id=id,state='dead',failure=w.failure,
-       process_exit_confirmed=w.process_exit_confirmed,exit_reason=w.exit_reason,exit_status=w.exit_status}
+      local v=controls[id] or {id=id}; controls[id]=v
+      v.state='dead'; v.failure=w.failure; v.process_exit_confirmed=w.process_exit_confirmed
+      v.exit_reason=w.exit_reason; v.exit_status=w.exit_status
       w.control_dead_sent=true
      end
     end
-    if not wire.busy(ctl) and #controls>0 then wire.enqueue(ctl,controls); controls={} end
+    if not wire.busy(ctl) and next(controls) then
+     local batch={}; for _,v in pairs(controls) do batch[#batch+1]=v end
+     assert(#batch<=admission.sessions,'guardian pending metadata bound')
+     wire.enqueue(ctl,batch); controls={}
+    end
     wire.flush(ctl)
    end
    if lost then
     if #backend.workers==0 then break end
    else wire.flush(ch) end
-   local poll=lost and {} or {[live]={events={IN=true}},[control]={events={IN=true,OUT=wire.busy(ctl)}},[fd]={events={IN=not wire.busy(ch),OUT=wire.busy(ch)}}}
+   local poll=lost and {} or {[live]={events={IN=true}},[control]={events={IN=true,OUT=wire.busy(ctl)}},[fd]={events={IN=true,OUT=wire.busy(ch)}}}
    x.p.poll(poll,5)
   end
  end)
@@ -143,7 +163,7 @@ function M.new(options)
  -- A manager mirror can remain running while a validated result is in flight.
  b.owns_execution_deadlines=true
  b.control_capacity=require('lua_repl_mcp.limits').admission(options.admission).sessions
- setmetatable(b,B); b.commands={}; b.by_id={}; b.inflight=false; b.control_commands={}
+ setmetatable(b,B); b.commands={}; b.by_id={}; b.control_commands={}
  local owned={}
  local function keep(fd) owned[#owned+1]=fd; return fd end
  local ok,err=pcall(function()
@@ -219,7 +239,15 @@ function B:step(delay)
   local control_open=wire.receive(self.control_channel,function(items)
    for _,v in ipairs(items) do
     local w=self.by_id[v.id]
-    if w and w.state=='terminating' then
+    if w and v.observed_state then
+     -- Observation is not bulk application: ready paths/errors remain bulk,
+     -- and validated completion cannot make an active execution consumable.
+     w.guardian_state=v.observed_state
+    end
+    if w and v.validated_generation and v.validated_generation==w.execution_generation then
+     w.validated_generation=v.validated_generation; w.validated_at=v.result_at
+    end
+    if w and v.state=='dead' and w.state=='terminating' then
      w.state='dead'; w.process_exit_confirmed=v.process_exit_confirmed
      w.exit_reason=v.exit_reason; w.exit_status=v.exit_status
     end
@@ -228,7 +256,6 @@ function B:step(delay)
   assert(control_open~=false,'guardian control lost')
   wire.flush(self.channel)
   local open=wire.receive(self.channel,function(report,done)
-   assert(self.inflight,'unsolicited guardian report'); if done then self.inflight=false end
    for _,v in ipairs(report) do
     local w=assert(self.by_id[v.id],'unknown guardian allocation')
     -- An accepted kill/deadline freezes the outcome before its command is sent.
@@ -264,9 +291,9 @@ function B:step(delay)
     live[#live+1]=w
    end
   end; self.workers=live
-  if not self.inflight and not wire.busy(self.channel) then
+  if #self.commands>0 and not wire.busy(self.channel) then
    for _,cmd in ipairs(self.commands) do if cmd.id and self.by_id[cmd.id] then self.by_id[cmd.id].dirty=false end end
-   wire.enqueue(self.channel,self.commands); self.commands={}; self.inflight=true
+   wire.enqueue(self.channel,self.commands); self.commands={}
    wire.flush(self.channel)
   end
   x.p.poll({[self.control_channel.fd]={events={IN=true,OUT=wire.busy(self.control_channel)}},[self.channel.fd]={events={IN=true,OUT=wire.busy(self.channel)}}},delay or 0)

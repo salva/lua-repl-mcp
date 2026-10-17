@@ -52,7 +52,7 @@ for _,mode in ipairs{'tiny','partial_backend','accepted_kill','completed_kill','
     -- during partial private decode must not freeze a stale running mirror.
     local partial_by=x.now()+3
     repeat b:step(0); assert(x.now()<partial_by,'partial report barrier') until #b.channel.input>0
-    assert(b.inflight and r.session.worker.state=='running')
+    assert(r.session.worker.state=='running') -- no report/command lockstep flag
     assert(not r.session.worker.failure)
    end
    local v=take(r)
