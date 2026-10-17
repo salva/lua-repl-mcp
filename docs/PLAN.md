@@ -352,6 +352,13 @@ User-facing README/guides/reference/examples and website output may mention
 Saivage only in one linked "Built with Saivage" attribution; do not link its bug
 reports or integration narratives there. Keep client-timeout guidance generic.
 Preserve work evidence separately, outside public staging and user navigation.
+Follow `AGENTS.md`'s user-documentation requirements: lead with functional
+purpose/design/features and organize by user goals, then installation, first
+success, common tasks, reference and recovery. Analyze all topics from the user's
+viewpoint. Maintain root `README-IF-YOR-ARE-AN-AI.md` for LLM consumers, with
+accurate install/launch/discovery, examples, state/result semantics and cleanup.
+Include its examples in installed-package and schema validation, and link it
+from the user entry points without importing development-agent instructions.
 
 Build and test locally. Verify project-prefix links/assets, relevant
 examples against runtime/contracts, desktop/mobile navigation, and artifact

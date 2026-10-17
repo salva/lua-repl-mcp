@@ -14,6 +14,24 @@ static documentation; visitors' Lua code is never executed there.
 
 ## Content and navigation
 
+Lead with the software's functional purpose, functional design and features:
+what a user can accomplish, which interface to choose, how persistent execution
+behaves and what outcomes to expect. Analyze every topic from the user's point
+of view, not the implementer's work sequence. Organize by user goals, with clear
+headings and progressive detail: overview, installation/first success, common
+tasks, reference and troubleshooting. Pair examples with expected results and
+explain state changes, risks and recovery. Internal architecture is supporting
+detail, not the primary narrative.
+
+Maintain root `README-IF-YOR-ARE-AN-AI.md` as a compact LLM-facing user guide.
+Cover prerequisites, local-source installation and environment, manager launch,
+MCP discovery and actual tool arguments, persistence and explicit returns,
+JSON/null, async polling, consumed results, cancellation/kill and recovery.
+Separate commands from tool arguments and expected outcomes; never invent client
+configuration syntax, published package availability or successful test results.
+Link this guide from the eventual user README and website; apply the same
+user/work-document separation and example-validation rules to it.
+
 User documentation is the primary documentation asset: the repository's user
 entry point and website must lead with installation, usage, embedding and public
 reference, not autonomous-work plans or acceptance reports. Keep implementation
@@ -109,6 +127,11 @@ No credentials are needed to create or build the content.
   desktop/mobile layouts, navigation, code blocks, and keyboard access.
 - Code examples and defaults agree with current contracts; reuse the contract
   checker and add checks for website-specific examples and generated references.
+- Review the user journey: a newcomer can identify features and choose a mode,
+  install, obtain a first result, repeat a stateful task and recover from an
+  error without reading work plans. Validate LLM-guide installation/usage examples
+  against the clean-installed package and discovery schemas, recording evidence
+  separately rather than claiming unperformed validation in the guide.
 - Artifact inspection proves only allowlisted content is published; scan for
   secret-bearing names, accidental local paths, and private conversation artifacts.
 - Validate the user README/source tree and generated HTML/downloads for Saivage

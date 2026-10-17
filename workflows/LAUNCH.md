@@ -25,6 +25,11 @@ linked "Built with Saivage" attribution. Do not include named integration status
 Saivage issue links or work reports there; describe client limitations generically.
 Preserve work documentation outside public staging and user navigation, and
 validate this separation in U11 sources and generated artifacts.
+Apply `AGENTS.md`'s user-documentation requirements: well-structured, user-friendly
+guides led by functional purpose, functional design and features, analyzing every
+topic from the user's viewpoint. Include root `README-IF-YOR-ARE-AN-AI.md` for
+LLM consumers with accurate installation, launch, discovery, usage and recovery
+instructions. This is user documentation, not development-agent guidance.
 
 Plan U12 and `docs/MANAGER_LIFECYCLE_DESIGN.md` add required standalone-manager
 signal/crash cleanup and independently supervised worker lifetime. Schedule this
