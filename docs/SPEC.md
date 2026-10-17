@@ -64,23 +64,31 @@ metadata. It has no `session_id`, session allocation/listing, async waiting,
 or manager-enforced execution deadline. The host interpreter is implicit.
 
 The handler must also expose a `repl_close` MCP tool, requiring no session ID,
-to end the blocking REPL invocation and disconnect. This tool is distinct from
+to acknowledge closure and end the blocking MCP-serving invocation. This tool is distinct from
 the manager's `session_kill`: it does not terminate a process or dispose of the
 host interpreter.
 
 On accepting `repl_close`, the handler must:
 
 1. Stop accepting further execution requests for that invocation.
-2. Send and flush a successful close acknowledgement before disconnecting,
+2. Send and flush a successful close acknowledgement before returning,
    if the transport is still writable.
 3. End its protocol attachment without closing or shutting down the underlying
    transport. Cleanup belongs to the parent code/custom manager that set it up.
 4. Return control to the host with an explicit close-requested reason and
-   acknowledgement/disconnection status, including any transport error that
+   acknowledgement status, including any transport error that
    prevented completing those steps.
 
-The parent is responsible for closing the connection after the handler returns.
-The host can then preserve state, reset, or shut down according to its policy.
+The parent decides what happens after the handler returns; physical disconnection
+is not a postcondition of the handler call. Custom parent code may preserve or
+close the transport, preserve or reset interpreter state, terminate the host,
+or perform another action appropriate to that application.
+
+For the standard manager's worker, the parent wrapper terminates the session
+process after the handler returns. Process exit closes its transport descriptors.
+The manager observes that exit and marks the session terminated. Custom managers
+are not required to adopt this exit policy. The handler itself only acknowledges
+the request and returns control; it neither exits the process nor owns cleanup.
 The handler itself must not clear globals, reset Lua, or kill the host. No
 requests after the close acknowledgement may be executed, including requests
 already buffered behind the close command.
@@ -478,9 +486,10 @@ Exact status names and any pagination remain schema decisions.
     instead resolves pending executions and waits as failures and marks the
     session terminated; unrelated sessions remain usable.
 22. A direct handler exposes synchronous execution without session identifiers
-    and a `repl_close` tool. Close acknowledges before disconnecting where
-    possible, returns a structured lifecycle reason, respects handle ownership,
-    and leaves the host interpreter and its globals intact.
+    and a `repl_close` tool. Close acknowledges before returning where possible,
+    returns a structured lifecycle reason, and leaves transport handles and Lua
+    state intact. The standard worker wrapper then exits the process; custom
+    parent code chooses its own continuation and cleanup policy.
 
 ## 9. Lua version support
 
@@ -519,8 +528,8 @@ adapter; the standalone manager arranges descriptors during worker startup.
 
 Because standard Lua has no portable API for arbitrary sockets and file
 descriptors, the pure-Lua handler accepts a host-supplied I/O adapter wrapping
-those handles. The adapter provides read and write operations and, where
-appropriate, an explicit close operation. Integration with host-specific handles
+those handles. The adapter provides read and write operations.
+Integration with host-specific handles
 belongs in the adapter, not in the REPL evaluator.
 
 The adapter contract must define partial reads and writes, end-of-input, and I/O
