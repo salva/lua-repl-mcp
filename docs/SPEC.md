@@ -384,6 +384,17 @@ apply to failed results while the session remains alive. On termination,
 resolve existing waiters, then discard all session metadata and retained data.
 Later calls receive `unknown_session`, not a historical error payload.
 
+For the guardian-backed manager, full worker-record validation, manager
+application of the complete payload, and public response commitment are distinct
+boundaries. Raw or partially validated relay bytes do not complete an execution.
+The guardian's timely validated completion timestamp arbitrates the original
+hard deadline; delayed relay does not restart that deadline. Before the manager
+has applied the payload, accepted active cancellation or kill freezes disposal
+and suppresses that payload. After application, cancellation of the completed
+request is inert, even if public commitment has not occurred. Public commitment
+still owns single-consumer result consumption and request-ID release. Private
+allocation/execution generations cannot be substituted by a reused request ID.
+
 Consume when a terminal execution or wait response is committed for transmission;
 delivery cannot be guaranteed after disconnect. If multiple waits are outstanding,
 including the initial execution call's wait, one
@@ -1084,6 +1095,14 @@ fail serialization. Keep draining workers with bounded buffers. Apply client
 backpressure; if the output buffer cannot stay bounded, disconnect and clean
 up sessions. Reject oversized frames without allocating their full length.
 Service timers/control operations fairly even under sustained traffic.
+
+The nesting limit counts containers within each user argument or returned
+value, not the positional tuple, tool arguments, or protocol envelopes. Fixed
+wrappers have their own derived allowance; they must neither consume user
+nesting nor permit a user value one container deeper than the configured limit.
+Library arguments are freshly copied as raw JSON data: arbitrary metatables
+are neither invoked nor copied, and do not alone cause rejection. Cycles and
+unsupported JSON shapes remain errors.
 
 MiB means 1048576 bytes. Input limits count UTF-8 JSON frame bytes excluding
 the newline. The return-value limit counts the encoded JSON `values` array,

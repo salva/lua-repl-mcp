@@ -887,5 +887,21 @@
     "deadline": 60,
     "run": true,
     "expected_status": 0
+  },
+  {
+    "path": "u13_encoding_cancel.lua",
+    "kind": "process",
+    "wrapper": "u9_suite.py",
+    "deadline": 50,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u13_path_diagnostic.lua",
+    "kind": "process",
+    "wrapper": "u9_suite.py",
+    "deadline": 150,
+    "run": true,
+    "expected_status": 0
   }
 ]
