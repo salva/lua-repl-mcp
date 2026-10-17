@@ -45,6 +45,7 @@ creating a second public MCP connection.
 | U9 | U8 | Packaging, real embedding integration and release acceptance |
 | U10 | U9 | Real Saivage MCP-client integration and defect reporting |
 | U11 | U9; U10 for integration-status content | GitHub Pages-compatible documentation content and local validation |
+| U12 | U6–U8; revalidate U9 and affected U10 | Manager signal cleanup and guardian orphan prevention |
 
 Test seams are internal: injectable monotonic clock, poll/process operations and
 response-commit boundary, plus controllable process fixtures. They must not add
@@ -187,7 +188,7 @@ drain only currently available bounded bytes before classifying failure; an alre
 available complete response can win over observed exit. Reached hard deadlines or
 accepted kills of active execution freeze their outcomes. Disarm completed timers.
 
-Implement synchronous-to-caller kill with nonblocking forced termination/reaping
+Implement synchronous-to-caller kill with nonblocking progressive termination/reaping
 and the specified 30-second fallback. Bind cleanup to the selected worker. Resolve
 fatal waiters after cleanup with confirmed-exit information; preserve original
 timeout/kill/failure causes. Never rewrite completed results. At cleanup completion,
@@ -360,6 +361,39 @@ permissions: do not seek them, create deployment workflows, push, publish, alter
 repository Pages settings, or trigger deployment. Completion means authored
 content/assets and the verified local site artifact. Publication is outside this
 task, not a blocked acceptance gate.
+
+## U12 — Manager crash/signal cleanup addendum
+
+Implement `docs/MANAGER_LIFECYCLE_DESIGN.md` and SPEC §14.9. Add safe
+SIGINT/SIGTERM shutdown requests, a protected partial-initialization boundary,
+and idempotent bounded cleanup. Add an independent single-threaded POSIX guardian
+owning OS worker spawn/reap so manager-only abrupt death cannot orphan workers
+blocked in Lua/native execution. The manager retains logical session ownership.
+Qualify descriptor transfer/inheritance and liveness on the pinned binding before
+selecting the private topology; do not introduce a spawn-then-register race.
+
+This correction is required before final release acceptance and need not wait
+for U11. Preserve previous evidence, but rerun affected process, resource-limit,
+clean-install, cancellation/timeout and Saivage integration tests after ownership
+changes. No embedded-host signal policy or descendant-tree sandbox is added.
+
+Use the progressive policy in SPEC §14.4 for every disposal path: repeated
+SIGTERM over 10 seconds, then repeated SIGKILL over 20 seconds, at 250 ms retry
+intervals, stopping on confirmed exit. At the 30-second total bound abandon
+unconfirmed children, release session resources and report the existing warning.
+Do not reset cleanup on repeated requests or guardian handoff. Preserve safe
+process identity and concurrent event-loop progress throughout both phases.
+
+**Acceptance/evidence:** actual manager-only SIGKILL/abrupt-exit and graceful
+signals in idle, blocked startup, infinite Lua and blocking native-call states;
+external watchdog confirms bounded worker/guardian disposal. Cover partial
+construction, spawn/readiness races, repeated shutdown, safe allocation identity,
+guardian loss, descriptor inheritance, and simulated unconfirmed exits. Record
+TERM-cooperative and TERM-ignoring real-process cases, and deterministic repeated
+signal/abandonment timing, early-exit and handoff-deadline cases. Record
+capability findings and real-process results in
+`docs/validation/MANAGER_LIFECYCLE.md`. Configured cleanup or fake tests alone
+do not establish acceptance.
 
 ## Test orchestration and evidence rules
 

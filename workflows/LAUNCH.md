@@ -19,6 +19,13 @@ only. Do not create deployment workflows, seek publication permissions, push,
 publish, or alter repository settings. Publication is outside this task and must
 not block its completion. Keep implementation/integration acceptance intact.
 
+Plan U12 and `docs/MANAGER_LIFECYCLE_DESIGN.md` add required standalone-manager
+signal/crash cleanup and independently supervised worker lifetime. Schedule this
+before final release acceptance, without waiting for website content. Preserve
+embedded-handler independence and revalidate affected runtime/install/integration
+evidence. This authorizes project implementation, not host/service configuration
+changes or modifications to shared Saivage.
+
 Use the bundled general software-development workflow. Make coherent related
 implementation/test batches, reuse applicable evidence, and commit completed
 work. Preserve independent review and real process-boundary validation; do not

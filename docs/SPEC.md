@@ -1136,8 +1136,15 @@ Read input fairly even at admission capacity; do not stop reading cancellation
 or kill behind a backlog of waiting calls. Control floods remain bounded.
 
 Kill is synchronous to the caller but never blocks the manager event loop.
-Attempt forced worker termination and reaping. If exit is not confirmed within
-30 seconds, close manager-owned transport descriptors, discard the session and
+Use progressive termination: send SIGTERM immediately and repeat every 250 ms
+for up to 10 seconds; if exit is still unconfirmed, send SIGKILL and repeat every
+250 ms for the remaining 20 seconds. Stop signalling as soon as child exit is
+confirmed. Timers use monotonic elapsed time; delayed event-loop turns must not
+extend the 30-second total bound or cause catch-up signal bursts. Signal delivery
+success alone does not confirm exit. Retain race-safe child identity throughout;
+never retry against a reused PID. Repeated cleanup requests do not restart phases
+or deadlines. If exit is not confirmed within 30 seconds, abandon further
+termination attempts, close manager-owned transport descriptors, discard the session and
 its data, and return successful kill with `process_exit_confirmed: false`.
 The worker may exceptionally remain alive outside session management; this must
 not retain the client call, session slot, or application-level supervision
@@ -1279,4 +1286,18 @@ In addition to section 8, implementation validation must cover:
 9. New stdout/stderr files never overwrite existing paths; cwd resolution and
    sharing a single output file follow the creation contract.
 10. No print/io overrides or automatic output capture in either direct or
-    managed execution; explicit client Lua capture remains possible.
+     managed execution; explicit client Lua capture remains possible.
+
+### 14.9 Unexpected manager termination
+
+`MANAGER_LIFECYCLE_DESIGN.md` defines required standalone lifecycle hardening.
+SIGINT/SIGTERM, client disconnect and caught fatal errors enter idempotent,
+bounded cleanup, including partially constructed workers. A dedicated independent
+POSIX guardian owns OS worker spawning/reaping and disposes of workers after
+manager-only crash or SIGKILL, including non-yielding Lua/native execution.
+The manager remains logical session owner; guarded ownership precedes readiness
+and user-code execution. Worker pipe EOF or Lua finalizers alone are insufficient.
+Guardian loss is fail-closed; simultaneous manager/guardian loss, exceptional OS
+inability to terminate, deliberate trusted-code interference and arbitrary
+descendant trees retain the documented guarantee limits. Existing 30-second
+cleanup fallback applies. No embedded-handler ownership or signal policy changes.
