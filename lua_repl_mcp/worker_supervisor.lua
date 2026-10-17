@@ -45,10 +45,14 @@ function S:allocate(options)
  local w={allocation_generation=self.generation,state='starting',created_paths={},files_complete=false,
   deadline=self.clock()+self.timeout,buffer='',pending='',execution_generation=0}
  self.workers[#self.workers+1]=w
- local r,write=x.u.pipe()
- if not r then w.state='dead'; w.failure='spawn_failed'; return w end
- local read,wr=x.u.pipe()
- if not read then x.u.close(r); x.u.close(write); w.state='dead'; w.failure='spawn_failed'; return w end
+ local owned={}
+ local function own(fd) if fd then owned[fd]=true end; return fd end
+ local function release(fd) if owned[fd] then x.u.close(fd); owned[fd]=nil end end
+ local ok,err=pcall(function()
+ local r,write=x.u.pipe(); own(r); own(write)
+ if not r then w.state='dead'; w.failure='spawn_failed'; return end
+ local read,wr=x.u.pipe(); own(read); own(wr)
+ if not read then w.state='dead'; w.failure='spawn_failed'; return end
  for _,fd in ipairs({r,write,read,wr}) do x.clo(fd,true) end
  local pid=x.u.fork()
  if pid==0 then
@@ -69,10 +73,20 @@ function S:allocate(options)
   end)
   x.u._exit(ok and 0 or 126)
  end
- x.u.close(r); x.u.close(wr)
- if not pid then x.u.close(read); x.u.close(write); w.state='dead'; w.failure='spawn_failed'; return w end
+ if pid and pid>0 then w.pid=pid end -- ownership before any fallible parent setup
+ release(r); release(wr)
+ if not pid then w.state='dead'; w.failure='spawn_failed'; return end
  w.pid=pid; w.read_fd=read; w.write_fd=write
  x.nonblock(read); x.nonblock(write)
+ owned[read]=nil; owned[write]=nil -- descriptor ownership transfers to worker
+ end)
+ for fd in pairs(owned) do pcall(x.u.close,fd) end
+ if not ok then
+  w.read_fd=nil; w.write_fd=nil
+  w.startup_message=tostring(err)
+  if w.pid then self:abort(w,'spawn_failed')
+  else w.state='dead'; w.failure='spawn_failed' end
+ end
  return w
 end
 function S:execute(w,input,deadline)

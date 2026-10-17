@@ -161,3 +161,26 @@ unconfirmed exit and capacity release, concurrent cleanup and original handoff
 deadlines. No real unkillable process should be created. Run affected runtime
 suites. General descendant-tree containment, simultaneous guardian/manager loss
 and exceptional kernel inability to terminate remain outside the guarantee.
+
+## Partial acquisition repair
+
+Native `allocate` now tracks every acquired descriptor inside a protected
+boundary, records child PID ownership before fallible parent setup, closes all
+partial descriptors on failure and uses the same progressive abort path for an
+already-forked child. Pre-fork exceptions become `spawn_failed`, with the original
+injected setup message retained; no fictitious exit confirmation is generated.
+Guardian endpoint nonblocking/CLOEXEC setup now completes before fork, so those
+exceptions cannot create an untracked guardian. Its child close-sweep/entrypoint
+is protected and always exits through `_exit` on error (never returns into the
+manager's copied call stack).
+
+`lua5.4 tests/u12_partial_acquisition.lua` passed 19 injected parent-boundary
+cases: native first/second pipe, four CLOEXEC calls, fork, two post-fork
+nonblocking calls; guardian pipe/socketpair, five CLOEXEC calls, two nonblocking
+calls and fork. Real FD counts before/after match. No fake PID reaches native
+kill/wait: fake child ownership verifies post-fork failures enter termination,
+retain the child and confirm reap only on fake wait confirmation. These tests
+are deterministic supplements, not real fork-failure or unowned-child process
+proof. Remaining child-side readiness/result-delivery injections and full matrix
+are still required. After this change the six lifecycle cases, U8, progressive
+policy, unchanged aggregate reproducer, streaming regression and contracts passed.

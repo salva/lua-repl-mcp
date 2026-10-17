@@ -90,14 +90,21 @@ function M.new(options)
   local r,w=x.u.pipe(); assert(r,w); keep(r); keep(w)
   local a,g=socket.socketpair(socket.AF_UNIX,socket.SOCK_STREAM,0); assert(a,g); keep(a); keep(g)
   for _,fd in ipairs(owned) do x.clo(fd,true) end
+  -- Configure parent endpoint before fork: construction failure cannot leave
+  -- an untracked guardian, and no child exists until all descriptors are ready.
+  local channel=wire.new(a,b.limits.response_bytes)
+  x.nonblock(r)
   local pid=assert(x.u.fork())
   if pid==0 then
    x.u.close(w); x.u.close(a)
    -- Close *all* unrelated manager descriptors before any worker can exist.
-   x.close_except(r,g)
-   guardian(g,r,options); x.u._exit(1)
+   local ok=pcall(function()
+    x.close_except(r,g)
+    guardian(g,r,options)
+   end)
+   x.u._exit(ok and 0 or 1)
   end
-  b.guardian_pid=pid; b.live=w; b.channel=wire.new(a,b.limits.response_bytes)
+  b.guardian_pid=pid; b.live=w; b.channel=channel
   x.u.close(r); x.u.close(g); owned={}
  end)
  if not ok then for _,fd in ipairs(owned) do x.u.close(fd) end; error(err,0) end
