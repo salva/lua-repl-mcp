@@ -279,3 +279,17 @@ child ownership; simultaneous manager/guardian failure, arbitrary descendants,
 trusted interference and exceptional kernel unkillability remain outside the
 stated guarantee. Linux `/proc` is used by tests only. No host/service configuration,
 shared runtime, embedded handler, publication or push changes were made.
+
+## Final configured decoder boundary correction
+
+Branch review after the matrix found private receive checked the configured frame
+bound before storage but called JSON decode with only depth, inheriting codec's
+16MiB public input default. This could still reject a legal larger single private
+report despite aggregate streaming. Owning channel now passes `max_bytes=ch.limit`
+to decode (no capacity expansion). `tests/u12_large_frame.lua` delivers17MiB payload
+through the real receive parser with20MiB configured frame bound and passes.
+Fail-fast large-frame + unchanged aggregate reproducer + streaming + full U8 +
+contracts + diff-check completed0 after correction. Nine-real-worker aggregate
+snapshot fixture reran under50s watchdog and completed0. Prior lifecycle/ownership
+results apply unchanged: only decoder capacity argument changed, not native
+ownership, command transitions, signal handling or cleanup policy.

@@ -50,7 +50,7 @@ function M.receive(ch,accept)
    assert(#ch.input+#part<=ch.limit,'guardian frame bound')
    ch.input=ch.input..part
    if not nl then break end
-   local value=assert(c.decode(ch.input,{max_depth=520})); ch.input=''
+   local value=assert(c.decode(ch.input,{max_depth=520,max_bytes=ch.limit})); ch.input=''
    assert(type(value)=='table' and type(value.items)=='table' and type(value.done)=='boolean','invalid guardian fragment')
    accept(value.items,value.done)
    rest=rest:sub(nl+1)
