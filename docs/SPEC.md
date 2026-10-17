@@ -426,6 +426,9 @@ Exact status names and any pagination remain schema decisions.
 19. `session_list` reports explicitly and automatically created sessions and
     their statuses without blocking on a running worker or consuming results.
     A manager without sessions returns an empty list.
+20. JSON arguments convert automatically to Lua values and are passed through
+    chunk varargs. Nested nulls and positional null arguments retain their
+    positions through a documented sentinel, without source-code interpolation.
 
 ## 9. Lua version support
 
@@ -593,7 +596,46 @@ OS/event-loop dependency with native bindings if needed. This must not become a
 required dependency of the embeddable handler. Windows manager support and
 robust descendant-process cleanup require separate explicit decisions.
 
-## 12. Open implementation decisions
+## 12. Task input data
+
+`session_execute` accepts an optional JSON `args` array, defaulting to an empty
+array. Each element becomes one positional argument to the submitted Lua chunk,
+accessible through `...`. Conversion is automatic; callers need not encode JSON
+inside the code or explicitly decode it in Lua.
+
+| JSON value | Lua value |
+| --- | --- |
+| Boolean | Boolean |
+| Number | Integer or float, where representable |
+| String | String |
+| Array | Table with consecutive 1-based integer keys |
+| Object | Table with string keys |
+| `null` | A documented, stable null sentinel, distinct from Lua `nil` |
+
+Conversion applies recursively. Null object members and array elements must
+not disappear, create holes, or shorten the positional argument list. The
+sentinel must be accessible to submitted code through a documented API so code
+can identify nulls. Exact naming remains an embedding/API design decision and
+must avoid silently overwriting host globals.
+
+For example, code `local person, count = ...; return person.name, count * 2`
+with `args: [{"name": "Alice"}, 21]` receives a Lua table and a number and
+returns `"Alice"` and `42`.
+
+Arguments are transferred as data, never interpolated into Lua source. Each
+execution receives freshly converted argument tables; retaining them in globals
+is subject to ordinary session persistence. JSON provides no shared object
+identity or cycles in input. Conversion must not silently round an integer to a
+different value; numeric range/precision errors must be reported or handled by
+an explicitly documented exact-number convention. Strings follow JSON's Unicode
+semantics; arbitrary binary input needs a separately specified encoding.
+
+Empty arrays and objects both become empty Lua tables; preserving their original
+JSON shape on return is not implied. The result encoding remains to be finalized.
+Whether execution returns synchronously or is retrieved with `session_wait`,
+the terminal result representation must be the same.
+
+## 13. Open implementation decisions
 
 The following have not yet been agreed:
 
@@ -603,6 +645,8 @@ The following have not yet been agreed:
   identifier semantics.
 - Precise Lua embedding API and its compatibility with `dosbox-y`.
 - Result rendering, output limits, and oversized-result behaviour.
+- Null sentinel API, exact numeric conversion policy, and typed return-value
+  schema, including binary data and non-JSON Lua values.
 - Event-loop and process-spawning dependencies, internal worker protocol, and
   per-session request queueing or busy-response policy.
 - Execution timeout field, units, bounds, omitted-timeout policy, and ordering
