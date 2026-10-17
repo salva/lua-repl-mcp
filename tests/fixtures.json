@@ -903,5 +903,21 @@
     "deadline": 150,
     "run": true,
     "expected_status": 0
+  },
+  {
+    "path": "u13_partial_crash.py",
+    "kind": "process",
+    "wrapper": "u9_suite.py",
+    "deadline": 120,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u13_filesystem_paths.py",
+    "kind": "process",
+    "wrapper": "u9_suite.py",
+    "deadline": 120,
+    "run": true,
+    "expected_status": 0
   }
 ]
