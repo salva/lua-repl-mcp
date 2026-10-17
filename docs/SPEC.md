@@ -350,7 +350,82 @@ sockets and raw TCP remain possible custom integrations through the supplied
 I/O adapter; the initial manager need not listen on either. Legacy HTTP+SSE
 transport is not required.
 
-## 11. Open implementation decisions
+## 11. Proposed decisions for review
+
+This section contains recommendations, not yet accepted requirements. Resolve
+these policies before implementation rather than letting them emerge accidentally.
+
+### 11.1 Public tool surface and code entry
+
+Propose manager tools `session_create`, `session_list`, `session_execute`,
+`session_reset`, and `session_close`. A directly embedded handler exposes
+execution and only those lifecycle operations the host supports; it does not
+pretend to create or manage independent host interpreters.
+
+Propose execution takes a complete Lua chunk, with explicit `return` for results.
+This supports both statements and expressions without automatic expression
+detection or a multiline interactive input protocol. For example, `x = 7` sets
+a global and a later `return x * 2` returns its computed value.
+
+### 11.2 Busy sessions and lifecycle operations
+
+Propose rejecting another execution with a `session_busy` tool error while that
+session is running, rather than maintaining a request queue. Other sessions
+remain available. Close and reset must remain actionable while a worker is busy;
+either operation terminates the active worker and resolves its pending execution
+as interrupted. Reset preserves the logical session ID but starts fresh Lua state.
+
+### 11.3 Timeout and cancellation policy
+
+Propose an optional positive integer `timeout_ms` on managed execution. When
+omitted, execution has no manager-imposed deadline; client deadlines still apply.
+Use a monotonic clock and define completion as the manager receiving a complete,
+valid worker response before the deadline. Disarm the request's timer on
+completion so it cannot later kill an idle or replacement worker.
+
+Propose explicit MCP cancellation of an active managed execution terminates its
+worker, using the same state-loss policy as an execution timeout. Cancellation
+must follow MCP response rules rather than promising a normal tool response to
+a request the client has cancelled. This is distinct from a client merely
+stopping its wait without notifying the manager.
+
+### 11.4 Connection ownership and shutdown
+
+Propose managed sessions are owned by the manager's stdio connection. End-of-input
+or manager shutdown terminates and reaps all owned workers; reconnecting does not
+restore their state. No detached sessions, persistence to disk, or automatic
+recovery of interpreter state is required initially.
+
+Embedded disconnect handling remains host-owned as specified above.
+
+### 11.5 Results, errors, and resource bounds
+
+Propose execution results include captured output, an ordered list of typed
+return values, and structured error information when execution fails. Represent
+Lua `nil` explicitly instead of relying on sparse JSON arrays. Render complex
+objects with bounded inspection rather than evaluating arbitrary serialization
+code. Document handling of binary strings, invalid UTF-8, non-finite numbers,
+cycles, and metatables before finalizing the result schema.
+
+Define configurable limits for input messages, captured output, value-rendering
+depth and size, and managed session count. Prefer truncating diagnostic output
+with an explicit truncation indicator to unbounded buffering. Worker output must
+continue to be drained or otherwise handled after a capture limit is reached so
+a full pipe does not deadlock execution. Transport corruption and worker crashes
+must be distinguished from ordinary Lua runtime errors.
+
+### 11.6 Platform and dependency boundary
+
+The pure-Lua handler and host-supplied I/O adapter do not imply the standalone
+manager can use only standard Lua libraries: standard Lua does not provide the
+required portable process supervision and nonblocking descriptor APIs.
+
+Propose Linux/POSIX as the initial manager platform, allowing an established
+OS/event-loop dependency with native bindings if needed. This must not become a
+required dependency of the embeddable handler. Windows manager support and
+robust descendant-process cleanup require separate explicit decisions.
+
+## 12. Open implementation decisions
 
 The following have not yet been agreed:
 
@@ -365,6 +440,8 @@ The following have not yet been agreed:
 - Execution timeout field, units, bounds, omitted-timeout policy, and ordering
   rules for completion racing with the deadline.
 - Deployment authentication and authorization for any network transport.
+- Acceptance or revision of the proposed policies in section 11, including
+  disconnect cleanup, cancellation, platform support, and resource bounds.
 
 These decisions must preserve the independent handler, shared host environment,
 full-access trust model, explicit lifecycle handoff, and blocking single-threaded
