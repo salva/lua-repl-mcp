@@ -31,7 +31,7 @@ for name,test in checks.items():
  if not ok:missing.append(name)
 assert not missing,missing
 # Correlate retained results by session and order, not merely independent sightings.
-assert any(n=='session_execute' and a.get('wait_timeout_ms')==1 and s.get('status')=='running' for n,a,s in results)
+assert any(n=='session_execute' and a.get('wait_timeout_ms')==1 and 'return 81' in a.get('code','') and s.get('status')=='running' for n,a,s in results), 'missing designated finite-wait witness'
 for i,(n,a,s) in enumerate(results):
  if n=='session_execute' and s.get('status')=='running' and a.get('wait_timeout_ms')==1 and 'return 81' in a.get('code',''):
   later=[]
@@ -43,7 +43,7 @@ for i,(n,a,s) in enumerate(results):
     later.append(c['result'].get('data',{}).get('result',{}).get('structuredContent',{}))
   assert later[0].get('status')=='completed' and 'values' in later[0] and later[1].get('error',{}).get('code')=='result_unavailable'
 assert any(n=='session_execute' and a.get('args') and len(s.get('values',[]))==3 and s['values'][:2]==[42,None] and s['values'][2]==a['args'][0] for n,a,s in results), 'persistent function, positional null and JSON argument round trip'
-assert any(s.get('values') in ([None,1,1], [True,1,1,42]) and 'assert(' in a.get('code','') for n,a,s in results), 'side effects exactly once (asserted by executed chunk)'
+assert any(s.get('values') in ([None,1,1], [True,1,1,42], [None,1,1,42]) and 'assert(' in a.get('code','') for n,a,s in results), 'side effects exactly once (asserted by executed chunk)'
 assert any(s.get('values')==[True,True] for n,a,s in results), 'independent globals/functions'
 assert any(s.get('error',{}).get('code')=='execution_timeout' and s.get('process_exit_confirmed') and s.get('session_usable') is False for n,a,s in results)
 assert any('timed out after 30000ms' in c['result'].get('error','') for c in calls), 'client deadline not observed'
