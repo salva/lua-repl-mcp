@@ -18,6 +18,13 @@ documentation site. Scope is content/assets and minimal local build/validation
 only. Do not create deployment workflows, seek publication permissions, push,
 publish, or alter repository settings. Publication is outside this task and must
 not block its completion. Keep implementation/integration acceptance intact.
+User documentation is the primary documentation asset and must remain separate
+from Saivage work plans, deployment notes, integration reports and agent evidence.
+User-facing docs and website content may reference Saivage only through one
+linked "Built with Saivage" attribution. Do not include named integration status,
+Saivage issue links or work reports there; describe client limitations generically.
+Preserve work documentation outside public staging and user navigation, and
+validate this separation in U11 sources and generated artifacts.
 
 Plan U12 and `docs/MANAGER_LIFECYCLE_DESIGN.md` add required standalone-manager
 signal/crash cleanup and independently supervised worker lifetime. Schedule this

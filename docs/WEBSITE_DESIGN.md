@@ -14,6 +14,23 @@ static documentation; visitors' Lua code is never executed there.
 
 ## Content and navigation
 
+User documentation is the primary documentation asset: the repository's user
+entry point and website must lead with installation, usage, embedding and public
+reference, not autonomous-work plans or acceptance reports. Keep implementation
+planning, Saivage work/deployment notes, trial reports and agent evidence in a
+separate maintainer/work-documentation area, outside user navigation and the
+website artifact. Preserve that evidence; separation is not permission to delete
+it or break internal planning links.
+
+The only Saivage reference permitted anywhere in user-facing documentation is
+one short linked attribution, **Built with Saivage**, pointing to its public
+project page. This rule covers the user README, guides, examples, reference
+pages, downloadable documentation and generated HTML. Do not include Saivage
+configuration, integration narratives, issue links, work-card identifiers or
+validation status there. Explain client-side timeout/connection-loss risks in
+generic terms without naming Saivage. The named integration evidence and upstream
+bug reports remain available only in the separate work documentation.
+
 1. **Home:** purpose, architecture diagram, principal features, current release
    status, links to installation and embedding, and a prominent full-access warning.
 2. **Getting started:** Lua/POSIX prerequisites, clean LuaRocks installation,
@@ -28,9 +45,10 @@ static documentation; visitors' Lua code is never executed there.
    values, serialization failure after side effects, and actionable error examples.
 6. **Operations and limitations:** cwd/redirection, current resource defaults,
    trust/system privileges, no automatic output capture, client timeout pitfalls,
-   and links to relevant public upstream issues without overstating fixes.
+   explained independently of the development harness.
 7. **Reference:** reviewed specification, tool schemas, wire examples, tested
-   versions, local build/test commands, and contribution guidance.
+   versions, local build/test commands, and contribution guidance. Public
+   reference must exclude work-management material.
 
 Use concise task-oriented prose and copyable code blocks. Explain which tools
 belong to each surface; do not show session IDs on the embedded-handler API.
@@ -57,8 +75,11 @@ their authoritative source.
 
 Exclude `.saivage/`, `.saivage-work/`, workflows/operations, raw integration-agent
 conversations, local evidence/log dumps, credentials, and machine-specific runtime
-paths. Use sanitized examples, not exported live configuration. Public limitation
-summaries may cite upstream issues but must not import raw trial artifacts.
+paths. Use sanitized examples, not exported live configuration. Do not import
+Saivage integration reports or link to their upstream issues in user content.
+Before including any authoritative reference, verify that it satisfies the same
+user-documentation boundary; never publish a work document merely because it is
+under `docs/`. Keep build/validation evidence outside the public staging tree.
 
 ## GitHub Pages compatibility and scope boundary
 
@@ -90,6 +111,12 @@ No credentials are needed to create or build the content.
   checker and add checks for website-specific examples and generated references.
 - Artifact inspection proves only allowlisted content is published; scan for
   secret-bearing names, accidental local paths, and private conversation artifacts.
+- Validate the user README/source tree and generated HTML/downloads for Saivage
+  references, allowing only the single linked attribution (and its generated
+  rendering). Check links as well as visible prose: no work-report, integration,
+  agent-state or Saivage issue links may leak into the user documentation.
+- Verify repository and website entry points prioritize user documentation;
+  work plans/evidence are separate and absent from website navigation/artifacts.
 - Record commands, pinned versions, outcomes, and local artifact paths in
   `docs/validation/WEBSITE.md`. State that publication is out of scope and not
   performed. No live URL or GitHub deployment is an acceptance requirement.

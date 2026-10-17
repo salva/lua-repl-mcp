@@ -346,12 +346,18 @@ Implement `docs/WEBSITE_DESIGN.md` after the package/API are stable. Create
 task-oriented guides, an accessible responsive MkDocs site, deterministic
 allowlisted reference staging and pinned local build dependencies. Do not create
 publishing workflows. Keep normative requirements/schemas authoritative rather
-than maintaining divergent copies. Link the public Saivage limitation report
-where useful without exposing raw agent transcripts or deployment credentials.
+than maintaining divergent copies. Make user documentation the primary asset,
+separate from Saivage work plans, operations, integration reports and evidence.
+User-facing README/guides/reference/examples and website output may mention
+Saivage only in one linked "Built with Saivage" attribution; do not link its bug
+reports or integration narratives there. Keep client-timeout guidance generic.
+Preserve work evidence separately, outside public staging and user navigation.
 
 Build and test locally. Verify project-prefix links/assets, relevant
 examples against runtime/contracts, desktop/mobile navigation, and artifact
 exclusions. Record reproducible evidence in `docs/validation/WEBSITE.md`.
+Check both user sources and generated artifacts/downloads for prohibited harness
+references and work-document links, with only the attribution exception.
 This documentation stage does not change manager/handler semantics or reopen
 completed implementation stages. It may progress independently of an externally
 blocked Saivage scenario using honest status text.
