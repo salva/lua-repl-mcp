@@ -75,18 +75,40 @@ function M.encode(value, options)
   options = options or {}
   local maxdepth, maxbytes = options.max_depth or 128, options.max_bytes or 16*1024*1024
   local out, bytes, active = {}, 0, {}
+  local work=0
+  local function progress(n)
+    if not options.checkpoint then return end
+    work=work+(n or 1)
+    if work>=65536 then work=0; options.checkpoint() end
+  end
   local function put(s,path)
     bytes = bytes + #s
     if bytes > maxbytes then fail('encoded size limit exceeded',path) end
     out[#out+1] = s
   end
+  local function emit_string(s,path)
+    if not options.checkpoint then put(quote(s,path),path); return end
+    if not utf8valid(s) then fail('invalid UTF-8',path) end
+    put('"',path)
+    -- Escape byte chunks (UTF-8 validity was checked for the complete string).
+    -- Splitting a multibyte sequence here cannot alter its emitted bytes.
+    for i=1,#s,65536 do
+      local part=s:sub(i,i+65535):gsub('[%z\1-\31\\"]',function(ch)
+        if ch=='"' then return '\\"' elseif ch=='\\' then return '\\\\' end
+        return string.format('\\u%04x',ch:byte())
+      end)
+      put(part,path); progress(math.min(65536,#s-i+1))
+    end
+    put('"',path)
+  end
   local visit
   visit = function(v,path,depth)
+    progress()
     if encoded_data[v] then put(encoded_data[v].text,path); return end
     if rawequal(v,null) or v == nil then put('null',path); return end
     local t = type(v)
     if t == 'boolean' then put(v and 'true' or 'false',path)
-    elseif t == 'string' then put(quote(v,path),path)
+    elseif t == 'string' then emit_string(v,path)
     elseif t == 'number' then
       number(v,path)
       -- Only the codec's output is normalized; never mutate the host locale.
@@ -98,6 +120,7 @@ function M.encode(value, options)
       active[v] = true
       local count, highest, strings, nums = 0, 0, false, false
       for k in next,v do
+        progress()
         count = count+1
         if type(k) == 'string' then strings=true
         elseif type(k) == 'number' and k % 1 == 0 and k >= 1 then nums=true; highest=math.max(highest,k)
@@ -114,10 +137,10 @@ function M.encode(value, options)
         end
       else
         -- Stable ordering makes evidence reproducible; never call __pairs.
-        local keys = {}; for k in next,v do keys[#keys+1]=k end; table.sort(keys)
+        local keys = {}; for k in next,v do progress(); keys[#keys+1]=k end; table.sort(keys)
         for i,k in ipairs(keys) do
           if i>1 then put(',',path) end
-          put(quote(k,ptr(path,k)) .. ':',path)
+          emit_string(k,ptr(path,k)); put(':',path)
           visit(rawget(v,k),ptr(path,k),depth+1)
         end
       end

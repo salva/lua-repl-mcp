@@ -9,16 +9,18 @@ function M.new(fd,limit)
 end
 -- A logical batch is streamed as one bounded item per frame. Retain references
 -- to the bounded allocation/command snapshot, never an encoded aggregate.
-function M.busy(ch) return ch.batch~=nil or #ch.output>0 end
+function M.busy(ch) return ch.batch~=nil or ch.encoding~=nil or #ch.output>0 end
 local function advance(ch)
  if not ch.batch then return end
  local i=ch.batch_index
  local last=i>=#ch.batch
  local value={items={},done=last}
  if ch.batch[i] then value.items[1]=ch.batch[i] end
- local text,err=c.encode(value,{max_bytes=ch.limit,max_depth=520})
- if not text then error(err or 'guardian encoding failed') end
- ch.output=text..'\n'; ch.offset=1
+ ch.encoding=coroutine.create(function()
+  local text,err=c.encode(value,{max_bytes=ch.limit,max_depth=520,checkpoint=coroutine.yield})
+  if not text then error(err or 'guardian encoding failed') end
+  return text..'\n'
+ end)
  if last then ch.batch=nil else ch.batch_index=i+1 end
 end
 function M.enqueue(ch,value)
@@ -28,7 +30,13 @@ function M.enqueue(ch,value)
  advance(ch)
 end
 function M.flush(ch)
- if #ch.output==0 then advance(ch) end
+ if #ch.output==0 and not ch.encoding then advance(ch) end
+ if ch.encoding then
+  local ok,text=coroutine.resume(ch.encoding)
+  assert(ok,text)
+  if coroutine.status(ch.encoding)~='dead' then return end
+  ch.encoding=nil; ch.output=text; ch.offset=1
+ end
  if #ch.output==0 then return end
  local n,msg,err=x.u.write(ch.fd,ch.output:sub(ch.offset,ch.offset+65535))
  if n and n>0 then
