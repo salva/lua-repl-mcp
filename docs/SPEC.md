@@ -64,8 +64,9 @@ single-threaded I/O event loop to multiplex independent worker processes.
   to the host's thread-affinity requirements.
 - Only one evaluation may be active in a given interpreter at a time; concurrent
   or reentrant evaluation is not supported.
-- The execution response is sent after execution finishes, if the connection is
-  still available.
+- A handler's execution response is sent after execution finishes, if its
+  connection is still available. The manager may return an earlier task handle
+  to its client as specified in section 7.2.
 - The handler does not service additional MCP requests, pings, progress updates,
   or cancellation notifications while code is executing.
 - A long-running execution in one managed session must not block the manager
@@ -233,6 +234,53 @@ If progress reporting is added later, MCP progress notifications must use a
 client-supplied progress token and satisfy the negotiated protocol's rules.
 Fabricated percentages must not be used as keep-alives.
 
+### 7.2 Unified synchronous and asynchronous execution
+
+The manager must expose all three client waiting modes through one execution
+tool. This specification calls the parameter `wait_timeout_ms`:
+
+| Value | Behaviour |
+| --- | --- |
+| `null` | Wait for execution to finish and return its terminal result. |
+| `0` | Accept execution and return a task ID without waiting for completion. |
+| Positive number | Wait up to that many milliseconds; return a terminal result if available, otherwise return a task ID while execution continues. |
+
+The field's omitted-value default and whether fractional milliseconds are
+accepted remain schema decisions. Negative, non-finite, and otherwise invalid
+values must be rejected before execution starts.
+
+Every accepted execution has a stable task ID, including those initially waited
+for synchronously. A response identifies the task and whether it is pending or
+terminal. If the wait expires, the manager must return control without cancelling,
+restarting, or resubmitting the execution. The client can subsequently poll that
+same task for status and retrieve its terminal result, including output or errors.
+The final result must remain retrievable even if completion races with returning
+the pending response. Status and result retrieval must not execute the code again.
+
+The wait deadline starts when the execution is dispatched. The manager must
+continue servicing other requests while waiting. Expiry releases only the
+client's wait; the worker continues and its session remains busy until execution
+terminates. The handler remains blocking and single-threaded regardless of the
+client's waiting mode.
+
+The wait timeout is distinct from the optional hard execution timeout in section
+7.1. Both may apply to one task: a client can wait five seconds for a result while
+allowing execution to run for at most ten minutes. Only the hard execution
+deadline triggers worker termination and state loss. A null wait timeout does
+not disable a supplied hard execution deadline or a client's own MCP deadline.
+
+Task polling and retained-result retrieval are application-level MCP tools in
+the initial contract; they must not be presented as standard MCP Tasks support
+unless that optional protocol feature is separately implemented and negotiated.
+These manager facilities do not require a standalone embedded handler to service
+requests while executing.
+
+Task status must distinguish pending execution from success, failure, and
+interruption. Polling responses must make clear whether the session remains
+usable after termination. Exact status names, polling tool schemas, explicit
+cancellation by task ID, result-retention limits, and expiry behaviour must be
+defined before implementation.
+
 ## 8. Initial acceptance criteria
 
 1. A client defines a global and a function, then uses both in a later request.
@@ -263,6 +311,11 @@ Fabricated percentages must not be used as keep-alives.
     kill and reap that worker, report a timeout, and mark the session terminated.
     Another managed session remains usable. An execution completing before its
     deadline does not cause its worker to be killed by a stale timer.
+14. One execution tool supports null, zero, and positive wait timeouts. Expiring
+    a wait returns a task ID without killing the worker or executing code twice;
+    polling that task later yields the result and preserved session state.
+15. Async execution returns a task ID without waiting for the worker's result.
+    Completed results remain retrievable across the wait-to-poll transition.
 
 ## 9. Lua version support
 
@@ -358,7 +411,9 @@ these policies before implementation rather than letting them emerge accidentall
 ### 11.1 Public tool surface and code entry
 
 Propose manager tools `session_create`, `session_list`, `session_execute`,
-`session_reset`, and `session_close`. A directly embedded handler exposes
+`session_reset`, `session_close`, and task status/result retrieval tools.
+The single execution tool implements all waiting modes in section 7.2 rather
+than separate synchronous and asynchronous tools. A directly embedded handler exposes
 execution and only those lifecycle operations the host supports; it does not
 pretend to create or manage independent host interpreters.
 
@@ -377,7 +432,8 @@ as interrupted. Reset preserves the logical session ID but starts fresh Lua stat
 
 ### 11.3 Timeout and cancellation policy
 
-Propose an optional positive integer `timeout_ms` on managed execution. When
+Propose an optional positive integer `execution_timeout_ms` on managed execution,
+separate from `wait_timeout_ms`. When
 omitted, execution has no manager-imposed deadline; client deadlines still apply.
 Use a monotonic clock and define completion as the manager receiving a complete,
 valid worker response before the deadline. Disarm the request's timer on
@@ -439,6 +495,8 @@ The following have not yet been agreed:
   per-session request queueing or busy-response policy.
 - Execution timeout field, units, bounds, omitted-timeout policy, and ordering
   rules for completion racing with the deadline.
+- Wait-timeout omitted-value default and numeric precision; task polling/result
+  schemas, retention and expiry limits, and task-ID cancellation policy.
 - Deployment authentication and authorization for any network transport.
 - Acceptance or revision of the proposed policies in section 11, including
   disconnect cleanup, cancellation, platform support, and resource bounds.
