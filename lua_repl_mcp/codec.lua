@@ -131,11 +131,27 @@ end
 function M.decode(text, options)
   options=options or {}
   local i,n = 1,#text
-  local function ws() local _,j=text:find('^[ \t\r\n]*',i); i=(j or i-1)+1 end
+  -- Native bulk readers may suspend this otherwise blocking strict parser.
+  -- The public handler supplies no checkpoint and remains purely blocking.
+  local checkpoint=options.checkpoint
+  local next_check=65536
+  local function progress()
+    if checkpoint and i>=next_check then next_check=i+65536; checkpoint() end
+  end
+  local function ws()
+    if not checkpoint then local _,j=text:find('^[ \t\r\n]*',i); i=(j or i-1)+1; return end
+    while i<=n do
+      progress()
+      local b=text:byte(i)
+      if b~=32 and b~=9 and b~=13 and b~=10 then break end
+      i=i+1; progress()
+    end
+  end
   local function bad(reason,path) fail(reason .. ' at byte ' .. i,path) end
   local function str(path)
     i=i+1; local parts={}; local start=i
     while i<=n do
+      progress()
       local b=text:byte(i)
       if b==34 then
         parts[#parts+1]=text:sub(start,i-1); i=i+1
@@ -197,23 +213,23 @@ function M.decode(text, options)
       c=text:sub(i,i)
       if c=='0' then i=i+1
       elseif c:match('[1-9]') and c~='' then
-        repeat i=i+1 until not text:sub(i,i):match('%d')
+        repeat i=i+1; progress() until not text:sub(i,i):match('%d')
       else bad('expected value',path) end
       if text:sub(i,i)=='.' then
         i=i+1; if not text:sub(i,i):match('%d') then bad('expected fraction',path) end
-        repeat i=i+1 until not text:sub(i,i):match('%d')
+        repeat i=i+1; progress() until not text:sub(i,i):match('%d')
       end
       c=text:sub(i,i)
       if c=='e' or c=='E' then
         i=i+1; c=text:sub(i,i); if c=='+' or c=='-' then i=i+1 end
         if not text:sub(i,i):match('%d') then bad('expected exponent',path) end
-        repeat i=i+1 until not text:sub(i,i):match('%d')
+        repeat i=i+1; progress() until not text:sub(i,i):match('%d')
       end
       return token_number(text:sub(start,i-1),path)
     end
   end
   parse=function(path,depth)
-    ws(); local start=i
+    ws(); progress(); local start=i
     local v=parse_value(path,depth)
     if options.json_path and path==options.json_path then
      local token={}; encoded_data[token]={text=text:sub(start,i-1),depth=options.max_depth or 128}; return token

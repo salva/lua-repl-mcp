@@ -37,9 +37,25 @@ function M.flush(ch)
  elseif not x.retryable(err) then error(msg or 'guardian write failed') end
 end
 function M.receive(ch,accept)
+ -- One parser slice per turn. Pending complete bytes remain private until
+ -- strict decode finishes; caller can service control/liveness between slices.
+ local function resume_validation()
+  local ok,value=coroutine.resume(ch.validation)
+  assert(ok,value)
+  if coroutine.status(ch.validation)~='dead' then return false end
+  ch.validation=nil
+  assert(type(value)=='table' and type(value.items)=='table' and type(value.done)=='boolean','invalid guardian fragment')
+  accept(value.items,value.done)
+  return true
+ end
+ if ch.validation then
+  if not resume_validation() then return true end
+ end
  local budget=65536
  while budget>0 do
-  local s,msg,err=x.u.read(ch.fd,math.min(65536,budget))
+  local s,msg,err
+  if ch.rest then s=ch.rest; ch.rest=nil
+  else s,msg,err=x.u.read(ch.fd,math.min(65536,budget)) end
   if not s then if x.retryable(err) then return end; error(msg) end
   if s=='' then return false end
   budget=budget-#s
@@ -54,10 +70,11 @@ function M.receive(ch,accept)
    ch.input_parts[#ch.input_parts+1]=part
    if not nl then break end
    local text=table.concat(ch.input_parts); ch.input_parts={}; ch.input_bytes=0
-   local value=assert(c.decode(text,{max_depth=520,max_bytes=ch.limit,json_path="/items/0/request"})); ch.input=''
-   assert(type(value)=='table' and type(value.items)=='table' and type(value.done)=='boolean','invalid guardian fragment')
-   accept(value.items,value.done)
+   ch.validation=coroutine.create(function()
+    return assert(c.decode(text,{max_depth=520,max_bytes=ch.limit,json_path="/items/0/request",checkpoint=coroutine.yield}))
+   end)
    rest=rest:sub(nl+1)
+   if not resume_validation() then if rest~='' then ch.rest=rest end; return true end
   until rest==''
  end
  return true
