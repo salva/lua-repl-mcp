@@ -101,12 +101,51 @@ failed its old direct-child oracle: it was observing the persistent guardian as
 if it were a per-session worker. Updated that oracle to observe guardian children;
 no behavior assertion was removed. The preserved U12 reproducer is unchanged.
 
+## Aggregate-capacity repair (after d917a2f)
+
+The unchanged `tests/u12_aggregate_reports_red.lua` now passes. Owning channel
+primitive streams a logical batch as `{items={one_item}, done=boolean}` frames;
+an empty batch sends one final empty frame. `busy` includes unencoded pending
+items, not just the current encoded frame. Only one item/frame is encoded at a
+time, with the original complete-response bound; the aggregate is never encoded
+or granted an enlarged cap. Retained report references are admission-bounded.
+Guardian steps native children and checks the independent liveness pipe between
+flush turns even when output is blocked. Receive retains the existing 64KiB turn
+budget. Encoder/decoder depth supports configured nesting up to 512 plus private
+envelope headroom, rather than the previous hardcoded 160.
+
+Guardian assembles at most 1024 command fragments and applies the batch only on
+its final marker, preserving previous command-transition ordering. Manager keeps
+`inflight` until final report, applies each allocation report progressively, and
+retains dirty-local-transition guards. Empty poll batches still complete. New
+commands are not sent during a partial report and cannot interleave snapshots.
+
+Using the environment above, all these checks passed:
+
+```sh
+lua5.4 tests/u12_aggregate_reports_red.lua
+lua5.4 tests/u12_channel_stream.lua
+# Run the following under an external 50s process-group watchdog:
+lua5.4 tests/u12_aggregate_process.lua
+```
+
+Named results: `multiple_legal_maximal_results` (nine exact 1MiB values under an
+8MiB frame cap); `guardian_stream_order_partial_write_EAGAIN_one_completion_empty_bound_single_overflow`
+(30 fragments, strict order, one final marker, empty batch, 113-byte writes,
+79-byte reads, EAGAIN and unchanged single-item overflow rejection); and
+`real_guardian_nine_maximal_results_survive_aggregate_frame_boundary` (nine real
+execed workers, each returns V bytes, then two complete retained-result snapshots
+exceeding a single frame in aggregate, followed by confirmed shutdown). External
+watchdog returned zero and contained only its own isolated process group.
+
+Reran the six-case lifecycle tests, full U8 external suite, deterministic native
+progressive policy and contracts sequentially with fail-fast chaining: all passed.
+No assertion was removed from the preserved aggregate reproducer.
+
 ## Remaining validation / limitations
 
-Full accepted U12 remains incomplete despite the focused reproducer passing.
-The current aggregated report has a connection response-size cap, not a proven
-fit for many simultaneous maximal results; queue backpressure currently fails
-closed rather than streaming all legal multi-session maxima. Guardian allocation
+Full accepted U12 remains incomplete despite both focused reproducers passing.
+Guardian allocation
 construction still needs fault-injection proof around every partial fork/FD
 acquisition. Minimal eventual reaping follows the existing native supervisor;
 shutdown unconfirmed diagnostics and exceptional wait failures need dedicated

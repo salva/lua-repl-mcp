@@ -10,6 +10,7 @@ local fields={'state','failure','files_complete','created_paths','cwd','result',
 local function guardian(fd,live,options)
  local backend=native.new(options); local allocations={}; local lost=false
  local ch=wire.new(fd,backend.limits.response_bytes)
+ local commands={}
  x.nonblock(live)
  x.s.signal(x.s.SIGINT,x.s.SIG_IGN); x.s.signal(x.s.SIGTERM,x.s.SIG_IGN)
  local function dispose()
@@ -20,8 +21,13 @@ local function guardian(fd,live,options)
   while true do
    local data,_,errno=x.u.read(live,1)
    if data=='' then dispose() elseif not data and not x.retryable(errno) then dispose() end
-   if not lost and #ch.output==0 then
-    local open=wire.receive(ch,function(batch)
+   if not lost and not wire.busy(ch) then
+    local open=wire.receive(ch,function(fragment,done)
+     for _,cmd in ipairs(fragment) do
+      assert(#commands<1024,'guardian command bound'); commands[#commands+1]=cmd
+     end
+     if not done then return end
+     local batch=commands; commands={}
      assert(type(batch)=='table' and #batch<=1024,'guardian command bound')
      for _,cmd in ipairs(batch) do
       if cmd.op=='shutdown' then dispose(); break end
@@ -64,7 +70,7 @@ local function guardian(fd,live,options)
    if lost then
     if #backend.workers==0 then break end
    else wire.flush(ch) end
-   local poll=lost and {} or {[live]={events={IN=true}},[fd]={events={IN=#ch.output==0,OUT=#ch.output>0}}}
+   local poll=lost and {} or {[live]={events={IN=true}},[fd]={events={IN=not wire.busy(ch),OUT=wire.busy(ch)}}}
    x.p.poll(poll,5)
   end
  end)
@@ -132,8 +138,8 @@ function B:step(delay)
  if self.closed then return end
  local ok,err=pcall(function()
   wire.flush(self.channel)
-  local open=wire.receive(self.channel,function(report)
-   assert(self.inflight,'unsolicited guardian report'); self.inflight=false
+  local open=wire.receive(self.channel,function(report,done)
+   assert(self.inflight,'unsolicited guardian report'); if done then self.inflight=false end
    for _,v in ipairs(report) do
     local w=assert(self.by_id[v.id],'unknown guardian allocation')
     -- An accepted kill/deadline freezes the outcome before its command is sent.
@@ -156,12 +162,12 @@ function B:step(delay)
     if w.state=='running' and w.execution_deadline and self.clock()>=w.execution_deadline then self:abort(w,'execution_timeout') end
    end
   end; self.workers=live
-  if not self.inflight and #self.channel.output==0 then
+  if not self.inflight and not wire.busy(self.channel) then
    for _,cmd in ipairs(self.commands) do if cmd.id and self.by_id[cmd.id] then self.by_id[cmd.id].dirty=false end end
    wire.enqueue(self.channel,self.commands); self.commands={}; self.inflight=true
    wire.flush(self.channel)
   end
-  x.p.poll({[self.channel.fd]={events={IN=true,OUT=#self.channel.output>0}}},delay or 0)
+  x.p.poll({[self.channel.fd]={events={IN=true,OUT=wire.busy(self.channel)}}},delay or 0)
  end)
  if not ok then
   self.closed=true

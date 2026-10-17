@@ -7,13 +7,28 @@ function M.new(fd,limit)
  x.nonblock(fd); x.clo(fd,true)
  return {fd=fd,limit=limit,input='',output='',offset=1}
 end
-function M.enqueue(ch,value)
- local text,err=c.encode(value,{max_bytes=ch.limit,max_depth=160})
+-- A logical batch is streamed as one bounded item per frame. Retain references
+-- to the bounded allocation/command snapshot, never an encoded aggregate.
+function M.busy(ch) return ch.batch~=nil or #ch.output>0 end
+local function advance(ch)
+ if not ch.batch then return end
+ local i=ch.batch_index
+ local last=i>=#ch.batch
+ local value={items={},done=last}
+ if ch.batch[i] then value.items[1]=ch.batch[i] end
+ local text,err=c.encode(value,{max_bytes=ch.limit,max_depth=520})
  if not text then error(err or 'guardian encoding failed') end
- assert(#ch.output==0,'guardian output backpressure')
  ch.output=text..'\n'; ch.offset=1
+ if last then ch.batch=nil else ch.batch_index=i+1 end
+end
+function M.enqueue(ch,value)
+ assert(not M.busy(ch),'guardian output backpressure')
+ assert(type(value)=='table','guardian batch required')
+ ch.batch=value; ch.batch_index=1
+ advance(ch)
 end
 function M.flush(ch)
+ if #ch.output==0 then advance(ch) end
  if #ch.output==0 then return end
  local n,msg,err=x.u.write(ch.fd,ch.output:sub(ch.offset,ch.offset+65535))
  if n and n>0 then
@@ -35,8 +50,9 @@ function M.receive(ch,accept)
    assert(#ch.input+#part<=ch.limit,'guardian frame bound')
    ch.input=ch.input..part
    if not nl then break end
-   local value=assert(c.decode(ch.input,{max_depth=160})); ch.input=''
-   accept(value)
+   local value=assert(c.decode(ch.input,{max_depth=520})); ch.input=''
+   assert(type(value)=='table' and type(value.items)=='table' and type(value.done)=='boolean','invalid guardian fragment')
+   accept(value.items,value.done)
    rest=rest:sub(nl+1)
   until rest==''
  end
