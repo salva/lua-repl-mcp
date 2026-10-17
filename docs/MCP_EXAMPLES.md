@@ -1,6 +1,6 @@
 # MCP usage examples
 
-These examples are normative illustrations of `SPEC.md`. JSON is pretty-printed
+These examples illustrate the public MCP protocol. JSON is pretty-printed
 for readability; actual stdio/control frames occupy one line. Session IDs are
 illustrative. Error diagnostic wording is not fixed; codes and fields are.
 
@@ -49,7 +49,7 @@ contract check, not a live-server test. Defaults remain runtime responsibilities
 ## Allocate and execute synchronously
 
 ```json
-{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"session_create","arguments":{"cwd":"/work/project","stdout_path":"run.stdout","stderr_path":"run.stderr"}}}
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"session_create","arguments":{"cwd":"/example/project","stdout_path":"run.stdout","stderr_path":"run.stderr"}}}
 ```
 
 ```json
@@ -72,7 +72,7 @@ with `result_unavailable`, not with a repeated copy of `[2,null]`.
 ## Implicit creation and asynchronous wait
 
 ```json
-{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"session_execute","arguments":{"session_id":null,"create_options":{"cwd":"/work/project"},"code":"answer = 42; return answer","wait_timeout_ms":0,"execution_timeout_ms":600000}}}
+{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"session_execute","arguments":{"session_id":null,"create_options":{"cwd":"/example/project"},"code":"answer = 42; return answer","wait_timeout_ms":0,"execution_timeout_ms":600000}}}
 ```
 
 ```json
@@ -164,7 +164,7 @@ nothing; use `session_kill`. A normal wait deadline is not cancellation.
 
 <!-- schema: session_list_output -->
 ```json
-{"sessions":[{"session_id":"s1","session_status":"idle","execution_status":"failed","result_available":false,"cwd":"/work/project"}]}
+{"sessions":[{"session_id":"s1","session_status":"idle","execution_status":"failed","result_available":false,"cwd":"/example/project"}]}
 ```
 
 Consumed results and closed sessions are not history. Empty managers return

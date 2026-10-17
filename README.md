@@ -48,6 +48,8 @@ payloads rather than expecting a later wait to repeat them.
 
 ## Usage and reference
 
+- [Task-oriented documentation](site-docs/index.md) (local website sources)
+
 - [Install, execute, poll, recover and embed](README-IF-YOR-ARE-AN-AI.md)
 - [MCP initialization and wire examples](docs/MCP_EXAMPLES.md)
 - [Tool input/output schemas](docs/schemas/api.json)

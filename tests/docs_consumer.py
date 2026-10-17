@@ -25,7 +25,8 @@ for name, block in zip(
 print('PASS: 3 LLM-guide tool arguments match schemas')
 
 # Workspace-local artifacts, never runtime state or credentials.
-scratch = ROOT.parent / 'tmp'
+scratch = pathlib.Path(os.environ['SAIVAGE_CARD_WORK_ROOT']) / 'u11-embedded'
+scratch.mkdir(parents=True, exist_ok=True)
 with tempfile.TemporaryDirectory(prefix='lua-doc-consumer-', dir=scratch) as directory:
     path = pathlib.Path(directory)
     modules = path / 'modules'

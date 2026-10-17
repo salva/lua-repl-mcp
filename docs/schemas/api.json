@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:lua-repl-mcp:api:v1",
   "title": "Lua REPL MCP tool contracts",
-  "$comment": "Select input definitions per tool. Result is the structuredContent object; the MCP wrapper supplies isError. Runtime semantic checks in SPEC.md also apply. Inline references when publishing tool schemas if required by the client.",
+  "$comment": "Select input definitions per tool. Result is the structuredContent object; the MCP wrapper supplies isError. Runtime semantic checks also apply; schemas alone do not execute code. Inline references when publishing tool schemas if required by the client.",
   "$defs": {
     "sessionId": { "type": "string", "minLength": 1 },
     "waitTimeout": { "type": ["integer", "null"], "minimum": 0, "maximum": 2147483647, "default": 600000 },

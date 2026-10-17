@@ -1,0 +1,22 @@
+site_name: Lua REPL MCP
+site_description: Persistent Lua execution for MCP clients and existing Lua hosts
+site_url: https://example.invalid/lua-repl-mcp/
+docs_dir: site-docs
+site_dir: site
+theme:
+  name: mkdocs
+  locale: en
+  navigation_depth: 3
+  highlightjs: false
+use_directory_urls: true
+plugins: []
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Manager tasks: manager.md
+  - Embedding: embedding.md
+  - Data and errors: data-errors.md
+  - Operations: operations.md
+  - Reference: reference.md
+  - LLM guide: README-IF-YOR-ARE-AN-AI.md
+  - Wire examples: docs/MCP_EXAMPLES.md
