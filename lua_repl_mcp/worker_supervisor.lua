@@ -53,6 +53,7 @@ function S:allocate(options)
  local pid=x.u.fork()
  if pid==0 then
   local ok=pcall(function()
+  x.s.signal(x.s.SIGINT,x.s.SIG_DFL); x.s.signal(x.s.SIGTERM,x.s.SIG_DFL)
   -- Avoid overlapping 0/1/2 even if caller started with closed standard FDs.
   local a=assert(x.f.fcntl(r,x.f.F_DUPFD,3)); local b=assert(x.f.fcntl(wr,x.f.F_DUPFD,3))
   x.close_except(a,b); x.clo(a,false); x.clo(b,false)
@@ -197,4 +198,5 @@ function S:shutdown()
  repeat self:step(5) until #self.workers==0
  return #self.reaping==0
 end
+M.methods=S
 return M

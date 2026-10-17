@@ -3,8 +3,10 @@ local codec=require('lua_repl_mcp.codec')
 local protocol=require('lua_repl_mcp.protocol')
 local M={}
 function M.serve(io,options)
- local manager=require('lua_repl_mcp.manager').new(options)
- local transport=require('lua_repl_mcp.client_transport').new(manager,io)
+ local manager,transport
+ local ok,err=pcall(function()
+ manager=require('lua_repl_mcp.manager').new(options)
+ transport=require('lua_repl_mcp.client_transport').new(manager,io)
  local core=protocol.new{
   tools=assert(codec.decode(require('lua_repl_mcp.manager_schemas'))),
   names={session_create=true,session_execute=true,session_wait=true,session_kill=true,session_list=true},
@@ -18,25 +20,31 @@ function M.serve(io,options)
   end,
  }
  local function frame(text)
+  if io.stopping and io.stopping() then return end
   local response=core:handle(text)
   if response then
    local encoded=codec.encode(response,{max_bytes=transport.response_bytes,max_depth=transport.encode_depth})
    if encoded then transport:enqueue(encoded) else transport:close('protocol response bound') end
   end
  end
- local ok,err=pcall(function()
-  while transport:step(frame) do
+  while not (io.stopping and io.stopping()) and transport:step(frame) do
    if io.pause then io.pause() end
   end
  end)
- transport:close(ok and 'eof' or 'server error')
+ local cleaned,cleanup_error=pcall(function()
+  if transport then transport:close(ok and 'eof' or 'server error')
+  elseif manager then manager:disconnect() end
+ end)
+ if not cleaned and ok then error(cleanup_error,0) end
  if not ok then error(err,0) end
- return transport.closed
+ return transport and transport.closed
 end
 function M.main()
  local x=require('lua_repl_mcp.worker_posix')
+ local requested
  x.s.signal(x.s.SIGPIPE,x.s.SIG_IGN)
- x.nonblock(0); x.nonblock(1)
+ x.s.signal(x.s.SIGINT,function(sig) requested=requested or sig end)
+ x.s.signal(x.s.SIGTERM,function(sig) requested=requested or sig end)
  local function read(n)
   local data,msg,errno=x.u.read(0,n)
   if data=='' then return nil,'eof' end
@@ -48,9 +56,18 @@ function M.main()
   if not n and x.retryable(errno) then return nil,'again' end
   return n,msg
  end
- return M.serve{read=read,write=write,pause=function()
+ local backend
+ local ok,err=pcall(function()
+ x.nonblock(0); x.nonblock(1)
+ backend=require('lua_repl_mcp.guardian').new()
+ M.serve({read=read,write=write,stopping=function() return requested end,pause=function()
   -- A short bounded poll avoids spinning while workers progress independently.
   x.p.poll({[0]={events={IN=true}}},5)
- end}
+ end},{supervisor=backend})
+ end)
+ local clean,why=pcall(function() if backend then backend:shutdown() end end)
+ if not ok then x.u.write(2,tostring(err)..'\n') end
+ if not clean then x.u.write(2,tostring(why)..'\n') end
+ os.exit(requested and 128+requested or ((ok and clean) and 0 or 1))
 end
 return M

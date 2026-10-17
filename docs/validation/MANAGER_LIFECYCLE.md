@@ -1,8 +1,8 @@
 # U12 lifecycle qualification (in progress)
 
-This is implementation-stage capability evidence, **not U12 acceptance**.
-Production code still uses direct manager spawn/reap. The existing lifecycle
-reproducer remains red. Independent audit, clean-install lifecycle validation,
+This is implementation-stage evidence, **not full U12 or release acceptance**.
+Standalone now uses guardian-owned spawn/reap; the preserved focused lifecycle
+reproducer passes. Independent audit, clean-install lifecycle validation,
 and real-agent refresh are not claimed.
 
 ## Exact input and environment
@@ -58,18 +58,61 @@ PY
   guardian; this probe qualifies private bidirectional socket transport and
   inherited endpoint isolation, not full frame routing/backpressure correctness.
 
-## Remaining implementation and validation
+## Production implementation attempt
 
-The qualified alternative is a useful concrete implementation path, not a
-product repair yet. Add guardian-owned allocation identities and relay queues,
-bounded spawning/admission/descriptors, asynchronous exit reporting, shared
-progressive termination state with manager-death handoff, safe fail-closed
-handling of guardian loss, and protected standalone construction/shutdown. Keep
-logical outcomes/result ordering in manager; keep native ownership out of pure
-handler imports. Reuse the existing TERM20/KILL10 monotonic policy rather than
-reintroducing old immediate-KILL cleanup.
+`guardian.lua` is the standalone backend, using `guardian_channel.lua` private
+bounded newline JSON request/report transport. One in-flight batch plus at most
+1024 queued commands, one bounded frame per direction, and admission-limited
+allocations bound resources. Guardian alone calls the existing native supervisor
+for fork, signal and reap. Manager retains logical mirrors, execution generations,
+accepted kill/deadline outcomes, and public result-consumption policy. Dirty
+mirrors prevent stale reports overwriting locally accepted transitions. Allocation
+IDs are monotonic connection-local integers; no worker PID is sent to manager.
 
-Then run `tests/u12_lifecycle_red.py` and complete the design's real-process
+Guardian closes unrelated manager descriptors before worker creation. Worker
+resets inherited INT/TERM dispositions before setup/exec (an initial execution
+showed inherited guardian TERM-ignore caused a needless 20-second delay). Separate
+liveness EOF is checked independent of report backpressure. Guardian continually
+steps all children even while reports are blocked; original abort timestamps are
+carried in commands and preserved on EOF handoff. Channel loss fails closed with
+unconfirmed status, never a stale PID kill fallback. Partial standalone server
+construction is protected and cleanup errors do not replace the original error.
+Signal callbacks only record the first signal; bounded 5ms polling covers the
+before-poll race. Frame callbacks stop admission after shutdown is requested.
+Embedded handler is unchanged. Rockspec includes the two new modules.
+
+Using the environment above, ran:
+
+```sh
+python3 tests/u12_guardian_process.py
+python3 tests/u12_lifecycle_red.py
+python3 tests/u8_live.py
+lua5.4 tests/u6_progressive_policy.lua
+python3 docs/check_contracts.py
+git diff --check
+```
+
+The first four passed sequentially after implementation (including six real
+signal/crash cases across idle/infinite Lua, correct 130/143 statuses, guardian
+PPIDs, cancellation, execution deadlines, 256-wait saturation, FIFO startup
+cancellation, disconnect reaping and output retention). Contract validation passed
+14 standalone schemas, 7 tools, 23 examples and 125 regression cases. U8 initially
+failed its old direct-child oracle: it was observing the persistent guardian as
+if it were a per-session worker. Updated that oracle to observe guardian children;
+no behavior assertion was removed. The preserved U12 reproducer is unchanged.
+
+## Remaining validation / limitations
+
+Full accepted U12 remains incomplete despite the focused reproducer passing.
+The current aggregated report has a connection response-size cap, not a proven
+fit for many simultaneous maximal results; queue backpressure currently fails
+closed rather than streaming all legal multi-session maxima. Guardian allocation
+construction still needs fault-injection proof around every partial fork/FD
+acquisition. Minimal eventual reaping follows the existing native supervisor;
+shutdown unconfirmed diagnostics and exceptional wait failures need dedicated
+coverage. These are explicit residual engineering gaps, not release acceptance.
+
+Complete the design's real-process
 barrier/watchdog matrix: graceful signals and manager-only crashes during idle,
 blocked startup, infinite Lua and native blocking; partial failures and spawn
 window; inheritance including subprocesses; repeated signals/EOF/completion

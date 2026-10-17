@@ -221,7 +221,15 @@ work = pathlib.Path(os.environ.get('U8_WORK_DIR') or (pathlib.Path(os.environ['S
 work.mkdir(parents=True, exist_ok=True)
 def children(p):
     path = pathlib.Path('/proc') / str(p.pid) / 'task' / str(p.pid) / 'children'
-    return [int(n) for n in path.read_text().split()]
+    direct = [int(n) for n in path.read_text().split()]
+    # The standalone guardian persists across sessions; observe its workers,
+    # not the manager's dedicated guardian, for per-allocation reaping.
+    result = []
+    for guardian in direct:
+        owned = pathlib.Path('/proc') / str(guardian) / 'task' / str(guardian) / 'children'
+        if owned.exists():
+            result.extend(int(n) for n in owned.read_text().split())
+    return result
 def wait_children(p):
     deadline = time.monotonic() + 3
     while time.monotonic() < deadline:

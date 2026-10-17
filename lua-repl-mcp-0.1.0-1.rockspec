@@ -10,6 +10,8 @@ dependencies = { "lua >= 5.4, < 5.6", "luaposix == 36.3-1" }
 build = {
   type = "builtin",
   modules = {
+    ["lua_repl_mcp.guardian"] = "lua_repl_mcp/guardian.lua",
+    ["lua_repl_mcp.guardian_channel"] = "lua_repl_mcp/guardian_channel.lua",
     ["lua_repl_mcp.client_transport"] = "lua_repl_mcp/client_transport.lua",
     ["lua_repl_mcp.codec"] = "lua_repl_mcp/codec.lua",
     ["lua_repl_mcp.contracts"] = "lua_repl_mcp/contracts.lua",
