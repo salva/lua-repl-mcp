@@ -83,7 +83,7 @@ function M.new(config)
     local input=p.arguments
     if input==nil then input=codec.object({}) end
     if config.submit then
-      config.submit(id,p.name,input)
+      config.submit(id,p.name,input,assert(codec.json_data(text,{max_depth=(config.max_depth or 128)+4,max_bytes=config.input_bytes})))
       return nil
     end
     local args,e=contracts.validate(p.name,input,{max_depth=config.max_depth or 128})

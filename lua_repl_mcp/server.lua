@@ -12,7 +12,7 @@ function M.serve(io,options)
   tools=assert(codec.decode(require('lua_repl_mcp.manager_schemas'))),
   names={session_create=true,session_execute=true,session_wait=true,session_kill=true,session_list=true},
   instructions='Trusted Lua code runs in separate persistent workers. Use explicit return; no automatic output capture. Terminal results are single-consumer. Wait deadlines do not kill; hard execution deadlines and request cancellation destroy the session.',
-  submit=function(id,name,args) transport:submit(id,name,args) end,
+  submit=function(id,name,args,original) transport:submit(id,name,args,original) end,
   outstanding=function(id) return manager.requests[id]~=nil end,
   notification=function(r)
    if r.method=='notifications/cancelled' and type(r.params)=='table' then

@@ -3,6 +3,18 @@
 local null = require('lua_repl_mcp').null
 local M = {}
 local shapes = setmetatable({}, {__mode='k'})
+-- Private immutable encoded JSON data, created only after strict decoding.
+-- Not a string value and never a user-table/metatable convention.
+local encoded_data=setmetatable({}, {__mode='k'})
+function M.json_data(text,options)
+ local v,e=M.decode(text,options); if v==nil then return nil,e end
+ local token={}; encoded_data[token]={text=text,depth=(options and options.max_depth) or 128}; return token
+end
+function M.json_value(token)
+ local v=encoded_data[token]
+ if v then return M.decode(v.text,{max_bytes=#v.text,max_depth=v.depth}) end
+end
+function M.json_bytes(token) local v=encoded_data[token]; return v and #v.text end
 local safe = 9007199254740991
 local function fail(reason, path) error({reason=reason, path=path or ''}, 0) end
 local function utf8valid(s) return utf8.len(s) ~= nil end
@@ -70,6 +82,7 @@ function M.encode(value, options)
   end
   local visit
   visit = function(v,path,depth)
+    if encoded_data[v] then put(encoded_data[v].text,path); return end
     if rawequal(v,null) or v == nil then put('null',path); return end
     local t = type(v)
     if t == 'boolean' then put(v and 'true' or 'false',path)
@@ -150,8 +163,8 @@ function M.decode(text, options)
     end
     bad('unterminated string',path)
   end
-  local parse
-  parse=function(path,depth)
+  local parse,parse_value
+  parse_value=function(path,depth)
     ws(); local c=text:sub(i,i)
     if c=='"' then return str(path)
     elseif c=='[' or c=='{' then
@@ -198,6 +211,14 @@ function M.decode(text, options)
       end
       return token_number(text:sub(start,i-1),path)
     end
+  end
+  parse=function(path,depth)
+    ws(); local start=i
+    local v=parse_value(path,depth)
+    if options.json_path and path==options.json_path then
+     local token={}; encoded_data[token]={text=text:sub(start,i-1),depth=options.max_depth or 128}; return token
+    end
+    return v
   end
   local ok,result=pcall(function()
     if n>(options.max_bytes or 16*1024*1024) then fail('input size limit exceeded','') end

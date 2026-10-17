@@ -63,7 +63,7 @@ function C:dispatch(s,a,r)
  if a.execution_timeout_ms~=null then e.deadline=e.dispatch_at+a.execution_timeout_ms/1000 end
  s.execution=e; s.generation=e.generation; r.execution=e
  if a.wait_timeout_ms~=null then r.deadline=e.dispatch_at+a.wait_timeout_ms/1000 end
- local generation,err=self.backend:execute(s.worker,{code=a.code,args=a.args},e.deadline)
+ local generation,err=self.backend:execute(s.worker,{code=a.code,args=a.args},e.deadline,r.original)
  if not generation then
   s.execution=old; s.generation=s.generation-1; r.execution=nil
   r.response=envelope(s,failure('transport_error')); return
@@ -86,11 +86,11 @@ function C:admit(r,tool)
  elseif self.slots.ordinary>=self.admission.ordinary then return false end
  self.slots[slot]=self.slots[slot]+1; r.slot=slot; return true
 end
-function C:accept(tool,input,request_id)
+function C:accept(tool,input,request_id,original)
  assert(not self.committing,'response commit must not reenter manager')
  self:refresh()
- local a,err=contracts.validate(tool,input,{max_depth=self.limits.max_depth,max_bytes=self.limits.input_bytes})
- local r={tool=tool,accepted_at=self.clock()}
+ local a,err=contracts.validate(tool,input,{max_depth=self.limits.max_depth,max_bytes=not original and self.limits.input_bytes or nil})
+ local r={tool=tool,accepted_at=self.clock(),original=original}
  if not self:admit(r,tool) then
   r.admission_rejected=true; r.response=failure('limit_exceeded'); return r
  end

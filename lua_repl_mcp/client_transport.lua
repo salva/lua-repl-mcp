@@ -45,7 +45,7 @@ function C:enqueue(text)
  self.bytes=self.bytes+#text; self.high_water=math.max(self.high_water,self.bytes)
  return true
 end
-function C:submit(id,tool,args)
+function C:submit(id,tool,args,original)
  if self.closed then return end
  if self.manager.requests[id] then
   local text=require('lua_repl_mcp.codec').encode(protocol.error(nil,-32600,'Duplicate outstanding request ID'))
@@ -58,7 +58,7 @@ function C:submit(id,tool,args)
   if not p.request.cancelled and not p.request.done then live[#live+1]=p end
  end
  self.pending=live
- local r=self.manager:accept(tool,args,id)
+ local r=self.manager:accept(tool,args,id,original)
  if r.admission_rejected then
   -- No slot means no pending-handle ownership. Charge the rejection to encoded
   -- output immediately; a stopped reader eventually trips the output bound.

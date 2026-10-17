@@ -98,13 +98,20 @@ function S:allocate(options,started)
  end
  return w
 end
-function S:execute(w,input,deadline)
+function S:execute(w,input,deadline,original)
  if w.state~='idle' then return nil,'worker not idle' end
+ if original then
+  local resolved,problem=p.execution_input({request=original},self.limits)
+  if not resolved then return nil,problem end
+  input=resolved
+ end
  -- Validate the direct evaluator arguments before dispatch.
- local args,e=require('lua_repl_mcp.contracts').validate('repl_execute',input,{max_depth=self.limits.max_depth,max_bytes=self.limits.input_bytes})
+ local args,e=require('lua_repl_mcp.contracts').validate('repl_execute',input,{max_depth=self.limits.max_depth,max_bytes=not original and self.limits.input_bytes or nil})
  if not args then return nil,e end
  local generation=w.execution_generation+1
- local text,err=p.encode(p.record('execute',w.allocation_generation,{execution_generation=generation,input=input}),self.limits)
+ local record={execution_generation=generation}
+ if original then record.request=original else record.input=args end
+ local text,err=p.encode(p.record('execute',w.allocation_generation,record),self.limits)
  if not text then return nil,err end
  w.execution_generation=generation; w.result=nil; w.result_at=nil; w.execution_deadline=deadline; w.state='running'; w.pending=text; w.offset=1
  self.pending_high_water=math.max(self.pending_high_water,#text)

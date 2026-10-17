@@ -52,9 +52,9 @@ function M.run(input,output,g,options,limit_options)
     if not v or v.allocation_generation~=g then return end
     if v.type=='close' then return end
     if v.type~='execute' or v.execution_generation~=last+1 then return end
-    if not require('lua_repl_mcp.contracts').validate('repl_execute',v.input,{max_depth=limits.max_depth}) then return end
+    local execution=p.execution_input(v,limits); if not execution then return end
     last=v.execution_generation
-    local result=evaluator.execute(v.input,{max_bytes=limits.values_bytes,max_depth=limits.max_depth,diagnostic_bytes=limits.diagnostic_bytes})
+    local result=evaluator.execute(execution,{max_bytes=limits.values_bytes,max_depth=limits.max_depth,diagnostic_bytes=limits.diagnostic_bytes})
     if not send('result',{execution_generation=last,result=result}) then return end
    end
   end

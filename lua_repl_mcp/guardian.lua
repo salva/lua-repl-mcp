@@ -71,7 +71,7 @@ local function guardian(fd,control,live,options)
        local w=assert(allocations[id],'stale allocation')
        if cmd.op=='execute' then
         assert(cmd.generation==w.execution_generation+1,'stale execution generation')
-        if w.state~='terminating' and w.state~='dead' then assert(backend:execute(w,cmd.input,cmd.deadline)) end
+        if w.state~='terminating' and w.state~='dead' then assert(backend:execute(w,cmd.input,cmd.deadline,cmd.request)) end
        elseif cmd.op=='abort' then
         -- Commands carry the manager's original monotonic origin. Never reset
         -- an already running disposal when the liveness channel is lost.
@@ -209,11 +209,11 @@ function B:allocate(options)
  self:queue{op='allocate',id=self.generation,options=validated,started=started}
  return w
 end
-function B:execute(w,input,deadline)
- local ok,err=native.methods.execute(self,w,input,deadline)
+function B:execute(w,input,deadline,original)
+ local ok,err=native.methods.execute(self,w,input,deadline,original)
  if not ok then return nil,err end
  w.pending=''
- self:queue{op='execute',id=w.allocation_generation,input=input,deadline=deadline,generation=w.execution_generation}
+ self:queue{op='execute',id=w.allocation_generation,input=not original and input or nil,request=original,deadline=deadline,generation=w.execution_generation}
  return ok
 end
 function B:abort(w,reason)
