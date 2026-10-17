@@ -48,10 +48,14 @@ payloads rather than expecting a later wait to repeat them.
 
 ## Usage and reference
 
-- [Task-oriented documentation](site-docs/index.md) (local website sources)
+- [Task-oriented documentation](https://salva.github.io/lua-repl-mcp/)
 
 - [Install, execute, poll, recover and embed](README-IF-YOR-ARE-AN-AI.md)
 - [MCP initialization and wire examples](docs/MCP_EXAMPLES.md)
 - [Tool input/output schemas](docs/schemas/api.json)
+
+**Status:** development candidate, not a stable release. Known correctness and
+lifecycle issues are being repaired; independently validate important results
+and do not rely on it for production workloads yet.
 
 Built with [Saivage](https://github.com/salva/saivage-v3).

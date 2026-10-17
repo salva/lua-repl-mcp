@@ -43,8 +43,11 @@ Continue with [stateful tasks and recovery](manager.md) and
 
 ## Package status
 
-The current local-source package is 0.1.0-1. No public registry availability or
-live documentation deployment is assumed. The standalone target is Lua 5.4 on
+The current source package is a **development candidate**, version 0.1.0-1,
+not a stable release. Known correctness and lifecycle issues are being repaired;
+independently validate important results and do not rely on it for production
+workloads yet. No public package-registry availability is claimed.
+The standalone target is Lua 5.4 on
 POSIX; the independent handler is pure Lua. See [operations](operations.md) for
 resource defaults and lifecycle limitations.
 

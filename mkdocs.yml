@@ -1,6 +1,6 @@
 site_name: Lua REPL MCP
 site_description: Persistent Lua execution for MCP clients and existing Lua hosts
-site_url: https://example.invalid/lua-repl-mcp/
+site_url: https://salva.github.io/lua-repl-mcp/
 docs_dir: site-docs
 site_dir: site
 theme:
