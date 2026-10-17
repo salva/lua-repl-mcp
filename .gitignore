@@ -1,0 +1,15 @@
+# Local automation state and credentials.
+/.saivage/
+/.saivage-work/
+.env
+.env.*
+
+# Local dependency trees, build artifacts, and test scratch.
+/.cache/
+/.venv/
+/.luarocks/
+/build/
+/dist/
+/test-results/
+__pycache__/
+*.py[cod]
