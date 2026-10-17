@@ -1,0 +1,3 @@
+#!/usr/bin/env lua5.4
+-- Module paths are supplied by the installation or development environment.
+require('lua_repl_mcp.server').main()

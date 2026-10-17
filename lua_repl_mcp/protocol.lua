@@ -69,6 +69,10 @@ function M.new(config)
     -- validation unchanged and must never trigger a lifecycle action.
     local input=p.arguments
     if input==nil then input=codec.object({}) end
+    if config.submit then
+      config.submit(id,p.name,input)
+      return nil
+    end
     local args,e=contracts.validate(p.name,input)
     if not args then
       return ok(M.tool_result(require('lua_repl_mcp.errors').failure(e)))
