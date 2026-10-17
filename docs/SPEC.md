@@ -65,7 +65,7 @@ single-threaded I/O event loop to multiplex independent worker processes.
 - Only one evaluation may be active in a given interpreter at a time; concurrent
   or reentrant evaluation is not supported.
 - A handler's execution response is sent after execution finishes, if its
-  connection is still available. The manager may return an earlier task handle
+  connection is still available. The manager may return an earlier pending status
   to its client as specified in section 7.2.
 - The handler does not service additional MCP requests, pings, progress updates,
   or cancellation notifications while code is executing.
@@ -242,18 +242,21 @@ tool. This specification calls the parameter `wait_timeout_ms`:
 | Value | Behaviour |
 | --- | --- |
 | `null` | Wait for execution to finish and return its terminal result. |
-| `0` | Accept execution and return a task ID without waiting for completion. |
-| Positive number | Wait up to that many milliseconds; return a terminal result if available, otherwise return a task ID while execution continues. |
+| `0` | Accept execution and return its session ID and pending status without waiting for completion. |
+| Positive number | Wait up to that many milliseconds; return a terminal result if available, otherwise return the session ID and pending status while execution continues. |
 
 The field's omitted-value default and whether fractional milliseconds are
 accepted remain schema decisions. Negative, non-finite, and otherwise invalid
 values must be rejected before execution starts.
 
-Every accepted execution has a stable task ID, including those initially waited
-for synchronously. A response identifies the task and whether it is pending or
+The public API uses `session_id` for all execution and lifecycle operations;
+there is no public `task_id`. Session creation returns the session ID, session
+listing includes it, and all subsequent session-scoped tools accept it.
+JSON-RPC request IDs correlate protocol requests and responses, not executions.
+A response identifies the session and whether its execution is pending or
 terminal. If the wait expires, the manager must return control without cancelling,
 restarting, or resubmitting the execution. The client can subsequently poll that
-same task for status and retrieve its terminal result, including output or errors.
+same session for status and retrieve its terminal result, including output or errors.
 The final result must remain retrievable even if completion races with returning
 the pending response. Status and result retrieval must not execute the code again.
 
@@ -282,18 +285,25 @@ limits, and expiry behaviour must be defined before implementation.
 
 ### 7.3 Reattaching to a task: wait
 
-The manager must expose a `task_wait` tool taking a task ID and
+The manager must expose a `session_wait` tool taking `session_id` and
 `wait_timeout_ms`, with the same null, zero, and positive-value semantics as the
 execution tool. Null waits for a terminal result; zero polls immediately; a
 positive value waits for at most that duration before returning a pending status
 if execution is still active. Each wait deadline starts when that wait is accepted.
 
-Waiting reattaches to the existing task, never dispatches another execution,
+Waiting reattaches to the session's current execution, never dispatches another execution,
 and never resets or extends its hard execution deadline. Expiry of a wait does
 not kill the task. Waiting on an already terminal task returns its retained
 result immediately. Result retrieval is repeatable during the retention period,
-not a destructive consume operation. Unknown or expired task IDs produce an
-explicit error.
+not a destructive consume operation. Unknown sessions, expired results, and
+sessions without an execution produce explicit, distinguishable errors.
+
+Each session exposes at most one current execution and its result. Starting a
+new execution replaces the previous retained result; reset clears it. Historical
+executions cannot be addressed through this API. A pending wait is internally
+bound to the execution current when the wait was accepted, so a later execution
+or reset cannot substitute a different result for that waiter. Internal generation
+identifiers may be used for this purpose but are not client-facing task IDs.
 
 The manager remains responsive while a wait is pending, including to a kill
 request for the same task. A task ending through success, failure, hard timeout,
@@ -303,18 +313,24 @@ for those functions are not required initially.
 
 ### 7.4 Explicitly terminating a task: kill
 
-The manager must expose a `task_kill` tool taking a task ID. If that task is
-running, the manager forcibly terminates and reaps its worker, marks the task
+The manager must expose a `session_kill` tool taking `session_id`. If that session
+has a running execution, the manager forcibly terminates and reaps its worker, marks the execution
 as killed, and reports that its session has terminated and lost its in-memory
 state. This is an explicit destructive operation, not cooperative Lua
 cancellation. The cleanup and side-effect limitations of section 7.1 apply.
 
-Kill targets that task's active worker, not merely whichever worker currently
-uses its logical session ID. A late kill for a completed task must not kill a
-replacement worker or a subsequent execution in that session. If completion
-has already been recorded, return the existing terminal status without changing
-it. Repeated kills of a killed task return its terminal status without further
-side effects. Unknown or expired task IDs produce an explicit error.
+Kill targets the execution active in the session when the kill request is
+accepted. If completion has already been recorded and no newer execution is
+active, return the existing terminal status without changing it or killing the
+idle worker. Repeated kills of a killed execution return its terminal status
+without further side effects. Unknown sessions and sessions without an execution
+produce explicit errors.
+
+Because selection is by session, a delayed kill received after a new execution
+starts targets that new execution. Clients must coordinate execution and kill
+requests accordingly; the API cannot express "kill only an older run". Once a
+kill is accepted, cleanup must be internally bound to the selected worker so it
+cannot subsequently kill a replacement worker after reset or another execution.
 
 A successful kill response must not claim termination before the manager has
 confirmed worker exit. Requests waiting for the task must resolve consistently
@@ -355,15 +371,15 @@ to implement background execution or to kill its host.
     Another managed session remains usable. An execution completing before its
     deadline does not cause its worker to be killed by a stale timer.
 14. One execution tool supports null, zero, and positive wait timeouts. Expiring
-    a wait returns a task ID without killing the worker or executing code twice;
-    polling that task later yields the result and preserved session state.
-15. Async execution returns a task ID without waiting for the worker's result.
+    a wait returns the session ID without killing the worker or executing code twice;
+    polling that session later yields the result and preserved session state.
+15. Async execution returns the session ID without waiting for the worker's result.
     Completed results remain retrievable across the wait-to-poll transition.
-16. A client reattaches with `task_wait`, can poll or wait with a fresh wait
+16. A client reattaches with `session_wait`, can poll or wait with a fresh wait
     timeout, and retrieves the same result repeatedly without re-execution.
-17. `task_kill` terminates an active task's worker and resolves pending waits as
-    killed. Repeating the kill, or killing an old completed task after another
-    execution starts, does not terminate unrelated or replacement execution.
+17. `session_kill(session_id)` terminates the session's active worker and resolves
+    pending waits as killed. Repeating the kill without reset has no further
+    side effects. Accepted kill cleanup never targets a replacement worker.
 
 ## 9. Lua version support
 
@@ -459,8 +475,9 @@ these policies before implementation rather than letting them emerge accidentall
 ### 11.1 Public tool surface and code entry
 
 Propose manager session tools `session_create`, `session_list`, `session_execute`,
-`session_reset`, and `session_close`. Required task tools are `task_wait` and
-`task_kill`, as specified in sections 7.3 and 7.4.
+`session_reset`, and `session_close`. Required execution-control tools are
+`session_wait` and `session_kill`, as specified in sections 7.3 and 7.4. All
+session-scoped tools use `session_id`, not a separate task identifier.
 The single execution tool implements all waiting modes in section 7.2 rather
 than separate synchronous and asynchronous tools. A directly embedded handler exposes
 execution and only those lifecycle operations the host supports; it does not
