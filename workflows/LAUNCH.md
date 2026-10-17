@@ -13,6 +13,11 @@ installation, and user/embedding documentation with evidence of acceptance.
 After the package is ready, complete plan U10's real Saivage MCP-client trial.
 Record any Saivage-side failures in reproducible local bug reports and mark
 affected scenarios honestly; do not modify the shared runtime to fix them.
+Plan U11 and `docs/WEBSITE_DESIGN.md` additionally specify a GitHub Pages
+documentation site. Scope is content/assets and minimal local build/validation
+only. Do not create deployment workflows, seek publication permissions, push,
+publish, or alter repository settings. Publication is outside this task and must
+not block its completion. Keep implementation/integration acceptance intact.
 
 Use the bundled general software-development workflow. Make coherent related
 implementation/test batches, reuse applicable evidence, and commit completed

@@ -42,4 +42,9 @@ Read-only inspection of Saivage server-runtime.ts confirms timeout path calls
 closeAdmission/directContainment when no response completes. No evidence of a
 Lua server violation here. Impact: any long synchronous tool call can terminate
 other persistent workers; use bounded/async polling below the client deadline.
-Do not silently replay lost-state operations. Public upstream filing not done.
+Do not silently replay lost-state operations.
+
+Upstream issue filed with operator authorization:
+https://github.com/salva/saivage-v3/issues/8 — request a 15-minute invocation
+default, configurable overrides, and explicit documentation of stdio containment.
+Filing does not mean the upstream timeout has changed or the limitation is fixed.

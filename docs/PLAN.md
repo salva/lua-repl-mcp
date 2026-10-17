@@ -44,6 +44,7 @@ creating a second public MCP connection.
 | U8 | U2, U7 | Complete manager MCP integration and live conformance |
 | U9 | U8 | Packaging, real embedding integration and release acceptance |
 | U10 | U9 | Real Saivage MCP-client integration and defect reporting |
+| U11 | U9; U10 for integration-status content | GitHub Pages-compatible documentation content and local validation |
 
 Test seams are internal: injectable monotonic clock, poll/process operations and
 response-commit boundary, plus controllable process fixtures. They must not add
@@ -337,6 +338,28 @@ outcome for affected U10 scenarios; complete other independent scenarios and
 report the remaining integration limitation. Filing public upstream issues or
 modifying Saivage itself requires separate operator direction. A concrete report
 is required even when no upstream fix can be made during this project.
+
+## U11 — GitHub Pages documentation website
+
+Implement `docs/WEBSITE_DESIGN.md` after the package/API are stable. Create
+task-oriented guides, an accessible responsive MkDocs site, deterministic
+allowlisted reference staging and pinned local build dependencies. Do not create
+publishing workflows. Keep normative requirements/schemas authoritative rather
+than maintaining divergent copies. Link the public Saivage limitation report
+where useful without exposing raw agent transcripts or deployment credentials.
+
+Build and test locally. Verify project-prefix links/assets, relevant
+examples against runtime/contracts, desktop/mobile navigation, and artifact
+exclusions. Record reproducible evidence in `docs/validation/WEBSITE.md`.
+This documentation stage does not change manager/handler semantics or reopen
+completed implementation stages. It may progress independently of an externally
+blocked Saivage scenario using honest status text.
+
+Scope is content creation and local validation only. Saivage lacks publication
+permissions: do not seek them, create deployment workflows, push, publish, alter
+repository Pages settings, or trigger deployment. Completion means authored
+content/assets and the verified local site artifact. Publication is outside this
+task, not a blocked acceptance gate.
 
 ## Test orchestration and evidence rules
 
