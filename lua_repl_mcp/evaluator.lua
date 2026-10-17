@@ -10,7 +10,7 @@ local traceback = type(debug)=='table' and type(debug.traceback)=='function' and
 local M={}
 function M.execute(input,options)
   options=limits.evaluator(options)
-  local args,e=contracts.validate('repl_execute',input)
+  local args,e=contracts.validate('repl_execute',input,{max_depth=options.max_depth})
   if not args then return errors.failure(e) end
   local function err(code,msg,stage,state,extra)
     return errors.failure(errors.new(code,msg,stage,state,extra,options.diagnostic_bytes))
@@ -65,7 +65,8 @@ function M.execute(input,options)
   return {status='completed',values=normalized}
 end
 function M.from_json(text,options)
-  local input,e=contracts.from_json('repl_execute',text)
+  options=limits.evaluator(options)
+  local input,e=contracts.from_json('repl_execute',text,{max_depth=options.max_depth})
   if not input then return errors.failure(e) end
   return M.execute(input,options)
 end

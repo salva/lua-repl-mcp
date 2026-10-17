@@ -2,16 +2,20 @@ local M = {}
 local notice = 'Original diagnostic data was not fully preserved.'
 M.notice = notice
 -- Preserve valid Unicode sequences; render each invalid byte as literal \xHH.
-local function clean(s)
-  local out, altered, i = {}, false, 1
+local function clean(s,limit)
+  local out, altered, i, bytes = {}, false, 1, 0
   while i<=#s do
     local b=s:byte(i)
     local len=b<128 and 1 or (b>=194 and b<=223 and 2 or (b>=224 and b<=239 and 3 or (b>=240 and b<=244 and 4 or 0)))
     local part=len>0 and s:sub(i,i+len-1) or ''
-    if len>0 and #part==len and utf8.len(part)==1 then out[#out+1]=part; i=i+len
-    else out[#out+1]=string.format('\\x%02X',b); altered=true; i=i+1 end
+    if len>0 and #part==len and utf8.len(part)==1 then i=i+len
+    else part=string.format('\\x%02X',b); altered=true; i=i+1 end
+    bytes=bytes+#part
+    -- Keep only a prefix, but scan the rest for late invalid-byte flags and
+    -- exact truncation accounting. No source-sized expanded buffer is built.
+    if bytes<=limit then out[#out+1]=part end
   end
-  return table.concat(out),altered
+  return table.concat(out),altered,bytes
 end
 local function safe(value)
   local t=type(value)
@@ -31,12 +35,12 @@ function M.new(code, message, stage, state, extra, limit)
   assert(math.type(limit)=='integer' and limit>=#notice, 'diagnostic limit too small')
   local result={code=code,stage=stage,execution_state=state}
   if extra then for k,v in next,extra do result[k]=v end end
-  local m,a=clean(safe(message))
-  local trace,b=clean(result.traceback or '')
-  local trunc=#m+#trace>limit
+  local m,a,mb=clean(safe(message),limit)
+  local trace,b,tb=clean(result.traceback or '',limit)
+  local trunc=mb+tb>limit
   if a or b or trunc then
     local budget=limit-#notice
-    local original_bytes=#m+#trace
+    local original_bytes=mb+tb
     m=prefix(m,budget)
     budget=budget-#m
     trace=prefix(trace,budget)

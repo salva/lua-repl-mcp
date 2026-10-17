@@ -35,19 +35,31 @@ local function timeout(v,min,path)
   if rawequal(v,null) then return end
   if type(v)~='number' or v%1~=0 or v<min or v>2147483647 then invalid(path,'invalid timeout') end
 end
-function M.validate(tool,input)
+function M.validate(tool,input,options)
+  options=options or {}
+  local depth=options.max_depth or 128
   local ok,result=pcall(function()
     local fields=tools[tool]; if not fields then invalid('','unknown tool') end
     object(input,'',fields)
     -- Copy only after structural validation, rejecting unsupported data even in
     -- nested args. No untrusted conversion or indexing metamethod is invoked.
-    local copy,e=codec.clone(input)
+    -- Tool object and positional tuple are two fixed containers, not user
+    -- nesting. Validate each user value below against its own D allowance.
+    local copy,e=codec.clone(input,{max_depth=depth+2,max_bytes=options.max_bytes})
     if not copy then invalid(e.path,e.reason) end
     if tool=='session_create' then create(copy,'') end
     if tool=='repl_execute' or tool=='session_execute' then
       stringfield(copy,'code',true,false,'')
       if copy.args==nil then copy.args=codec.array({}) end
       if type(copy.args)~='table' or rawequal(copy.args,null) or codec.kind(copy.args)~='array' then invalid('/args','expected array') end
+    end
+    if copy.args then
+      local function nested(v,n,path)
+        if type(v)~='table' or rawequal(v,null) then return end
+        if n>depth then invalid(path,'nesting limit exceeded') end
+        for k,child in next,v do nested(child,n+1,codec.pointer(path,k)) end
+      end
+      for i,v in ipairs(copy.args) do nested(v,1,'/args/'..(i-1)) end
     end
     if tool=='session_execute' then
       if copy.session_id==nil then copy.session_id=null end
@@ -68,9 +80,10 @@ function M.validate(tool,input)
   if ok then return result end
   return nil,errors.new('invalid_arguments',result.reason,'validation','not_started',{path=result.path})
 end
-function M.from_json(tool,text)
-  local data,e=codec.decode(text)
+function M.from_json(tool,text,options)
+  options=options or {}
+  local data,e=codec.decode(text,{max_depth=(options.max_depth or 128)+2,max_bytes=options.max_bytes})
   if data==nil then return nil,errors.new('invalid_arguments',e.reason,'validation','not_started',{path=e.path}) end
-  return M.validate(tool,data)
+  return M.validate(tool,data,options)
 end
 return M

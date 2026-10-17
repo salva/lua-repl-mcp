@@ -15,4 +15,5 @@ def frame(stream, timeout=5, maximum=2*1024*1024):
         assert chunk, 'EOF before complete frame'
         data.extend(chunk)
         assert len(data) <= maximum, 'frame size limit'
+    assert time.monotonic() < deadline, 'complete-frame deadline'
     return data

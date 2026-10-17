@@ -206,9 +206,62 @@ function M.decode(text, options)
   if not ok then return nil,result end
   return result
 end
--- Data copy through the same strict mapping. Input wire shape is preserved;
--- user-return mapping is selected explicitly by the evaluator.
-function M.clone(v,options)
-  local s,e=M.encode(v,options); if not s then return nil,e end; return M.decode(s,options)
+-- Fresh raw JSON data copy. Never consult/copy user metatables, and never
+-- expand admitted strings/numbers through an encode/decode round trip.
+-- The byte counter is the canonical JSON size for library-originated data.
+function M.clone(value,options)
+  options=options or {}
+  local active,bytes={},0
+  local maxdepth,maxbytes=options.max_depth or 128,options.max_bytes or 16*1024*1024
+  local function add(n,path)
+    if n>maxbytes-bytes then fail('encoded size limit exceeded',path) end
+    bytes=bytes+n
+  end
+  local function stringbytes(s,path)
+    if not utf8valid(s) then fail('invalid UTF-8',path) end
+    local n=2+#s
+    for i=1,#s do
+      local b=s:byte(i)
+      if b<32 then n=n+5 elseif b==34 or b==92 then n=n+1 end
+    end
+    add(n,path)
+  end
+  local visit
+  visit=function(v,path,depth)
+    if rawequal(v,null) or v==nil then add(4,path); return null end
+    local t=type(v)
+    if t=='string' then stringbytes(v,path); return v
+    elseif t=='boolean' then add(v and 4 or 5,path); return v
+    elseif t=='number' then
+      number(v,path)
+      local text=math.type(v)=='integer' and tostring(v) or string.format('%.17g',v)
+      add(#text,path); return v
+    elseif t~='table' then fail('unsupported '..t,path) end
+    if depth>maxdepth then fail('nesting limit exceeded',path) end
+    if active[v] then fail('cycle',path) end
+    active[v]=true
+    local count,highest,strings,nums=0,0,false,false
+    for k in next,v do
+      count=count+1
+      if type(k)=='string' then strings=true
+      elseif type(k)=='number' and k%1==0 and k>=1 then nums=true; highest=math.max(highest,k)
+      else fail('unsupported table key',path) end
+    end
+    if strings and nums then fail('mixed table keys',path) end
+    if nums and highest~=count then fail('array hole',path) end
+    local array=nums or (count==0 and shapes[v]=='array' and not options.user_tables)
+    local copy=array and M.array({}) or M.object({})
+    add(2+math.max(0,count-1),path)
+    for k,item in next,v do
+      local child=ptr(path,array and k-1 or k)
+      if not array then stringbytes(k,child); add(1,child) end
+      copy[k]=visit(item,child,depth+1)
+    end
+    active[v]=nil
+    return copy
+  end
+  local ok,result=pcall(visit,value,options.path or '',1)
+  if not ok then return nil,result end
+  return result
 end
 return M
