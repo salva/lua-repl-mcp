@@ -230,17 +230,17 @@ function B:allocate(options)
  self:queue{op='allocate',id=self.generation,options=validated,started=started}
  return w
 end
-function B:execute(w,input,deadline,original)
+function B:execute(w,input,deadline,original,checkpoint)
  -- Mirror admission owns detached logical data and generation, not the child
  -- worker's encoded pipe buffer. The guardian validates/encodes at dispatch.
  if w.state~='idle' then return nil,'worker not idle' end
  if original then
-  local resolved,problem=require('lua_repl_mcp.worker_protocol').execution_input({request=original},self.limits)
+  local resolved,problem=require('lua_repl_mcp.worker_protocol').execution_input({request=original},self.limits,checkpoint)
   if not resolved then return nil,problem end
   input=resolved
  end
  local args,problem=require('lua_repl_mcp.contracts').validate('repl_execute',input,
-  {max_depth=self.limits.max_depth,max_bytes=original and math.huge or self.limits.input_bytes})
+  {max_depth=self.limits.max_depth,max_bytes=original and math.huge or self.limits.input_bytes,checkpoint=checkpoint})
  if not args then return nil,problem end
  return self:execute_owned(w,args,deadline,original)
 end

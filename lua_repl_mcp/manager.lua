@@ -69,7 +69,7 @@ function C:dispatch(s,a,r)
    -- its execution data, rather than traversing and copying it a second time.
    return self.backend:execute_owned(s.worker,{code=a.code,args=a.args},e.deadline)
   end
-  return self.backend:execute(s.worker,{code=a.code,args=a.args},e.deadline,r.original)
+  return self.backend:execute(s.worker,{code=a.code,args=a.args},e.deadline,r.original,r.checkpoint)
  end)
  if not ok or not generation then
   s.execution=old; s.generation=s.generation-1; r.execution=nil
@@ -93,11 +93,14 @@ function C:admit(r,tool)
  elseif self.slots.ordinary>=self.admission.ordinary then return false end
  self.slots[slot]=self.slots[slot]+1; r.slot=slot; return true
 end
-function C:accept(tool,input,request_id,original)
+function C:accept(tool,input,request_id,original,checkpoint)
  assert(not self.committing,'response commit must not reenter manager')
  self:refresh()
- local a,err=contracts.validate(tool,input,{max_depth=self.limits.max_depth,max_bytes=not original and self.limits.input_bytes or math.huge})
- local r={tool=tool,accepted_at=self.clock(),original=original}
+ local a,err=contracts.validate(tool,input,{max_depth=self.limits.max_depth,max_bytes=not original and self.limits.input_bytes or math.huge,checkpoint=checkpoint})
+ -- Validation may relinquish control in a native adapter. Refresh again before
+ -- admission/dispatch; no ID, slot or execution was reserved while suspended.
+ if checkpoint then self:refresh() end
+ local r={tool=tool,accepted_at=self.clock(),original=original,checkpoint=checkpoint}
  if not self:admit(r,tool) then
   r.admission_rejected=true; r.response=failure('limit_exceeded'); return r
  end
@@ -140,6 +143,8 @@ function C:accept(tool,input,request_id,original)
   self:terminate(s,'session_killed'); r.killing=true
  end
  if r.starting then self.starting[#self.starting+1]=r end
+ -- A checkpoint belongs to this acceptance coroutine, never a later preview.
+ r.checkpoint=nil
  return r
 end
 -- All destructive paths freeze only a still-active generation. The backend owns
