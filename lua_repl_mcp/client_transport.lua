@@ -58,17 +58,20 @@ function C:submit(id,tool,args,original)
   if not p.request.cancelled and not p.request.done then live[#live+1]=p end
  end
  self.pending=live
- if tool=='session_execute' and self.manager.admission then
+ if self.manager.admission then
   -- Pending validation consumes ordinary capacity but has no manager handle or
   -- session side effects. Control slots remain independent. IDs are reserved
   -- here until atomic handoff to the manager or cancellation/disconnection.
-  if self.preparation_count+self.manager.slots.ordinary>=self.manager.admission.ordinary then
+  if tool~='session_list' and tool~='session_kill' and tool~='ping' and
+   self.preparation_count+self.manager.slots.ordinary>=self.manager.admission.ordinary then
    local errors=require('lua_repl_mcp.errors')
    local text=protocol.encode_result(id,{error=errors.new('limit_exceeded','limit_exceeded','execution','not_started')},
     {max_bytes=self.response_bytes,max_depth=self.encode_depth},tool)
    if not text then return self:close('response bound') end
    return self:enqueue(text)
   end
+ end
+ if tool=='session_execute' and self.manager.admission then
   local p={id=id,turn=0}
   p.co=coroutine.create(function()
    return self.manager:accept(tool,args,id,original,coroutine.yield,true)
