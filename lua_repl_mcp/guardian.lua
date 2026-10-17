@@ -231,11 +231,26 @@ function B:allocate(options)
  return w
 end
 function B:execute(w,input,deadline,original)
- local ok,err=native.methods.execute(self,w,input,deadline,original)
- if not ok then return nil,err end
- w.pending=''
- self:queue{op='execute',id=w.allocation_generation,input=not original and input or nil,request=original,deadline=deadline,generation=w.execution_generation}
- return ok
+ -- Mirror admission owns detached logical data and generation, not the child
+ -- worker's encoded pipe buffer. The guardian validates/encodes at dispatch.
+ if w.state~='idle' then return nil,'worker not idle' end
+ if original then
+  local resolved,problem=require('lua_repl_mcp.worker_protocol').execution_input({request=original},self.limits)
+  if not resolved then return nil,problem end
+  input=resolved
+ end
+ local args,problem=require('lua_repl_mcp.contracts').validate('repl_execute',input,
+  {max_depth=self.limits.max_depth,max_bytes=original and math.huge or self.limits.input_bytes})
+ if not args then return nil,problem end
+ if deadline and self.clock()>=deadline then self:abort(w,'execution_timeout'); return nil,'execution deadline expired' end
+ local generation=w.execution_generation+1
+ -- Queue admission precedes the state transition: failure cannot claim work
+ -- was dispatched, and subsequent caller mutations cannot change queued data.
+ self:queue{op='execute',id=w.allocation_generation,input=not original and args or nil,
+  request=original,deadline=deadline,generation=generation}
+ w.execution_generation=generation; w.result=nil; w.result_at=nil
+ w.execution_deadline=deadline; w.state='running'; w.pending=''
+ return generation
 end
 function B:abort(w,reason)
  if w.state=='terminating' or w.state=='dead' then return end
