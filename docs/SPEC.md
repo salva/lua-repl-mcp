@@ -275,7 +275,7 @@ This server-enforced execution timeout is distinct from a client's own MCP
 request deadline. A client-side timeout alone does not request or guarantee
 worker termination. The optional `execution_timeout_ms` is a positive integer
 in milliseconds. When omitted, there is no manager-imposed hard execution
-deadline. Permitted upper bounds remain a schema decision.
+deadline. Bounds are defined in section 14.
 
 Embedded handlers do not kill their host application to implement this feature.
 They must reject requests requiring this enforced timeout unless the host
@@ -299,8 +299,8 @@ tool. This specification calls the parameter `wait_timeout_ms`:
 
 Omitted `wait_timeout_ms` defaults to 600000 milliseconds (10 minutes) for both
 execution and wait tools. This is a wait deadline, not a hard execution deadline.
-Explicit null and zero retain their documented meanings. Whether fractional
-milliseconds are accepted remains a schema decision. Negative, non-finite, and otherwise invalid
+Explicit null and zero retain their documented meanings. Milliseconds must be
+integers. Negative, non-finite, and otherwise invalid
 values must be rejected before execution starts.
 
 The public API uses `session_id` for all execution and lifecycle operations;
@@ -319,8 +319,7 @@ started. Validate execution parameters before allocating a worker.
 
 Null means allocation only for execution, not an implicit current-session alias
 or a wildcard. Wait and kill require a concrete session ID and must not
-allocate workers as a side effect. The behaviour of an omitted `session_id`
-remains a schema decision; explicit null must be supported.
+allocate workers as a side effect. Omitted `session_id` defaults to null.
 
 JSON-RPC request IDs correlate protocol requests and responses, not executions.
 A response identifies the session and whether its execution is pending or
@@ -351,8 +350,8 @@ requests while executing.
 
 Task status must distinguish pending execution from success, failure, and
 interruption. Polling responses must make clear whether the session remains
-usable after termination. Exact status names, tool schemas, result-retention
-limits, and expiry behaviour must be defined before implementation.
+usable after termination. Section 14 defines statuses and schemas. Closed
+sessions are removed immediately; live-session results follow section 7.3.
 
 ### 7.3 Reattaching to a task: wait
 
@@ -377,9 +376,12 @@ single-consumer result mechanism. This applies both to indefinite synchronous
 execution and to execution completing within a finite wait deadline. Once the
 terminal result is returned, it is gone; a later wait cannot retrieve it again.
 Unknown sessions, consumed results, and sessions without an execution produce
-explicit, distinguishable errors. Keep lightweight status after consumption.
+explicit, distinguishable errors. Keep lightweight status after consumption
+only while the session remains alive.
 Rejected executions must not discard the preceding result. These rules also
-apply to failed results and results from terminated sessions.
+apply to failed results while the session remains alive. On termination,
+resolve existing waiters, then discard all session metadata and retained data.
+Later calls receive `unknown_session`, not a historical error payload.
 
 Consume when a terminal execution or wait response is committed for transmission;
 delivery cannot be guaranteed after disconnect. If multiple waits are outstanding,
@@ -415,9 +417,8 @@ cancellation. The cleanup and side-effect limitations of section 7.1 apply.
 Kill targets the session worker present when the kill request is accepted.
 If execution has already completed, its result is not rewritten as killed, but
 the idle worker is still terminated. A session need not have executed any code
-to be killed. Repeated kills of an already terminated session return its terminal
-session status without further side effects while that status is retained.
-Unknown session IDs produce an explicit error.
+to be killed. Remove the session on confirmed termination. Subsequent calls,
+including repeated kill, receive `unknown_session` without side effects.
 
 Because selection is by session, a delayed kill received after a new execution
 starts targets that new execution. Clients must coordinate execution and kill
@@ -447,15 +448,13 @@ both explicitly allocated and automatically created sessions.
 
 Each entry includes its concrete `session_id`, session lifecycle status, and
 current or latest execution status (or no execution yet). The response must
-distinguish idle sessions, running sessions, and retained terminated sessions,
+distinguish starting, idle, running, and terminating sessions,
 and indicate whether a terminal execution result is still available through
 `session_wait`. Listing must not create sessions, execute code, or consume results.
 
 The manager must answer listing requests while workers are executing. An empty
-manager returns an empty list. Keep terminated entries with unconsumed results
-available for retrieval. After consumption, metadata may be removed according
-to a documented policy; terminated entries must not appear usable.
-Exact status names and any pagination remain schema decisions.
+manager returns an empty list. Terminated sessions and their results are removed
+immediately. Listing has no pagination initially and is bounded by session limits.
 
 ## 8. Initial acceptance criteria
 
@@ -499,7 +498,7 @@ Exact status names and any pagination remain schema decisions.
     with exactly the same semantics as asynchronous execution followed by wait.
 17. `session_kill(session_id)` disposes of newly allocated, idle, or running
     sessions; pending execution waits resolve as killed. Repeating the kill
-    has no further side effects. Accepted kill cleanup never
+    returns unknown-session without further side effects. Accepted kill cleanup never
     targets a replacement worker.
 18. `session_execute` with a null session ID allocates a fresh persistent session
     and returns its concrete ID in synchronous, asynchronous, and wait-expired
@@ -628,19 +627,18 @@ before readiness. Apply the same checks to implicit allocation by execution.
 The manager must remain responsive during startup and cleanup, and late ready
 messages must not revive an aborted allocation.
 
-`session_create` accepts optional `stdin_path`, `stdout_path`, and `stderr_path`
+`session_create` accepts optional `cwd`, `stdin_path`, `stdout_path`, and `stderr_path`
 parameters. Standard input reads from the supplied file; standard output and
 error write to new files created when the session is initialized. Use exclusive
 creation: an existing output path is an error rather than being appended to or
 truncated. Keep these files open across tasks. Each omitted stream defaults to
 `/dev/null`, opened as a device rather than created exclusively. Standard input
 reads the supplied existing file. If stdout and stderr specify the same path,
-create it once and share the opened destination. Path resolution and handling of
-files created before a startup failure remain to be finalized.
+create it once and share the opened destination. Resolve stream paths against
+the chosen session directory; retain files created before startup failure.
 These streams are separate from captured Lua `print` output
 included in execution results; any mirroring of captured output must be explicit.
-For implicit creation, the execution API must expose equivalent creation options
-or document that it uses defaults; that schema choice remains open.
+Implicit creation exposes equivalent settings through `create_options`.
 
 During worker setup, establish the dedicated control descriptors and redirect
 FDs 0, 1, and 2 without overwriting control endpoints. Close unused pipe ends and
@@ -655,10 +653,10 @@ open a configured stream is a creation error rather than silent fallback.
 Automatic stream redirection is a managed-worker feature; an embedded host
 retains control of its own standard streams.
 
-## 11. API policies and remaining proposals
+## 11. API policies
 
-Policies in this section are requirements unless explicitly marked as proposals.
-Dependency selection still requires a final decision.
+Policies in this section are requirements. Section 14 specifies dependencies
+and concrete API defaults.
 
 ### 11.1 Public tool surface and code entry
 
@@ -710,8 +708,8 @@ a later execution or newly allocated worker.
 
 Standard MCP `notifications/cancelled` is a notification, with no response of
 its own. Follow MCP guidance on suppressing responses to cancelled requests;
-clients may ignore any late response. The terminated state and reason remain
-observable through session listing and retained execution results. Tool
+clients may ignore any late response. The terminated state and reason are
+delivered to other already-pending waits; no closed-session history is kept. Tool
 descriptions must explicitly state that request cancellation destroys session
 state, including cancellation sent automatically by a client on its deadline.
 
@@ -756,10 +754,9 @@ required portable process supervision and nonblocking descriptor APIs.
 
 The initial manager platform is POSIX. Windows support is outside the initial
 scope. Any platform-specific implementation extensions must be identified;
-Linux-only APIs must not silently become baseline requirements. Selection of an
-OS/event-loop dependency, potentially with native bindings, remains open. Such
-a dependency must not become required by the embeddable handler. Robust
-descendant-process cleanup remains a separate explicit decision.
+Linux-only APIs must not silently become baseline requirements. The manager uses
+luaposix; this dependency must not become required by the embeddable handler.
+Descendant-process termination is not guaranteed initially.
 
 ## 12. Task input data
 
@@ -780,8 +777,7 @@ inside the code or explicitly decode it in Lua.
 Conversion applies recursively. Null object members and array elements must
 not disappear, create holes, or shorten the positional argument list. The
 sentinel must be accessible to submitted code through a documented API so code
-can identify nulls. Exact naming remains an embedding/API design decision and
-must avoid silently overwriting host globals.
+can identify nulls via `require('lua_repl_mcp').null`, without overwriting host globals.
 
 For example, code `local person, count = ...; return person.name, count * 2`
 with `args: [{"name": "Alice"}, 21]` receives a Lua table and a number and
@@ -854,8 +850,10 @@ failure, hard execution timeout, and explicit termination.
 
 Synchronous execution and `session_wait` return the same terminal error payload.
 A wait timeout alone returns pending status, not a failed execution. Once an
-async execution call has returned, later failure is reported through retained
-session status and `session_wait`, not a second response to the original call.
+async execution call has returned, ordinary Lua failure is retrieved through
+`session_wait`, not a second response to the original call. Fatal termination
+removes the session; if nobody is waiting, subsequent calls receive
+`unknown_session` without historical failure details.
 
 ### 13.4 Nonrepresentable return values
 
@@ -873,7 +871,7 @@ null. Nonempty tables with exactly consecutive integer keys from 1 to N become
 JSON arrays. String-only keyed tables become objects; empty tables become
 objects. Reject mixed key types, holes, and unsupported key types. Inspect raw
 entries without invoking `__pairs`, `__index`, or conversion metamethods.
-Numeric precision rules remain to be finalized; reject values outside that
+Numeric precision rules are specified in section 14; reject values outside that
 contract rather than silently losing data. Detect cycles and enforce serialization bounds.
 Exceeding a result bound is an error, not successful result truncation.
 
@@ -905,29 +903,169 @@ start, started with potentially partial effects, completed before result
 conversion failed, or has an unknown outcome. Report session usability
 separately. A serialization failure must explicitly say execution completed
 and its effects remain; it must not encourage automatic re-execution. Exact
-code strings and schema remain to be finalized consistently across manager
-and direct-handler tools.
+code strings and schemas are defined consistently for manager and direct-handler
+tools in section 14.
 
-## 14. Open implementation decisions
+## 14. Final API contract and defaults
 
-The following have not yet been agreed:
+This section fixes previously open choices and supersedes provisional wording.
 
-- MCP protocol version and dependency strategy.
-- Manager launch command, packaging, and optional programmatic module API.
-- Session identifiers and complete tool request and response schemas.
-- Precise Lua embedding API and its compatibility with `dosbox-y`.
-- Result rendering, output limits, and oversized-result behaviour.
-- Null sentinel API, exact numeric conversion policy, and complete JSON return-value schema.
-- Event-loop and process-spawning dependencies and internal worker protocol.
-- Execution timeout upper bounds and ordering
-  rules for completion racing with the deadline.
-- Wait-timeout numeric precision; task tool schemas, consumed-session metadata
-  retention, and ordering for kill racing with completion.
-- Startup deadline default/bounds, standard-stream path resolution and failed
-  startup file cleanup, and creation options for implicit session allocation.
-- Deployment authentication and authorization for any network transport.
-- Resource-bound defaults.
+### 14.1 Protocol and dependencies
 
-These decisions must preserve the independent handler, shared host environment,
-full-access trust model, explicit lifecycle handoff, and blocking single-threaded
-execution specified above.
+Target MCP `2025-11-25` over JSON-RPC 2.0. Implement initialization/version
+negotiation, initialized notification, ping, tools/list, tools/call, and request
+cancellation. Advertise tools only; do not claim standard MCP Tasks support.
+Initialization must precede tool use. Malformed protocol requests use JSON-RPC
+errors; valid tool calls that fail use tool results with `isError: true`.
+
+Publish input/output JSON Schemas. Tool results carry an object in
+`structuredContent` and the same JSON in a text content block for compatibility.
+Descriptions must explain state persistence, explicit return, single-consumer
+results, both timeout meanings, and cancellation killing the session. Execution
+is neither read-only nor idempotent. Direct-handler discovery advertises close
+as a real MCP tool, not merely an internal function.
+
+Package Lua modules under `lua_repl_mcp` with a LuaRocks package and executable
+`lua-repl-mcp` launching the stdio manager. Use luaposix for POSIX process,
+descriptor, signal, and polling facilities; verify required bindings on Lua 5.4
+and pin a compatible release during implementation. Use a pure-Lua JSON codec
+with explicit null and strict string/number validation. The handler must not
+import manager/native dependencies. Codec selection must pass the data-contract
+tests; silently lossy decoding is not acceptable.
+
+### 14.2 Tools and creation options
+
+Reject unknown fields. Paths and code are strings. IDs are opaque strings
+generated by the manager and never reused within its lifetime.
+
+| Tool | Arguments |
+| --- | --- |
+| `session_create` | Optional `cwd`, `stdin_path`, `stdout_path`, `stderr_path` |
+| `session_execute` | Required `code`; optional `session_id` (null), `args` ([]), `wait_timeout_ms` (600000), `execution_timeout_ms` (null), `create_options` |
+| `session_wait` | Required non-null `session_id`; optional `wait_timeout_ms` (600000) |
+| `session_kill` | Required non-null `session_id` |
+| `session_list` | No arguments |
+| Direct handler `repl_execute` | Required `code`; optional `args` ([]) |
+| Direct handler `repl_close` | No arguments |
+
+Parenthesized values are defaults. `create_options` accepts the same fields as
+`session_create` and is permitted only with a null session ID. Sessions inherit
+the manager's environment. With omitted `cwd`, they inherit its working directory.
+Resolve relative `cwd` against that directory, and relative stream paths against
+the chosen session directory. An unusable directory is a creation error; there
+is no silent fallback. List entries report the effective initial directory.
+
+Output files use exclusive creation with mode 0600 subject to umask; existing
+paths fail rather than overwrite. Shared stdout/stderr paths are opened once.
+Standard input reads an existing file; omitted streams use `/dev/null`.
+Keep files created before startup failure and identify them in the error rather
+than deleting them. Perform potentially blocking file setup in the supervised
+worker before its readiness handshake so the manager's startup timer can abort
+a blocked open. Setup must not block the manager event loop.
+
+Timeouts use integer milliseconds up to 2147483647. Wait accepts null, zero,
+or positive values; hard execution timeout accepts null or positive values.
+Null/omitted hard timeout means no deadline. Invalid arguments fail before
+allocation. Completion requires a complete valid worker response received
+before the monotonic deadline; late responses cannot reverse a timeout.
+
+### 14.3 Payloads and errors
+
+Execution/wait responses use `status: running|completed|failed`. Manager
+responses also include `session_id`, `session_status`, and `session_usable`;
+direct-handler responses omit session metadata. Terminal success includes
+`values` (ordered JSON array), `output` (string), and `output_data_preserved`
+(boolean). Failure omits values and includes `error`; captured output accompanies
+execution failures where available. Pending responses include no partial result.
+
+An error contains `code`, `message`, `stage`, and `execution_state`.
+Stages are `validation`, `creation`, `execution`, `serialization`, `transport`,
+and `termination`. Execution states are `not_started`, `started`, `completed`,
+and `unknown`. Optional fields are `traceback`, `path` identifying an offending
+value, `reason`, and `data_preserved`. Altered diagnostics explicitly set the
+last field false and include the agreed readable notice.
+
+Codes are `invalid_arguments`, `unknown_session`, `session_busy`,
+`session_terminating`, `no_execution`, `result_unavailable`, `session_limit`,
+`session_creation_error`, `lua_syntax_error`, `lua_runtime_error`,
+`result_serialization_error`, `execution_timeout`, `session_killed`,
+`request_cancelled`, `worker_exited`, `transport_error`, `termination_error`,
+and `limit_exceeded`. Creation reasons are `startup_timeout`, `spawn_failed`,
+`cwd_setup_failed`, `stdio_setup_failed`, or `handshake_failed`.
+
+Creation returns session ID and idle status. Kill returns session ID,
+`status: killed`, and `session_usable: false` only after reaping. List returns
+`sessions` entries with ID, session status, execution status
+(`none|running|completed|failed`), `result_available`, and initial `cwd`.
+Close returns `status: closing`, acknowledging return to parent code rather
+than physical transport closure. Results already returned are never available
+for another retrieval; listing availability refers to retained data only.
+
+### 14.4 Lifetime and operational limits
+
+Live session states are `starting`, `idle`, `running`, and `terminating`.
+Once termination is confirmed, remove all metadata and results immediately;
+no tombstones are kept. Already-pending requests receive the termination
+outcome, but later requests receive `unknown_session`. A terminal response
+already being delivered may report `session_status: terminated`; it does not
+imply any retained session. Async fatal failures with no waiting caller have
+no historical payload available afterward.
+
+Configurable defaults:
+
+| Setting | Default |
+| --- | --- |
+| Startup deadline | 30 seconds |
+| Wait deadline | 10 minutes |
+| Hard execution deadline | None |
+| Concurrent sessions, including starting/terminating | 64 |
+| Input JSON message | 16 MiB |
+| Serialized return values | 16 MiB |
+| Captured output per execution | 4 MiB |
+| Diagnostic text per error | 64 KiB |
+| JSON/table nesting | 128 levels |
+| Outstanding client requests | 256 |
+| Buffered client output | 64 MiB |
+
+Validate operator-configured bounds. Do not impose worker CPU or memory quotas
+by default. Diagnostic/output truncation is flagged; oversized returned values
+fail serialization. Keep draining workers with bounded buffers. Apply client
+backpressure; if the output buffer cannot stay bounded, disconnect and clean
+up sessions. Reject oversized frames without allocating their full length.
+Service timers/control operations fairly even under sustained traffic.
+
+Kill is synchronous to the caller but never blocks the manager event loop.
+Use forced worker termination; if exit is not confirmed within 30 seconds,
+report `termination_error`, retain only the still-live terminating session,
+and continue supervision. Do not falsely report it closed. Descendant process
+termination is not guaranteed in this initial version.
+
+### 14.5 Data and embedding
+
+Expose null through `require('lua_repl_mcp').null`, without injecting globals.
+Hosts may preload this pure-Lua module. Integer input/output uses the exact
+interoperable range -(2^53-1) through 2^53-1; reject larger integers rather than
+round them. Fractional numbers use finite IEEE-754 binary64 semantics with
+ordinary decimal rounding. Reject overflow/non-finite values. Validate JSON
+integer tokens before decoder rounding can hide an out-of-range value.
+Escape invalid diagnostic bytes as literal `\\xHH`, with the loss flag.
+
+`require('lua_repl_mcp.handler').serve(io_adapter, options)` is the blocking
+embedding entry point. The adapter provides `read(max_bytes)` (bytes, EOF, or
+error), `write(bytes)` (positive byte count or error), and `flush()` (success
+or error). Define return tuples as value or `nil, reason`, with `reason: eof`
+reserved for read EOF. Partial I/O is supported; adapters handle interrupted
+OS calls and must not return empty strings in a busy loop. No close is invoked.
+Options configure limits and MCP host instructions describing application APIs;
+evaluation always uses the existing interpreter's global environment.
+
+The lifecycle return record contains `reason` (`close_requested|eof|transport_error|handler_error`),
+`acknowledgement_sent`, and optional diagnostics. The standard worker wrapper
+exits after return; custom parents choose their continuation. Validate the
+actual dosbox-y adapter against its embedding API during implementation.
+
+Internal worker traffic uses versioned newline-framed private ready/execute/
+result messages on dedicated descriptors, not a second public MCP connection.
+Internal execution generations associate timers, replies, and cancellations
+with their original execution without exposing task IDs. Standard streams do
+not carry control messages.
