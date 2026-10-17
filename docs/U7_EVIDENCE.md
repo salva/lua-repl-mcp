@@ -181,3 +181,77 @@ only universal legal-maximum default-fit acceptance needs an owner decision.
 Real saturated transport/timer/cancellation fairness, fragmented-worker/adversarial
 payload and exhaustive boundary obligations remain open as previously listed.
 No normative limits or failing acceptance expectations have been relaxed.
+
+## Independent remainder: real fairness and adversarial/default-scale paths
+
+Continued independently of the preserved coupled-default conflict. New tests:
+
+| Test | Actual coverage / measurements |
+| --- | --- |
+| `u7_fairness_process.lua` | Three real workers, real nonblocking input/output pipes; 256 outstanding waits; 257th rejection, list/ping, cancellation suppression, accepted kill and confirmed reap; 24 general controls then 8 reserved kills; sustained ping traffic while a 30ms hard worker deadline still completes. Output high-water 150316/134217728 bytes, input high-water 507; latest run 408 ping ticks before timed reply. |
+| `u7_maximum_process.lua` | Exact default 16777216-byte quote-heavy values from real worker through fragmented private pipe, manager snapshots, public duplicated encoding and real client pipe. Response including newline 50331991 bytes; output high-water identical versus 134217728 bound. Duplicate text equality and unrelated live session `return 42` verified afterward. |
+| `u7_adversarial.lua` | Default-scale exact-bound backslash values (16777216 bytes, response 50331838), control values (16777216, response 36350828), next character overflow; duplicate text equality; nesting 127/128/129; diagnostics 65535/65536/65537 and escaped 8192-byte ID; value overflow classified result_serialization_error without values. |
+| `u7_boundaries.lua` | Exact complete-response -1/at/+1, frame -1/at/+1, retained output 2047/2048/2049; explicit versus default clone-depth budget. |
+| extended `u7_pending_ownership.lua` | Output overflow inside commit callback actually disconnects after non-reentry guard releases; invalid/unknown/nonintegral/false/infinite transport bounds rejected. |
+
+Owning fixes uncovered by these paths:
+
+- `codec.clone` accepts explicit encode/decode options. Manager snapshots select
+  a result/envelope budget (64 MiB, depth160), not public input defaults. Previously
+  a legal values array plus metadata, or maximum nesting plus result wrappers,
+  could raise before public response preflight despite protocol wrapping repair.
+  Public/default codec input limits remain unchanged.
+- `client_transport.close` defers manager teardown only when inside the guarded
+  manager commitment callback, then runs it immediately after return. Previously
+  enqueue overflow called disconnect reentrantly; pcall swallowed its assertion,
+  leaving closed transport with live owned sessions. Regression checks actual
+  closed manager and empty bindings. Ordinary EOF/write failures still dispose
+  immediately. Transport scalar bounds and output/response+newline coupling are
+  validated; full legal-maximum coupling is NOT claimed.
+
+Reproduction, using the native LUA_PATH/LUA_CPATH above:
+
+```sh
+python3 tests/u7_process.py
+lua5.4 tests/u7_adversarial.lua
+lua5.4 tests/u7_boundaries.lua
+lua5.4 tests/u7_encoding_red.lua
+lua5.4 tests/u7_pending_flood_red.lua
+lua5.4 tests/u7_pending_ownership.lua
+lua5.4 tests/u7_transport.lua
+lua5.4 tests/u7_admission.lua
+lua5.4 tests/u5.lua
+lua5.4 tests/u6_policy.lua
+python3 tests/u4_process.py
+python3 tests/u5_process.py
+python3 tests/u6_process.py
+lua5.4 tests/u2.lua
+python3 docs/check_contracts.py
+git diff --check
+```
+
+All completed exit 0. `u7_process.py` provides independent process-group watchdogs
+and cleanup, NOFILE256 test-only and disposable fixture root beneath the card
+work root. The maximum-response test has a 110-second outer bound. No RSS claim:
+queue measurements include the retained written prefix, not merely unsent bytes.
+U4's 15 real-process groups rerun, including fragmented ready/result and oversized
+worker-frame disposal. U5/U6 rerun with 28/21 schema-validated committed responses.
+
+### What remains unaccepted
+
+The coupled-default reproducer is unchanged and remains red/owner-decision
+blocked solely for universal default legal-maximum fit. These tests do not waive
+remaining independent completeness questions: an exact supported-configuration
+matrix for values/worker/public budgets is not implemented (worker evaluator
+limits are still fixed); worker-frame and input default-size below/at/above
+mapping and explicit worker buffer high-water instrumentation still need fuller
+coverage. The depth test proves codec table depth, not all depth128 manager
+roundtrips. Max-ID diagnostic combinations and every small response/error case
+also are not exhaustively enumerated. Full U7 is still not accepted.
+
+A justified next independent attempt is centralized validated configuration for
+worker evaluator and transport budgets (preserving mandated defaults), with
+explicit worker-buffer high-water instrumentation and generated frame boundaries,
+then maximum-depth real-manager response coverage. Any universal-fit coupling
+must expose the 194-byte contract conflict rather than silently reject defaults
+or narrow legal IDs. No new normative limit is authorized here.

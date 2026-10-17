@@ -50,3 +50,15 @@ for i=1,23 do t:submit('hold'..i,'session_list',{}) end
 t:submit('rejected','session_list',{})
 assert(not t:cancel('rejected') and #t.pending==24 and t.bytes>0)
 print('PASS cancellation_churn_reclaims_handles_without_tick_and_rejected_ID_inert')
+-- Output overflow while inside manager.commit must defer teardown (no reentry),
+-- then actually dispose owned sessions, not leave a closed transport only.
+t,m,b=new{response_bytes=1024,output_bytes=1025}
+assert(t:enqueue(string.rep('x',1024)))
+t:submit('overflow-commit','session_list',{})
+assert(not t:step(function() end))
+assert(t.closed and m.closed and not m.committing and next(m.requests)==nil)
+for _,bad in ipairs({{input_bytes=0},{input_bytes=false},{response_bytes=1.5},
+ {output_bytes=math.huge},{unknown=1},{response_bytes=2048,output_bytes=2048}}) do
+ assert(not pcall(new,bad))
+end
+print('PASS commit_callback_overflow_defers_cleanup_and_invalid_transport_configuration')

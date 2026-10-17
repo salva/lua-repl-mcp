@@ -11,7 +11,11 @@ local function failure(code,state)
   code=='no_execution' or code=='result_unavailable') and 'validation' or 'execution'
  return {error=errors.new(code,code,stage,state or 'not_started')}
 end
-local function copy(t) return assert(codec.clone(t)) end
+-- Manager results are private-frame sized, not public-input sized. Preserve
+-- legal values plus metadata and nesting through snapshots before preflight.
+local function copy(t)
+ return assert(codec.clone(t,{max_bytes=64*1048576,max_depth=160}))
+end
 function M.new(o)
  o=o or {}; serial=serial+1
  local admission=require('lua_repl_mcp.limits').admission(o.admission)

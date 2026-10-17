@@ -206,7 +206,7 @@ function M.decode(text, options)
 end
 -- Data copy through the same strict mapping. Input wire shape is preserved;
 -- user-return mapping is selected explicitly by the evaluator.
-function M.clone(v)
-  local s,e=M.encode(v); if not s then return nil,e end; return M.decode(s)
+function M.clone(v,options)
+  local s,e=M.encode(v,options); if not s then return nil,e end; return M.decode(s,options)
 end
 return M

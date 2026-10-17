@@ -5,8 +5,15 @@ local framing=require('lua_repl_mcp.framing')
 local M={}; local C={}; C.__index=C
 function M.new(manager,io,o)
  o=o or {}
- local self=setmetatable({manager=manager,io=io,input=framing.new(o.input_bytes or 16*1048576),
-  response_bytes=o.response_bytes or 64*1048576,output_bytes=o.output_bytes or 128*1048576,
+ assert(type(o)=='table','transport options must be a table')
+ local bounds={input_bytes=16*1048576,response_bytes=64*1048576,output_bytes=128*1048576}
+ for k,v in pairs(o) do
+  assert(bounds[k]~=nil,'unknown transport option')
+  assert(math.type(v)=='integer' and v>0 and v<=2147483647,'invalid transport bound')
+  bounds[k]=v
+ end
+ local self=setmetatable({manager=manager,io=io,input=framing.new(bounds.input_bytes),
+  response_bytes=bounds.response_bytes,output_bytes=bounds.output_bytes,
   queue={},pending={},bytes=0,high_water=0,input_high_water=0,closed=false},C)
  assert(self.output_bytes>=self.response_bytes+1,'output must hold a response plus newline')
  return self
@@ -14,7 +21,10 @@ end
 function C:close(reason)
  if not self.closed then
   self.closed=reason or 'disconnect'; self.queue={}; self.pending={}; self.bytes=0
-  self.manager:disconnect()
+  -- Enqueue can fail inside a manager commit callback. Stop transport now but
+  -- defer manager teardown until the callback releases its non-reentry guard.
+  if self.manager.committing then self.cleanup_pending=true
+  else self.manager:disconnect() end
  end
 end
 function C:enqueue(text)
@@ -85,6 +95,9 @@ function C:step(on_frame)
        {max_bytes=self.response_bytes,max_depth=160})
       return full and self:enqueue(encoded)
      end)
+     if self.cleanup_pending then
+      self.cleanup_pending=nil; self.manager:disconnect()
+     end
      if not committed and not self.closed then rest[#rest+1]=p end
     else
      -- Small replacement is sent without consuming a retained terminal result.
