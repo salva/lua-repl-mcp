@@ -2,14 +2,17 @@
 
 ## Whole-project repair continuation
 
-The operator authorized U13 implementation through the existing project process:
-adopt the independently approved `workflows/reviews/project-wide/99-METAPLAN.md`
-and exact per-finding APPROVED.md editions through supported root/owner records,
-then use normal Run if stopped. Preserve history, model configuration and current
-work; do not edit generated state or restart shared services. Reconcile source
-drift, execute batches A–E and verify actual child tool activity. Plan approval is
-not runtime acceptance. Operator-owned GitHub/Pages publication is separately
-recorded in `PUBLISHING.md`; no publication permissions are delegated to Saivage.
+The operator authorized stopping this dedicated instance, simplifying U13,
+independent review, then service restart and normal Run. Adopt the current minimal
+`workflows/reviews/project-wide/99-METAPLAN.md` through accepted root/immediate
+owner records before continuation. It replaces the old five-batch selected
+editions; reconcile existing work instead of reverting it or finishing obsolete
+machinery. Execute batches1–3 with focused evidence and one final integration.
+Preserve history, routing, credentials and completed work; no generated-state
+filesystem edits or shared-service changes. Verify actual returned child tools,
+not only Run status. Plan approval is not runtime acceptance. Operator-owned
+GitHub/Pages publication is separately recorded in `PUBLISHING.md`; no publication
+permissions are delegated to Saivage.
 
 ## Original delivery scope
 

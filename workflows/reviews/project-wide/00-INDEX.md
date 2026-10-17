@@ -1,6 +1,15 @@
 # Project-wide review
 
-## Scope and baseline
+## Current execution authority
+
+The sole current plan is [the minimal repair plan](99-METAPLAN.md), replacing
+the expanded five-batch plan and all prior per-finding selected implementation
+editions after a fresh overengineering critique. Old drafts/reviews/approval
+receipts below are historical work evidence, not additive scope. The instance
+is stopped while this smaller plan is independently reviewed and adopted.
+Preserve completed containment work; no automatic revert or further expansion.
+
+## Original review scope and baseline (historical)
 
 Review commit `8383c03e1d1b38fb33a0573f80aeecdf179673ee`: runtime, public
 contracts, tests, packaging, user documentation and local website build.
@@ -13,7 +22,7 @@ Writer: GPT-6.1 Sol (orchestrator). Independent auditor/reviewer: GPT-6 Astra
 (`openai/gpt-6-astra`). Iterate until approved; escalate if the same objections
 remain unresolved for two successive rounds. No claim of absolute perfection.
 
-## Work checklist
+## Original review checklist (historical)
 
 - [x] Confirm scope, models, iteration policy and handoff with operator.
 - [x] Pin clean snapshot without altering active runtime source.
@@ -25,7 +34,7 @@ remain unresolved for two successive rounds. No claim of absolute perfection.
 - [x] Notify owning/root planners through supported controls and verify adoption.
 - [x] Resume via supported Run if stopped; otherwise preserve running work.
 
-## Findings
+## Original findings and approval history
 
 | Finding | Severity | Transversality |
 | --- | --- | --- |
@@ -43,13 +52,14 @@ remain unresolved for two successive rounds. No claim of absolute perfection.
 | [F12 evidence](F12-evidence-claims.md) | Low | Claims/applicability |
 | [F13 authority](F13-completion-arbitration.md) | Medium | Contract/guardian/manager |
 
-Independent audit and three-round planning review complete. Astra's final
+The original independent audit and three-round planning review completed. Its
 [integrated verdict](99-METAPLAN-review-r3.md) is APPROVED: no remaining actionable
-planning issues within scope. Each work package's APPROVED.md selects exact
-analysis/design/plan editions; superseded drafts/reviews remain work evidence,
-not alternative execution instructions. [Current metaplan](99-METAPLAN.md)
-orders all findings. No implementation, release or absence-of-defects claim is
-made. See [audit receipt](00-AUDIT.md).
+planning issues within that earlier scope. At the time, each work package's
+APPROVED.md selected exact editions for the
+[expanded metaplan](99-METAPLAN-expanded-superseded.md). Those selections and
+verdicts are now superseded historical evidence, not approval of the current
+minimal plan. No implementation, release or absence-of-defects claim was made.
+See [audit receipt](00-AUDIT.md).
 
 Round1 closed deferred topology/authority, depth/copy, preparation/correlation
 and nested containment definitions. Round2 closed transfer scheduling/large
@@ -61,7 +71,7 @@ Publication is excluded from this repair acceptance scope, but separately
 authorized for the orchestrator: repository and Pages are public development
 candidates. Saivage executors retain content-only/no-publish scope.
 
-## Pre-handoff validation
+## Original pre-handoff validation (historical)
 
 Runtime modules, entrypoint, rockspec and tests have no diff from audited baseline
 at handoff preparation. Operator publication changed README to the live site
@@ -72,7 +82,7 @@ approved matching reviews; local review-document links checked. Contract gate
 passes14 schemas,7 tools,23 examples,125 regressions. No fix implementation is
 claimed by these structural/documentation checks.
 
-## Verified adoption and resume
+## Original verified adoption and resume (historical)
 
 Analyst updated accepted root scope through supported tools to
 `record:///brief.md?card=project&v=11`, created U13 goal `card-f` with accepted

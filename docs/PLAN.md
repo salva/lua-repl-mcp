@@ -415,25 +415,28 @@ do not establish acceptance.
 
 ## U13 — Whole-project audited repair plan
 
-Execute `workflows/reviews/project-wide/99-METAPLAN.md` and the exact editions
-selected by each F01–F13 APPROVED.md. Independent Astra audit baseline is
-`8383c03`; three planning rounds ended with integrated approval. This is not
-evidence that the candidate runtime is defect-free or these repairs are done.
-Compare current code before creating work; do not replay a finding already fixed.
+Execute the current minimal `workflows/reviews/project-wide/99-METAPLAN.md`.
+It supersedes the expanded five-batch design and old selected per-finding editions;
+those remain historical work evidence, not cumulative implementation scope.
+Preserve all13 concrete findings and owner requirements while avoiding unnecessary
+frameworks. Reconcile stopped source and already-completed containment repairs.
 
-Sequence: A reliable fixture containment/evidence; B locale-safe data, effective
-limits and public failure interface; C protected invocation/optional debug and
-correlation; D coordinated guardian control/completion/provenance/wait repairs;
-E repository/site journeys and current installed/live-client acceptance. Preserve
-the selected authority and transport designs, owner requirements and source/user
-documentation separation. Keep overlapping runtime changes serialized.
+Sequence: 1 local correctness and adequate gates; 2 coordinated guardian progress,
+effective limits/fit and explicit outcome semantics; 3 user journey and one final
+integrated qualification. Source-link/claim corrections need not wait for runtime
+changes. Keep overlapping edits serialized, not thirteen architecture subprojects.
+No mandatory binary bulk protocol, general incremental codec, selected-field raw
+slices, replacement correlation registry, typed-error prerequisite or fixed100ms
+target. Implement targeted bounded-work improvements where evidence requires them.
 
-**Acceptance:** minimal regressions for all findings, corrected full contained
-runner, real legal-default aggregate-result/control tests through installed
-guardian CLI, exact custom-bound input/worker fit, fresh actual-client tool
-evidence and source/built/browser doc validation. Record missing environments as
-blocked coverage. Do not substitute historical counts or public Pages availability
-for current runtime acceptance. Commit coherent batches using owner identity.
+**Acceptance:** focused executable regressions, schema-valid actual errors,
+installed guardian maximum-record/control and original-deadline tests, tight-floor
+real input/worker fit, independent admission/no-retransmission checks and one
+final clean-installed/client qualification on integrated changes. Combined maximal
+count×size stress and repeated browser/integration campaigns require relevant
+changes or unresolved scaling evidence, not phase labels. Record missing coverage
+honestly; publication or prior pass counts are not current acceptance. Commit
+coherent batches using owner identity.
 
 Operator-owned GitHub repository/Pages publication is separately authorized and
 recorded in `workflows/PUBLISHING.md`; autonomous executors still must not push,
