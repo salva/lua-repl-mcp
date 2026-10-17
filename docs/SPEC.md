@@ -914,7 +914,8 @@ tools in section 14.
 
 ## 14. Final API contract and defaults
 
-This section fixes previously open choices and supersedes provisional wording.
+This section fixes the API contract. Machine-readable definitions are in
+`schemas/api.json`; complete wire examples are in `MCP_EXAMPLES.md`.
 
 ### 14.1 Protocol and dependencies
 
@@ -930,6 +931,15 @@ Descriptions must explain state persistence, explicit return, single-consumer
 results, both timeout meanings, and cancellation killing the session. Execution
 is neither read-only nor idempotent. Direct-handler discovery advertises close
 as a real MCP tool, not merely an internal function.
+
+In `schemas/api.json`, `$defs/<tool_name>` is the input schema and
+`$defs/<tool_name>_output` is its structured-result schema. Resolve/integrate
+references before publishing; every advertised tool schema must be independently
+usable. Schema defaults are descriptive: the implementation must apply them.
+JSON Schema does not enforce numeric lexical precision, UTF-8 correctness,
+session state, or exclusive file creation; runtime checks enforce those rules.
+Set `isError: true` exactly when a tool payload contains `error`; normal pending,
+completed, closing, creation, listing, and best-effort kill results use false.
 
 Package Lua modules under `lua_repl_mcp` with a LuaRocks package and executable
 `lua-repl-mcp` launching the stdio manager. Use luaposix for POSIX process,
@@ -977,18 +987,42 @@ before the monotonic deadline; late responses cannot reverse a timeout.
 
 ### 14.3 Payloads and errors
 
-Execution/wait responses use `status: running|completed|failed`. Manager
-responses also include `session_id`, `session_status`, and `session_usable`;
-direct-handler responses omit session metadata. Terminal success includes
-`values` (ordered JSON array). Failure omits values and includes `error`.
-There is no output-capture field. Pending responses include no partial result.
+Execution/wait responses use `status: running|completed|failed` to describe
+execution, not success of retrieving its result. An operation error may retain
+`status: completed` (result already consumed) or `status: running` (session busy).
+When no execution can be identified, omit status. MCP `isError` reports the
+tool operation's success independently. Manager responses for a known session
+also include `session_id`, `session_status`, and `session_usable`; direct-handler
+responses omit session metadata. Terminal success includes `values` (ordered
+JSON array). Errors omit values and include `error`. Error-free completed
+responses require values; pending responses include neither values nor error.
+No output-capture field exists. Unknown-session errors echo the supplied ID but
+omit session status and set session_usable false. Validation/creation errors
+before a session exists omit all session metadata.
 
 An error contains `code`, `message`, `stage`, and `execution_state`.
 Stages are `validation`, `creation`, `execution`, `serialization`, `transport`,
 and `termination`. Execution states are `not_started`, `started`, `completed`,
 and `unknown`. Optional fields are `traceback`, `path` identifying an offending
 value, `reason`, and `data_preserved`. Altered diagnostics explicitly set the
-last field false and include the agreed readable notice.
+last field false and include the agreed readable notice. `path` uses RFC 6901
+JSON Pointer rooted at tool arguments for input errors and at a conceptual
+`{"values": [...]}` object for result errors. Array indices in pointers are
+zero-based even though Lua indices are one-based. `execution_state` refers to
+the submitted code for execute and to the selected execution for wait. For busy
+execute it is not_started, even though status describes the existing running
+execution. For non-execution lifecycle requests use unknown unless a specific
+execution outcome is being reported.
+
+Additional optional error fields are `exit_code` (nonnegative integer),
+`signal` (positive integer), `created_files` (reported created paths),
+`created_files_complete` (boolean), `truncated` (boolean),
+`invalid_bytes_escaped` (boolean), and `process_exit_confirmed` (boolean).
+The last field also appears on execution responses affected by process cleanup.
+`notice` carries the readable explanation for unconfirmed exit. Only include
+OS exit information actually observed; never infer a signal from EOF alone.
+Diagnostic bounds cover the combined message and traceback after invalid-byte
+escaping; reserve space for the truncation notice and flags.
 
 Codes are `invalid_arguments`, `unknown_session`, `session_busy`,
 `session_terminating`, `no_execution`, `result_unavailable`, `session_limit`,
@@ -1032,8 +1066,11 @@ Configurable defaults:
 | Serialized return values | 16 MiB |
 | Diagnostic text per error | 64 KiB |
 | JSON/table nesting | 128 levels |
-| Outstanding client requests | 256 |
-| Buffered client output | 64 MiB |
+| Outstanding ordinary client requests | 256 |
+| Reserved control requests | 32 |
+| Complete worker frame | 20 MiB |
+| Complete encoded MCP response | 64 MiB |
+| Buffered client output | 128 MiB |
 
 Validate operator-configured bounds. Do not impose worker CPU or memory quotas
 by default. Diagnostic truncation is flagged; oversized returned values
@@ -1041,6 +1078,25 @@ fail serialization. Keep draining workers with bounded buffers. Apply client
 backpressure; if the output buffer cannot stay bounded, disconnect and clean
 up sessions. Reject oversized frames without allocating their full length.
 Service timers/control operations fairly even under sustained traffic.
+
+MiB means 1048576 bytes. Input limits count UTF-8 JSON frame bytes excluding
+the newline. The return-value limit counts the encoded JSON `values` array,
+not raw Lua string bytes. The complete response limit includes its JSON-RPC
+envelope, structuredContent, compatibility text, and all escaping. Encoder
+budget checks must precede committing/consuming a result. A frame exceeding
+the response bound becomes a small `limit_exceeded` error without emitting a
+partial frame; if value serialization itself exceeds its bound, use
+`result_serialization_error`. Internal frames and public requests have separate
+limits; do not reject a legal result using the smaller input-frame limit.
+Validate configured limits together and reject configurations where one legal
+maximum result cannot fit in a complete response and client output budget.
+
+Ordinary requests cannot occupy reserved control slots. Kill, list, and ping
+may use those slots; cancellation notifications are parsed and handled without
+occupying a request slot. At least 8 control slots are reserved for kill alone.
+Reject excess ordinary calls with `limit_exceeded` without dispatching them.
+Read input fairly even at admission capacity; do not stop reading cancellation
+or kill behind a backlog of waiting calls. Control floods remain bounded.
 
 Kill is synchronous to the caller but never blocks the manager event loop.
 Attempt forced worker termination and reaping. If exit is not confirmed within
@@ -1077,14 +1133,19 @@ Escape invalid diagnostic bytes as literal `\\xHH`, with the loss flag.
 `require('lua_repl_mcp.handler').serve(io_adapter, options)` is the blocking
 embedding entry point. The adapter provides `read(max_bytes)` (bytes, EOF, or
 error), `write(bytes)` (positive byte count or error), and `flush()` (success
-or error). Define return tuples as value or `nil, reason`, with `reason: eof`
-reserved for read EOF. Partial I/O is supported; adapters handle interrupted
+or error). Calls are plain functions, not implicit-self methods:
+`read(n)` returns a nonempty string of at most n bytes, `nil, 'eof'`, or
+`nil, error_string`; `write(bytes)` returns a positive integer no greater than
+the input length or `nil, error_string`; `flush()` returns true or
+`nil, error_string`. The string `eof` is reserved for read EOF. Partial I/O is supported; adapters handle interrupted
 OS calls and must not return empty strings in a busy loop. No close is invoked.
 Options configure limits and MCP host instructions describing application APIs;
 evaluation always uses the existing interpreter's global environment.
 
 The lifecycle return record contains `reason` (`close_requested|eof|transport_error|handler_error`),
-`acknowledgement_sent`, optional diagnostics, `pending_messages`, and
+`acknowledgement_sent` (true only if the close acknowledgement was written and
+flushed successfully), optional diagnostics, optional `close_request_id`,
+`pending_messages`, and
 `pending_bytes`. `pending_messages` is an ordered list of complete unprocessed
 trailing frames as raw JSON strings, excluding their newline delimiters.
 `pending_bytes` is the raw incomplete trailing frame, or an empty string.
@@ -1101,3 +1162,84 @@ result messages on dedicated descriptors, not a second public MCP connection.
 Internal execution generations associate timers, replies, and cancellations
 with their original execution without exposing task IDs. Standard streams do
 not carry control messages.
+
+### 14.6 Event ordering and startup records
+
+Dispatch is a single acceptance transition: reserve the idle session, invalidate
+the old result, assign an internal execution generation, and arm deadlines
+before writing the execute command. Transmission is bounded/nonblocking in the
+manager. Invalid or busy calls do not perform this transition. Close/kill cannot
+dispatch a buffered execution after termination has begun.
+
+On worker exit or EOF, drain currently available control bytes up to the frame
+bound before classifying an unfinished execution. A complete valid result
+already available in the pipe can win over exit notification even if process
+exit was observed first. Do not wait for future bytes or inherit an unlimited
+drain from descendants. A hard deadline already reached, or an accepted kill
+of an active execution, freezes that outcome; late worker results cannot undo
+it. Receiving and validating completion before the deadline freezes the result
+and disarms its timer. A completed execution's outcome never changes because
+its idle worker is subsequently killed. Session lifecycle may still change.
+
+For fatal cleanup, resolve already-pending requests after bounded cleanup so
+the response can report whether exit was confirmed. Cancellation suppresses the
+cancelled request's response but resolves other waiters. If cleanup reaches its
+30-second bound, preserve the original timeout/kill/failure cause, include the
+unconfirmed-exit notice, and remove the session. Waiters already bound to a
+completed result retain that result under single-consumer rules even if kill
+arrives before it is sent. A successful kill response does not consume an
+unrelated waiter's recorded terminal result.
+
+Startup uses bounded private protocol messages with `protocol_version: 1` and
+an allocation generation: `file_created` (path), `ready` (effective cwd), or
+`startup_error` (creation reason and diagnostics). Report a created file before
+proceeding to another potentially blocking setup step. If a worker dies between
+creating a file and reporting it, the manager cannot know the complete set:
+return only reported paths and `created_files_complete: false`. Do not infer
+ownership from a path's existence or delete such files. Ready after abort is
+ignored. Spawn/cwd/stdio/handshake errors are all session_creation_error variants.
+Execute commands carry code, JSON args, and an internal generation; results
+echo that generation. Unknown, duplicate, malformed, or stale replies may not
+complete another execution; protocol corruption disposes of that worker.
+
+### 14.7 Discovery text requirements
+
+Tool descriptions must teach the following at the point of use:
+
+- Execute: omitted/null session ID creates a new interpreter; globals persist,
+  locals do not; explicit return is required; another accepted execution
+  discards an unread preceding result; no automatic output capture exists.
+- Wait: zero polls; null waits indefinitely; default is ten minutes; terminal
+  retrieval consumes the result, while a pending response does not. Request
+  cancellation kills the session, unlike a wait deadline.
+- Kill: destroys state, is synchronous best-effort disposal, and leaves no
+  history. Unconfirmed OS exit is surfaced without failing the kill operation.
+- List: only existing sessions, not history. An unknown session after async
+  work does not imply its code never ran or that retrying side effects is safe.
+- Handler close: acknowledges and returns control without closing the transport
+  or changing host state; the parent decides what happens afterward.
+
+### 14.8 Completion checks
+
+In addition to section 8, implementation validation must cover:
+
+1. Startup timeout while a child is blocked opening a supplied path; manager
+   continues handling other sessions and records partial file creation honestly.
+2. Result written before worker exit but processed after exit notification;
+   deadline/kill races obey the authoritative outcome ordering above.
+3. Two waiters racing for one successful or failed payload; exactly one consumes
+   it and the other receives result_unavailable with the execution status.
+4. All ordinary request slots occupied by waits while kill and cancellation
+   still work through bounded reserved control capacity.
+5. Worst-case JSON escaping and compatibility-text duplication near result
+   limits; a permitted result fits without disconnecting unrelated sessions.
+6. Data conversion errors report useful JSON Pointers, preserve prior side
+   effects, and never leak partially encoded values or invoke metamethods.
+7. Client disconnect during startup, execution, and response transmission;
+   disposal is bounded and no session metadata survives cleanup.
+8. A simulated worker that cannot be reaped in time yields successful kill
+   with process_exit_confirmed false, no retained session, and no false death claim.
+9. New stdout/stderr files never overwrite existing paths; cwd resolution and
+   sharing a single output file follow the creation contract.
+10. No print/io overrides or automatic output capture in either direct or
+    managed execution; explicit client Lua capture remains possible.
