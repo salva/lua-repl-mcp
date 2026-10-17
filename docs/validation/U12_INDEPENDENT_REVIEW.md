@@ -131,3 +131,30 @@ inputs but are not acceptance of this regression. Required useful next attempt:
 route the owning outcome/relay arbitration repair described above to the original
 implementation card, then rerun this externally bounded fixture and ordering suite.
 No test assertion was weakened to make the faulty behavior pass.
+
+## Second repair-node investigation: small-report control
+
+Product inputs remain unchanged at `2175ba1`. To distinguish partial-frame
+backpressure from manager pre-receive ordering, a disposable copy of the protected
+fixture changed only the returned/expected string length from1048576 to1. It ran
+under the same45s isolated-process-group watchdog, retaining the2s deadline and
+2.5s consumer pause. This **also failed exit1**: response `execution_timeout`,
+guardian completion878657.84159165 before deadline878659.83565927. Primary evidence:
+`work:///cards/card-d-b/processes/proc-6f518b7d3e24/stdout.log` and
+`work:///cards/card-d-b/processes/proc-6f518b7d3e24/stderr.log`.
+
+This materially narrows the correction: a large partial frame is **not necessary**
+for failure. A tiny already-available completion loses because manager refresh
+freezes a stale running mirror before backend consumption. Fixing streaming alone
+or extending the fixture deadline does not address that branch. Partial-frame
+arbitration remains additional required coverage, not the sole cause. Both
+fixture-cleanup weakness and maximal-payload-only explanations are exhausted;
+neither changes the public failure after timely guardian validation.
+
+The accepted audit brief explicitly routes original-scope product corrections to
+the original implementation card. There is no remaining test-only repair that can
+make this valid completion assertion pass without weakening the specified outcome.
+Required decision/input is explicit authorization to edit owning product arbitration
+here, or delivery of the original implementation owner's correction. This node
+does not assume either and does not wait for another node. Independent verdict
+remains reject pending correction; no claim of engineering impossibility is made.
