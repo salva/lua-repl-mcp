@@ -247,3 +247,62 @@ release prerequisite is complete. Parent should retain these concrete outstandin
 gates. No docs/SPEC15 takeover, requirement weakening, host/shared-runtime change,
 restart, push or publication. Passing diagnosis proceeds to verification-owned
 acceptance, not an inferred global approval.
+
+## Verify-node final acceptance of independent audit
+
+On unchanged HEAD565a47b, clean worktree and empty diff from565a47b for runtime
+and tests, reused immediately preceding same-card evidence above. This reuse is
+limited to the identical checkout: relay/matrix/U6 repeats/U8/fault/identity/large
+report runs all completed, and no relevant input changed. Newly added independent
+EOF policy was rerun during verification. No prior failure is being hidden: the
+original pre-fix relay and EOF failures remain in history, with owning fixes and
+unchanged reproducer evidence now establishing resolution.
+
+Ran remaining affected checks in one fail-fast sequence with the documented
+local Lua environment:
+
+```sh
+lua5.4 tests/u6_eof_policy.lua
+lua5.4 tests/u6_deadlines_red.lua
+lua5.4 tests/u6_ordering.lua
+lua5.4 tests/u6_policy.lua
+lua5.4 tests/u12_audit_eof_policy.lua
+python3 tests/u4_process.py
+python3 tests/u5_process.py
+python3 tests/u7_process.py
+python3 tests/u6_progressive_process.py
+python3 docs/check_contracts.py
+git diff --check
+```
+
+Sequence exit0. Entire partial stdout was read (including final tail):
+`work:///cards/card-d-b/processes/proc-c019bd0fa0a3/stdout.log`, stderr at the
+same returned process artifact. Six EOF policy branches, before/equal/after
+validation-time boundaries,15 ordering permutations, five fatal causes,
+completed-timer disarm and independent abandonment checks PASS. U4's15 real-process
+groups include independent wait despite descendant-held channel, malformed/partial
+frames, descriptor inheritance, blocked startup and bounded fair transport.
+U5's28 schema-checked responses preserve result consumption/replacement and
+multiworker responsiveness. U7 passes real20MiB configured and16MiB default
+values,256-wait saturation, reserved controls, stopped-reader/EPIPE cleanup and
+bounded short-write progress. Real TERM-resistant fixture confirmed KILL/reap at
+20.011s while1965 other turns progressed. Contracts PASS14 schemas/7 tools/
+2 discovery results/23 examples/125 cases. One simulated unconfirmed-exit notice
+is expected evidence of truthful abandonment, not a real process failure.
+
+**Final independent audit verdict: ACCEPT checkout implementation and meaningful,
+stable affected-suite coverage.** The prior rejection has been repaired at the
+owning primitives, not at test expectations. Deterministic clocks resolve timing
+boundaries and fake ownership errors without unsafe PIDs; real barriers and external
+watchdogs establish actual process ownership, disposal and scheduling behavior.
+Five native repetitions address the observed flaky exit race, supplemented by
+explicit same/next-turn evidence rather than merely repeated green runs.
+
+This completes this card's independent-review deliverable (explicit verdict and
+remaining gaps), not the parent implementation's full release gates. Required
+clean-installed executable lifecycle/packaging and refreshed affected U10 evidence
+remain outstanding with their separate owners. No such evidence was available or
+inferred from checkout tests; parent must not declare full U12/release acceptance
+until those gates pass. No additional checkout coverage gap or verified runtime
+failure remains in the reviewed original-scope branches. No new product changes,
+operator-doc takeover, host change, restart, publication or later-node work.
