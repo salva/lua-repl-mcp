@@ -277,9 +277,52 @@ requests while executing.
 
 Task status must distinguish pending execution from success, failure, and
 interruption. Polling responses must make clear whether the session remains
-usable after termination. Exact status names, polling tool schemas, explicit
-cancellation by task ID, result-retention limits, and expiry behaviour must be
-defined before implementation.
+usable after termination. Exact status names, tool schemas, result-retention
+limits, and expiry behaviour must be defined before implementation.
+
+### 7.3 Reattaching to a task: wait
+
+The manager must expose a `task_wait` tool taking a task ID and
+`wait_timeout_ms`, with the same null, zero, and positive-value semantics as the
+execution tool. Null waits for a terminal result; zero polls immediately; a
+positive value waits for at most that duration before returning a pending status
+if execution is still active. Each wait deadline starts when that wait is accepted.
+
+Waiting reattaches to the existing task, never dispatches another execution,
+and never resets or extends its hard execution deadline. Expiry of a wait does
+not kill the task. Waiting on an already terminal task returns its retained
+result immediately. Result retrieval is repeatable during the retention period,
+not a destructive consume operation. Unknown or expired task IDs produce an
+explicit error.
+
+The manager remains responsive while a wait is pending, including to a kill
+request for the same task. A task ending through success, failure, hard timeout,
+or explicit kill resolves its pending waits with the corresponding terminal
+outcome. This tool also provides polling and result retrieval; separate tools
+for those functions are not required initially.
+
+### 7.4 Explicitly terminating a task: kill
+
+The manager must expose a `task_kill` tool taking a task ID. If that task is
+running, the manager forcibly terminates and reaps its worker, marks the task
+as killed, and reports that its session has terminated and lost its in-memory
+state. This is an explicit destructive operation, not cooperative Lua
+cancellation. The cleanup and side-effect limitations of section 7.1 apply.
+
+Kill targets that task's active worker, not merely whichever worker currently
+uses its logical session ID. A late kill for a completed task must not kill a
+replacement worker or a subsequent execution in that session. If completion
+has already been recorded, return the existing terminal status without changing
+it. Repeated kills of a killed task return its terminal status without further
+side effects. Unknown or expired task IDs produce an explicit error.
+
+A successful kill response must not claim termination before the manager has
+confirmed worker exit. Requests waiting for the task must resolve consistently
+with its recorded terminal outcome. Failure to terminate a worker must be
+reported, not presented as successful cleanup. Other sessions remain available.
+
+Both task tools are manager facilities; they do not require an embedded handler
+to implement background execution or to kill its host.
 
 ## 8. Initial acceptance criteria
 
@@ -316,6 +359,11 @@ defined before implementation.
     polling that task later yields the result and preserved session state.
 15. Async execution returns a task ID without waiting for the worker's result.
     Completed results remain retrievable across the wait-to-poll transition.
+16. A client reattaches with `task_wait`, can poll or wait with a fresh wait
+    timeout, and retrieves the same result repeatedly without re-execution.
+17. `task_kill` terminates an active task's worker and resolves pending waits as
+    killed. Repeating the kill, or killing an old completed task after another
+    execution starts, does not terminate unrelated or replacement execution.
 
 ## 9. Lua version support
 
@@ -410,8 +458,9 @@ these policies before implementation rather than letting them emerge accidentall
 
 ### 11.1 Public tool surface and code entry
 
-Propose manager tools `session_create`, `session_list`, `session_execute`,
-`session_reset`, `session_close`, and task status/result retrieval tools.
+Propose manager session tools `session_create`, `session_list`, `session_execute`,
+`session_reset`, and `session_close`. Required task tools are `task_wait` and
+`task_kill`, as specified in sections 7.3 and 7.4.
 The single execution tool implements all waiting modes in section 7.2 rather
 than separate synchronous and asynchronous tools. A directly embedded handler exposes
 execution and only those lifecycle operations the host supports; it does not
@@ -495,8 +544,8 @@ The following have not yet been agreed:
   per-session request queueing or busy-response policy.
 - Execution timeout field, units, bounds, omitted-timeout policy, and ordering
   rules for completion racing with the deadline.
-- Wait-timeout omitted-value default and numeric precision; task polling/result
-  schemas, retention and expiry limits, and task-ID cancellation policy.
+- Wait-timeout omitted-value default and numeric precision; task tool schemas,
+  retention and expiry limits, and ordering for kill racing with completion.
 - Deployment authentication and authorization for any network transport.
 - Acceptance or revision of the proposed policies in section 11, including
   disconnect cleanup, cancellation, platform support, and resource bounds.
