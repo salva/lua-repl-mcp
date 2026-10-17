@@ -297,8 +297,10 @@ tool. This specification calls the parameter `wait_timeout_ms`:
 | `0` | Accept execution and return its session ID and pending status without waiting for completion. |
 | Positive number | Wait up to that many milliseconds; return a terminal result if available, otherwise return the session ID and pending status while execution continues. |
 
-The field's omitted-value default and whether fractional milliseconds are
-accepted remain schema decisions. Negative, non-finite, and otherwise invalid
+Omitted `wait_timeout_ms` defaults to 600000 milliseconds (10 minutes) for both
+execution and wait tools. This is a wait deadline, not a hard execution deadline.
+Explicit null and zero retain their documented meanings. Whether fractional
+milliseconds are accepted remains a schema decision. Negative, non-finite, and otherwise invalid
 values must be rejected before execution starts.
 
 The public API uses `session_id` for all execution and lifecycle operations;
@@ -326,7 +328,8 @@ terminal. If the wait expires, the manager must return control without cancellin
 restarting, or resubmitting the execution. The client can subsequently poll that
 same session for status and retrieve its terminal result, including output or errors.
 The final result must remain retrievable even if completion races with returning
-the pending response. Status and result retrieval must not execute the code again.
+the pending response, until consumed by wait or replaced by the next execution.
+Status and result retrieval must not execute the code again.
 
 The wait deadline starts when the execution is dispatched. The manager must
 continue servicing other requests while waiting. Expiry releases only the
@@ -362,9 +365,20 @@ if execution is still active. Each wait deadline starts when that wait is accept
 Waiting reattaches to the session's current execution, never dispatches another execution,
 and never resets or extends its hard execution deadline. Expiry of a wait does
 not kill the task. Waiting on an already terminal task returns its retained
-result immediately. Result retrieval is repeatable during the retention period,
-not a destructive consume operation. Unknown sessions, expired results, and
-sessions without an execution produce explicit, distinguishable errors.
+result immediately and consumes that retained result. Retain terminal results
+until returned by `session_wait` or replaced by the next accepted execution,
+without time-based result expiry. A wait returning pending status consumes
+nothing. A synchronous execution response does not itself consume the result.
+Unknown sessions, consumed results, and sessions without an execution produce
+explicit, distinguishable errors. Keep lightweight status after consumption.
+Rejected executions must not discard the preceding result. These rules also
+apply to failed results and results from terminated sessions.
+
+Consume when the terminal wait response is committed for transmission; delivery
+cannot be guaranteed after disconnect. If multiple waits are outstanding, one
+receives and consumes the payload; the others receive a result-unavailable error
+with terminal status. An existing pending waiter must not receive a newer
+execution's result if the session is reused.
 
 Each session exposes at most one current execution and its result. Starting a
 new execution replaces the previous retained result. Historical
@@ -375,8 +389,8 @@ identifiers may be used for this purpose but are not client-facing task IDs.
 
 The manager remains responsive while a wait is pending, including to a kill
 request for the same task. A task ending through success, failure, hard timeout,
-or explicit kill resolves its pending waits with the corresponding terminal
-outcome. This tool also provides polling and result retrieval; separate tools
+or explicit kill resolves its pending waits according to the single-consumer
+rules above. This tool also provides polling and result retrieval; separate tools
 for those functions are not required initially.
 
 ### 7.4 Terminating a session: kill
@@ -430,8 +444,9 @@ and indicate whether a terminal execution result is still available through
 `session_wait`. Listing must not create sessions, execute code, or consume results.
 
 The manager must answer listing requests while workers are executing. An empty
-manager returns an empty list. Terminated entries may be removed according to
-the documented metadata/result retention policy; they must not appear usable.
+manager returns an empty list. Keep terminated entries with unconsumed results
+available for retrieval. After consumption, metadata may be removed according
+to a documented policy; terminated entries must not appear usable.
 Exact status names and any pagination remain schema decisions.
 
 ## 8. Initial acceptance criteria
@@ -470,7 +485,8 @@ Exact status names and any pagination remain schema decisions.
 15. Async execution returns the session ID without waiting for the worker's result.
     Completed results remain retrievable across the wait-to-poll transition.
 16. A client reattaches with `session_wait`, can poll or wait with a fresh wait
-    timeout, and retrieves the same result repeatedly without re-execution.
+    timeout, and consumes the terminal result without re-execution. A subsequent
+    wait reports result unavailable; a pending response does not consume a result.
 17. `session_kill(session_id)` disposes of newly allocated, idle, or running
     sessions; pending execution waits resolve as killed. Repeating the kill
     has no further side effects. Accepted kill cleanup never
@@ -604,9 +620,14 @@ messages must not revive an aborted allocation.
 
 `session_create` accepts optional `stdin_path`, `stdout_path`, and `stderr_path`
 parameters. Standard input reads from the supplied file; standard output and
-error write to their supplied files. Each omitted stream defaults to `/dev/null`.
-Output file append/truncate policy and path resolution must be finalized before
-implementation. These streams are separate from captured Lua `print` output
+error write to new files created when the session is initialized. Use exclusive
+creation: an existing output path is an error rather than being appended to or
+truncated. Keep these files open across tasks. Each omitted stream defaults to
+`/dev/null`, opened as a device rather than created exclusively. Standard input
+reads the supplied existing file. If stdout and stderr specify the same path,
+create it once and share the opened destination. Path resolution and handling of
+files created before a startup failure remain to be finalized.
+These streams are separate from captured Lua `print` output
 included in execution results; any mirroring of captured output must be explicit.
 For implicit creation, the execution API must expose equivalent creation options
 or document that it uses defaults; that schema choice remains open.
@@ -708,7 +729,7 @@ Execution results include captured output, an ordered list of JSON-compatible
 return values, and structured error information on failure. Nonrepresentable
 results produce an error and the entire return-value payload is discarded;
 custom typed encodings and descriptive object inspection are not supported.
-Section 13.4 governs serialization; detailed table-shape rules remain open.
+Section 13.4 governs serialization and table-shape rules.
 
 Define configurable limits for input messages, captured output, value-rendering
 depth and size, and managed session count. Prefer truncating diagnostic output
@@ -764,8 +785,8 @@ different value; numeric range/precision errors must be reported or handled by
 an explicitly documented exact-number convention. Strings follow JSON's Unicode
 semantics; arbitrary binary input needs a separately specified encoding.
 
-Empty arrays and objects both become empty Lua tables; preserving their original
-JSON shape on return is not implied. The result encoding remains to be finalized.
+Empty arrays and objects both become empty Lua tables, which return as JSON
+objects; preserving an empty input array's original shape is not implied.
 Whether execution returns synchronously or is retrieved with `session_wait`,
 the terminal result representation must be the same.
 
@@ -838,15 +859,44 @@ objects or invent tagged encodings to make the result appear successful.
 Represent ordinary Lua `nil` returns as JSON null entries in the outer return
 array, preserving the explicit return count: zero returns is `[]`, while one
 nil return is `[null]`. The documented JSON null sentinel also maps to JSON
-null. Exact table shape, numeric precision, and empty-table conventions must
-be finalized before implementation; reject values outside that contract rather
-than silently losing data. Detect cycles and enforce serialization bounds.
+null. Nonempty tables with exactly consecutive integer keys from 1 to N become
+JSON arrays. String-only keyed tables become objects; empty tables become
+objects. Reject mixed key types, holes, and unsupported key types. Inspect raw
+entries without invoking `__pairs`, `__index`, or conversion metamethods.
+Numeric precision rules remain to be finalized; reject values outside that
+contract rather than silently losing data. Detect cycles and enforce serialization bounds.
 Exceeding a result bound is an error, not successful result truncation.
 
 Serialization failure occurs after execution and does not roll back side
 effects or terminate an otherwise healthy session. Preserve captured output
 and error diagnostics, but expose no partial return-value payload. Apply the
 same rule to direct execution and results obtained via `session_wait`.
+
+### 13.5 Diagnostic encoding and failure codes
+
+Error messages, tracebacks, and captured output must remain valid JSON when
+Lua produces invalid UTF-8. Escape invalid bytes with a documented printable
+convention instead of letting diagnostic encoding mask the original failure.
+Flag affected diagnostics/output with `data_preserved: false` and a readable
+notice that the original data was not fully preserved. Also flag truncation
+caused by diagnostic/output limits. Ordinary JSON escaping alone does not imply
+data loss. Returned values still follow the strict rejection policy above.
+
+Tool failures must expose stable machine-readable failure codes, not require
+clients to classify prose. Distinguish at least invalid arguments, unknown
+session, busy session, terminated session, no execution, result unavailable,
+session creation failure, Lua syntax error, Lua runtime error, result
+serialization error, hard execution timeout, explicit kill, request
+cancellation, worker exit, and control-transport failure. Preserve creation
+failure subreasons such as startup timeout or stream setup failure.
+
+Each execution error must identify its stage and whether user code did not
+start, started with potentially partial effects, completed before result
+conversion failed, or has an unknown outcome. Report session usability
+separately. A serialization failure must explicitly say execution completed
+and its effects remain; it must not encourage automatic re-execution. Exact
+code strings and schema remain to be finalized consistently across manager
+and direct-handler tools.
 
 ## 14. Open implementation decisions
 
@@ -857,15 +907,14 @@ The following have not yet been agreed:
 - Session identifiers and complete tool request and response schemas.
 - Precise Lua embedding API and its compatibility with `dosbox-y`.
 - Result rendering, output limits, and oversized-result behaviour.
-- Null sentinel API, exact numeric conversion policy, and JSON return-value
-  schema, including table shape and empty-table conventions.
+- Null sentinel API, exact numeric conversion policy, and complete JSON return-value schema.
 - Event-loop and process-spawning dependencies and internal worker protocol.
 - Execution timeout upper bounds and ordering
   rules for completion racing with the deadline.
-- Wait-timeout omitted-value default and numeric precision; task tool schemas,
-  retention and expiry limits, and ordering for kill racing with completion.
-- Startup deadline default/bounds, standard-stream file open modes and path
-  resolution, and creation options for implicit session allocation.
+- Wait-timeout numeric precision; task tool schemas, consumed-session metadata
+  retention, and ordering for kill racing with completion.
+- Startup deadline default/bounds, standard-stream path resolution and failed
+  startup file cleanup, and creation options for implicit session allocation.
 - Deployment authentication and authorization for any network transport.
 - Resource-bound defaults.
 
