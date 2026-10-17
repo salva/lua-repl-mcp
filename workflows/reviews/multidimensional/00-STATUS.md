@@ -15,10 +15,10 @@ authorized by this review. Uncommitted/live later work is outside this snapshot.
 - [x] Confirm scope, report location, concurrency and deferred implementation.
 - [x] Pin source without discarding or modifying active work.
 - [x] Launch four independent GPT-6 Astra reviewers.
-- [ ] Collect every reviewer report and inspection limits.
-- [ ] Deduplicate concrete findings against active minimal U13 repairs.
-- [ ] Produce subsystem map, stable issue inventory and consolidated report.
-- [ ] Vet proportionate fixes/ordering where findings require new work.
+- [x] Collect every reviewer report and inspection limits.
+- [x] Deduplicate concrete findings against active minimal U13 repairs.
+- [x] Produce subsystem map, stable issue inventory and consolidated report.
+- [x] Vet proportionate fixes/ordering where findings require new work.
 - [ ] Present plan and obtain confirmation before a fixing agent starts.
 - [ ] Once separately authorized, fix/review with at most three correction rounds.
 
@@ -26,10 +26,10 @@ authorized by this review. Uncommitted/live later work is outside this snapshot.
 
 | Dimension | Session | Status |
 | --- | --- | --- |
-| Architecture, process ownership and lifecycle | `ses_eb45f7a82fferjDsCiiNcS62kH` | Running |
-| Code quality, maintainability and simplicity | `ses_eb45f5ab0ffeZOdYMMnDTpbAdQ` | Running |
-| Testing, containment and evidence quality | `ses_eb45f3c17ffeXEETi1Yym3tHU4` | Running |
-| Public contracts, documentation and installation | `ses_eb45f1eb7ffeKOHo64az2MUyDk` | Running |
+| Architecture, process ownership and lifecycle | `ses_eb45f7a82fferjDsCiiNcS62kH` | Complete; no new findings; critical triage complete |
+| Code quality, maintainability and simplicity | `ses_eb45f5ab0ffeZOdYMMnDTpbAdQ` | Complete; one new claim, triaged |
+| Testing, containment and evidence quality | `ses_eb45f3c17ffeXEETi1Yym3tHU4` | Complete; one new oracle gap, residual F11 |
+| Public contracts, documentation and installation | `ses_eb45f1eb7ffeKOHo64az2MUyDk` | Complete; one small docs gap, triaged |
 
 All reviewers use `openai/gpt-6-astra`, source inspection only. They must classify
 findings as new or already covered by U13 and assess historical baggage,
@@ -37,3 +37,14 @@ evolutionary bias and review-induced overengineering. Prior approvals are not
 runtime proof; neither are reviewer counts. No dangerous process tests or
 publication operations are part of this pass. Reports are advisory until
 reconciled with source changes made after the pinned commit.
+
+## Required critical triage and fixing-agent constraint
+
+Every allegation must be critically checked for evidence, user impact, current
+applicability and duplication with active repairs. Reviewer authority, preference
+and prior approval are not sufficient. Record accept, simplify, defer or reject
+with reasons, and distinguish confirmed defects from untested source hypotheses.
+The eventual fixing agent must be explicitly told **do not overengineer; prefer
+the smallest sufficient correction**. No broad refactor, new framework or expanded
+gate without a concrete correctness need. This constraint applies to every
+correction/review round, not only initial triage. Implementation stays deferred.
