@@ -34,6 +34,19 @@ local ok,err=pcall(function()
  local z={pid=125,state='idle',pending='',buffer=''}; b.workers={z}
  lost=true; b:step(0)
  assert(z.failure=='wait_failed' and z.pid==nil and #signals==n)
+ -- Concurrent cleanup shares one origin, not serial per-worker 30s windows.
+ lost=false; confirmed=false; now=100; b.workers={}; b.reaping={}
+ local parallel={}
+ for i=1,8 do
+  local child={pid=200+i,state='running',pending='',buffer=''}
+  parallel[i]=child; b.workers[i]=child; b:abort(child,'shutdown')
+ end
+ now=120; b:step(0)
+ for _,child in ipairs(parallel) do assert(child.termination_phase=='kill' and child.cleanup_deadline==130) end
+ local count=#signals; confirmed=true; now=121; b:step(0)
+ assert(#signals==count and #b.workers==0,'kill-phase confirmed exits must stop all retries')
+ for _,child in ipairs(parallel) do assert(child.process_exit_confirmed) end
+ print('PASS parallel_eight_disposals_shared_deadline_early_kill_phase_exit')
  print('PASS original_handoff_deadline_no_late_signal_unconfirmed_diagnostic_minimal_eventual_reap_stale_wait')
 end)
 x.s.kill=kill; x.w.wait=wait; x.p.poll=poll; x.u.write=write

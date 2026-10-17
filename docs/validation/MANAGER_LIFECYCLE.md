@@ -218,3 +218,64 @@ independently acknowledged), child-side readiness/result delivery fault injectio
 real post-fork setup injection, deterministic guardian stale-command/reused-ID
 coverage and repeated completion/kill ordering stress. Full U12 remains incomplete;
 these additions do not claim clean-install/audit/U10 or release acceptance.
+
+## Completion of previously named process/identity gaps
+
+On product revision `679abe5` (production code unchanged in this continuation),
+expanded `tests/u12_matrix.py` now passes **28** cases. New pre-exec test wrapper
+is inherited by the guardian child and pauses immediately before worker exec,
+after reporting the child's PID. SIGINT/SIGTERM/manager-only KILL/abrupt exit are
+all exercised at this acknowledged spawn-before-readiness barrier. The subprocess
+case now waits for the descendant shell's PID file and confirms the same live
+identity both before manager death and after worker/guardian disposal. Thus a
+living execed descendant demonstrably does not retain manager liveness. The test
+contains that descendant afterward; no process-tree containment promise is made.
+Added repeated TERM and manager-only KILL of a worker that installs TERM-ignore
+before its execution barrier: disposal measured 20.058s and20.010s, respectively,
+requiring KILL. Caught fatal event-loop errors during native execution and blocked
+startup return1 and dispose workers/guardian. Existing normal EOF and protocol
+stdout assertions remain. Matrix watchdogs and own-group containment unchanged.
+
+New `tests/u12_real_faults.lua` passes four real-fork failure paths under a25s
+external group watchdog: post-fork parent nonblocking exception, child setup
+exception, partial readiness delivery followed by death, partial result delivery
+following actual execute command followed by death. Every child is confirmed
+reaped, parent channels closed, and no partial result becomes consumable.
+
+New `tests/u12_identity_races.lua` passes under45s watchdog:20 complete-result then
+repeated kill/shutdown transitions retain completed values;20 active execute then
+abort transitions preserve original failure and origin; injected reused allocation
+and stale execute after release both fail closed. The expected guardian diagnostic
+identifies `reused allocation` or `stale allocation`; no worker PID fallback is
+used. The existing rare-policy test now also covers eight concurrent disposals
+sharing one original deadline and confirmed exit during KILL phase stopping all
+retries. `tests/u12_server_boundary.lua` passes transport-construction/loop/cleanup
+injection with one cleanup attempt and original failure preserved when cleanup
+also fails.
+
+Commands with the environment above (all completed):
+
+- `python3 tests/u12_matrix.py` —28PASS; then rare policy/contracts/diff check0.
+- Real fault and aggregate-process fixtures in isolated subprocess groups under
+  25s/50s watchdogs —both0; nine maximal retained results remain valid.
+- Identity-race fixture under45s watchdog —0, expected injected failure diagnostics.
+- `python3 tests/u4_process.py && python3 tests/u5_process.py && python3 tests/u12_lifecycle_red.py && python3 tests/u12_guardian_process.py` —0.
+- `python3 tests/u6_process.py && python3 tests/u7_process.py && python3 tests/u6_progressive_process.py && python3 tests/u8_live.py && python3 docs/check_contracts.py` —0.
+  Includes20MiB configured result,16MiB default maximum,256 wait saturation,
+  nonblocking stopped-reader cleanup, configured limits, TERM-resistant real
+  child (20.011s), cancellation/deadline/output retention and API schemas.
+- All then-existing43 selected `u[1-7]*.lua` non-process/host fixtures —driver0.
+  This pattern also selected U12 Lua tests; the only expected exit1 remains
+  `u7_coupled_defaults_red.lua` which hardcodes obsolete64MiB response capacity,
+  as documented by the existing U9 driver. Current128MiB default boundary tests
+  pass. Injected stale/abandonment diagnostics are expected and not suppressed.
+- New server boundary3PASS; final `git diff --check`0.
+
+This closes the concrete missing checkout process/evidence cases listed in the
+previous section; it does not grant independent audit, clean-install validation,
+U10 refresh or final release acceptance. Those remain separate follow-up gates.
+POSIX guardian-loss fallback cannot safely kill reparented workers after loss of
+child ownership; simultaneous manager/guardian failure, arbitrary descendants,
+trusted interference and exceptional kernel unkillability remain outside the
+stated guarantee. Linux `/proc` is used by tests only. No host/service configuration,
+shared runtime, embedded handler, publication or push changes were made.

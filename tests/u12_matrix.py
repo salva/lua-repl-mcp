@@ -32,6 +32,18 @@ s.serve=function(io,options)
  return serve(io,options)
 end
 s.main()''' % json.dumps(str(marker))
+        if mode == 'fatal':
+            script=script.replace('u._exit(77)', 'error("injected manager event-loop failure")')
+        if state == 'spawn':
+            # Test-only wrapper inherited by guardian/worker; blocks immediately
+            # before worker exec, proving ownership in the spawn/readiness gap.
+            hook = """local x=require('lua_repl_mcp.worker_posix')
+x.u.execp=function()
+ local f=assert(io.open(%s,'w')); f:write(x.u.getpid()); f:close()
+ while true do x.t.nanosleep{tv_sec=1,tv_nsec=0} end
+end
+""" % json.dumps(str(tmp/'spawned'))
+            script = hook + script
         p = subprocess.Popen(['lua5.4', '-e', script], cwd=ROOT,
                              stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE, bufsize=0, start_new_session=True)
@@ -71,16 +83,21 @@ s.main()''' % json.dumps(str(marker))
             tracked.append((guardian, identity(guardian)))
             fifo = tmp/'fifo'
             os.mkfifo(fifo)
-            if state == 'startup':
+            if state in ('startup','spawn'):
                 send('tools/call',dict(name='session_create', arguments=dict(stdin_path=str(fifo))))
                 deadline = time.monotonic()+8
                 while not children(guardian):
                     assert time.monotonic()<deadline, 'spawn barrier'
                     time.sleep(.005)
                 worker = children(guardian)[0]
+                if state == 'spawn':
+                    while not (tmp/'spawned').exists():
+                        assert time.monotonic()<deadline, 'pre-exec barrier'
+                        time.sleep(.005)
+                    assert int((tmp/'spawned').read_text())==worker
                 # /proc syscall is an observation barrier: worker is blocked in
                 # FIFO open, not merely scheduled sometime after fork.
-                while True:
+                while state == 'startup':
                     syscall = Path(f'/proc/{worker}/syscall').read_text().strip()
                     if syscall.startswith(('257 ', '2 ')):
                         break
@@ -89,15 +106,19 @@ s.main()''' % json.dumps(str(marker))
             else:
                 v=rpc('tools/call',dict(name='session_create',arguments={}))['structuredContent']
                 worker=children(guardian)[0]
-                if state in ('native','infinite','subprocess'):
+                if state in ('native','infinite','subprocess','ignoring'):
                     barrier=tmp/'executing'
                     code='local f=assert(io.open('+json.dumps(str(barrier))+',"w")); f:write("ready"); f:close(); '
-                    if state=='native':
+                    if state=='ignoring':
+                        code='local s=require("posix.signal"); s.signal(s.SIGTERM,s.SIG_IGN); '+code+'while true do end'
+                    elif state=='native':
                         code+='local u=require("posix.unistd"); local f=require("posix.fcntl"); local fd=assert(f.open('+json.dumps(str(fifo))+',f.O_RDONLY)); u.read(fd,1)'
                     elif state=='subprocess':
                         # Descendant stays alive during guardian liveness EOF;
                         # containment is test-only, not a process-tree promise.
-                        code+='os.execute("sleep 8 &"); while true do end'
+                        import shlex
+                        shell='echo $$ > '+shlex.quote(str(tmp/'descendant'))+'; exec sleep 30'
+                        code+='os.execute('+json.dumps('sh -c '+shlex.quote(shell)+' &')+'); while true do end'
                     else:
                         code+='while true do end'
                     r=rpc('tools/call',dict(name='session_execute',arguments=dict(session_id=v['session_id'],code=code,wait_timeout_ms=0)))
@@ -110,11 +131,19 @@ s.main()''' % json.dumps(str(marker))
                         while not Path(f'/proc/{worker}/syscall').read_text().startswith(('257 ', '2 ')):
                             assert time.monotonic()<deadline, 'native open barrier'
                             time.sleep(.005)
+            descendant=None
+            if state=='subprocess':
+                deadline=time.monotonic()+8
+                while not (tmp/'descendant').exists():
+                    assert time.monotonic()<deadline, 'descendant-ready barrier'
+                    time.sleep(.005)
+                descendant=int((tmp/'descendant').read_text()); desc_identity=identity(descendant)
+                assert desc_identity and desc_identity[1]!='Z'
             tracked.append((worker,identity(worker)))
             assert tracked[-1][1][2]==guardian
             start=time.monotonic()
-            if mode=='abrupt':
-                marker.touch(); expected=77
+            if mode in ('abrupt','fatal'):
+                marker.touch(); expected=77 if mode=='abrupt' else 1
             elif mode=='guardian_loss':
                 os.kill(guardian,signal.SIGKILL); expected=1
             elif mode=='eof':
@@ -139,6 +168,8 @@ s.main()''' % json.dumps(str(marker))
                 while any(alive(pid,ident) for pid,ident in tracked):
                     assert time.monotonic()<deadline, ('disposal watchdog',tracked)
                     time.sleep(.01)
+            if descendant is not None:
+                assert alive(descendant,desc_identity), 'inheritance proof requires live descendant through disposal'
             print('PASS matrix',mode,state,'elapsed',round(time.monotonic()-start,3),flush=True)
             return True
         except Exception as e:
@@ -153,8 +184,8 @@ s.main()''' % json.dumps(str(marker))
 
 if __name__=='__main__':
     cases=[(mode,state) for mode in (signal.SIGINT,signal.SIGTERM,signal.SIGKILL,'abrupt')
-           for state in ('idle','startup','infinite','native')]
-    cases += [('abrupt','subprocess'),('guardian_loss','infinite'),('repeat','native'),('eof','infinite')]
+           for state in ('idle','startup','spawn','infinite','native')]
+    cases += [('abrupt','subprocess'),('guardian_loss','infinite'),('repeat','native'),('eof','infinite'),('repeat','ignoring'),(signal.SIGKILL,'ignoring'),('fatal','native'),('fatal','startup')]
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
         results=list(pool.map(lambda args:run(*args),cases))
     raise SystemExit(0 if all(results) else 1)
