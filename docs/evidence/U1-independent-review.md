@@ -75,3 +75,46 @@ report and a deliberately failing durable regression. Classification:
 implementation owner should remediate R1 and rerun all focused suites; independent
 review/verification may then assess the changed inputs. This report does not
 pre-approve a future repair or later runtime acceptance.
+
+## R1 repair-stage follow-up
+
+The preceding report records the diagnosis at 6ac36e1, not the current repair
+result. On the subsequent repair node, the requested concrete repair was made
+at `codec.pointer`: invalid UTF-8 string keys resolve to the valid containing
+object pointer, rather than copying binary bytes into diagnostic paths. The
+encoder still rejects such keys with `invalid UTF-8`. Valid string keys retain
+slash/tilde escaping; numeric array indices retain their prior representation.
+This primitive also protects argument-validator unknown-field diagnostics.
+No transport-specific workaround, replacement-key fiction, U2 work, or relaxation
+of returned-value validation was introduced.
+
+Extended `tests/u1_review_invalid_key.lua` checks exact containing pointers for
+both original cases and an escaped parent key, no values, side-effect notice,
+JSON-encodable responses, exactly-once execution and subsequent usability. It
+also checks raw codec rejection and invalid unknown argument keys, and keeps an
+explicit valid slash/tilde pointer check.
+
+Executed with `set -e` on Lua 5.4.6 / Python 3.12.3 / jsonschema 4.10.3:
+
+```sh
+lua5.4 -v
+lua5.4 tests/u1_review_invalid_key.lua
+lua5.4 tests/u1_public_entrypoint.lua
+lua5.4 tests/u1.lua
+lua5.4 tests/u1_diagnostic_notice.lua
+python3 --version
+python3 -c 'from importlib.metadata import version; print("jsonschema",version("jsonschema"))'
+python3 docs/check_contracts.py
+git diff --check
+```
+
+All exit 0. Original R1 cases now pass, plus escaped-parent and primitive-path
+checks; existing 14 U1 groups and diagnostic boundary matrix also pass.
+Complete runtime output read at
+`work:///cards/card-b/processes/proc-e716c90bb480/stdout.log`; schema checker
+reported 14 standalone schemas, 7 official tools, 2 discovery results, 23 examples
+and 125 regressions in complete inline stderr. Schema evidence remains
+supplemental (not pinned U8 validation). No failed repair attempts or alternate
+hypotheses were needed: the established invalid-path propagation diagnosis
+converged at the shared pointer primitive. This is focused repair evidence,
+not final acceptance or independent approval of the repair; verify owns that gate.

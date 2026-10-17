@@ -5,14 +5,17 @@ local M = {}
 local shapes = setmetatable({}, {__mode='k'})
 local safe = 9007199254740991
 local function fail(reason, path) error({reason=reason, path=path or ''}, 0) end
+local function utf8valid(s) return utf8.len(s) ~= nil end
 local function ptr(path, key)
+  -- A binary key cannot be named by a JSON Pointer. Identify its containing
+  -- object instead; never leak invalid bytes into an otherwise safe error.
+  if type(key) == 'string' and not utf8valid(key) then return path end
   return path .. '/' .. tostring(key):gsub('~','~0'):gsub('/','~1')
 end
 M.pointer = ptr
 function M.kind(v) return shapes[v] end
 function M.array(t) shapes[t] = 'array'; return t end
 function M.object(t) shapes[t] = 'object'; return t end
-local function utf8valid(s) return utf8.len(s) ~= nil end
 M.valid_utf8 = utf8valid
 local function number(n, path)
   if n ~= n or n == math.huge or n == -math.huge then fail('non-finite number',path) end

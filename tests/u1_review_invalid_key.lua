@@ -6,8 +6,9 @@ package.searchers={package.searchers[1],package.searchers[2]}
 local evaluator=require('lua_repl_mcp.evaluator')
 local codec=require('lua_repl_mcp.codec')
 local cases={
-  {'top-level invalid key','return {["\\255"]=1}'},
-  {'nested surrogate key','return {outer={["a/\\237\\160\\128~"]=1}}'},
+  {'top-level invalid key','return {["\\255"]=1}', '/values/0'},
+  {'nested surrogate key','return {outer={["a/\\237\\160\\128~"]=1}}', '/values/0/outer'},
+  {'escaped parent key','return {["a/~"]={["\\255"]=1}}', '/values/0/a~1~0'},
 }
 local failures=0
 for _,case in ipairs(cases) do
@@ -15,6 +16,8 @@ for _,case in ipairs(cases) do
   assert(r.status=='failed' and r.error.code=='result_serialization_error')
   assert(r.error.stage=='serialization' and r.error.execution_state=='completed')
   assert(r.values==nil)
+  assert(r.error.path==case[3], 'must identify the containing object')
+  assert(r.error.message:find('side effects',1,true))
   local text,problem=codec.encode(r)
   if not text then
     failures=failures+1
@@ -24,6 +27,17 @@ for _,case in ipairs(cases) do
     print('PASS '..case[1])
   end
 end
+-- Exercise the same pointer primitive through raw encoding and argument
+-- validation, including valid slash/tilde keys that must retain exact pointers.
+local contracts=require('lua_repl_mcp.contracts')
+local binary_key=string.char(255)
+local text,problem=codec.encode({[binary_key]=1})
+assert(not text and problem.path=='' and problem.reason=='invalid UTF-8')
+local input,err=contracts.validate('repl_execute',{code='', [binary_key]=1})
+assert(not input and err.path=='' and codec.encode(err))
+text,problem=codec.encode({['a/~']=function() end})
+assert(not text and problem.path=='/a~1~0')
+print('PASS pointer_boundary_paths')
 local next_result=evaluator.execute({code='return u1_review_effect'})
 assert(next_result.values[1]==#cases,'execution must happen once per case and remain usable')
 assert(failures==0,failures..' failure responses cannot be serialized')
