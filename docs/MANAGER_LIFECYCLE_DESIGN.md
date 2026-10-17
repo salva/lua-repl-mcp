@@ -74,9 +74,9 @@ All disposal paths use the same nonblocking escalation, including explicit kill,
 hard timeout, cancellation, startup failure, transport loss, signal shutdown and
 guardian cleanup after manager death:
 
-1. Send SIGTERM immediately; retry every 250 ms for at most 10 seconds.
+1. Send SIGTERM immediately; retry every 1 second for at most 10 seconds.
 2. If child exit is still unconfirmed, send SIGKILL at the transition and retry
-   every 250 ms for at most a further 20 seconds.
+   every 1 second for at most a further 20 seconds.
 3. If still unconfirmed at the 30-second total deadline, stop signalling and
    abandon the child as a managed session. Close channels and release session
    capacity; retain only minimal safe eventual-reaping bookkeeping while the
