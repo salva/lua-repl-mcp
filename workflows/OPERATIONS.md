@@ -72,6 +72,20 @@ Evidence: `tmp/lua-repl-mcp-container-setup/deployment-verification.json` and
 private setup logs under the workspace. Provisioning fixed private umask-created
 parent directory traversal permissions before launch; no runtime source change.
 
-The supported Analyst launch request has been submitted. Its Run/child execution
-receipt will be recorded after verification; service readiness alone is not
-evidence that implementation has begun.
+The supported Analyst `POST /api/chat` request accepted the root implementation
+brief and called `start_project` successfully at **2026-10-17 09:41:42 UTC**.
+Root Planner activated `card-a`, **U1 pure-Lua contracts, strict codec and
+evaluator**. At 09:43 UTC `/api/state` reported running with current card `card-a`;
+`agent:executor:card-a` was active and busy.
+
+The child's current conversation segment contains executed successful
+`run_command` calls from 09:42:23 onward, successful reads, and a successful
+`write` at 09:43:07. One rejected read and one failed skill lookup also remain
+in the evidence; they were followed by successful work and are not represented
+as completed effects. This verifies real child execution, not completion of U1
+or passing product runtime tests.
+
+Launch evidence in the setup directory: `launch-response.json`,
+`running-state.json`, `agents.json`, `root-children.json`, and
+`child-executor-evidence.json`. Autonomous work is now active; avoid editing its
+source/test files or generated runtime state concurrently.
