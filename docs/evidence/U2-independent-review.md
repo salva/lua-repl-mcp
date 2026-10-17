@@ -42,3 +42,31 @@ python3 docs/check_contracts.py
 Exit 0: nine U2 groups, 14 U1 groups, entrypoints, diagnostic matrix, pointer regressions and live host passed; checker reports 14 schemas, seven tools, two discovery results, 23 examples, 125 regressions. Complete combined source inspection/runtime output: `work:///cards/card-c-c/processes/proc-d4142abd3c52/stdout.log`. That first run used system jsonschema 4.10.3; pinned validation is recorded in status.md. The independent red fixture ran separately and is not erased by those successes.
 
 Classification: **failing_test**, not acceptance. Adequate existing coverage of many branches did not cover this malformed tool argument/lifecycle combination. This bounded diagnosis does not certify U3–U9 or begin later workflow verification.
+
+## R1 repair-node follow-up
+
+The diagnosis above describes `fdccdfa` before repair. On explicit request to
+repair this concrete finding, changed only shared protocol argument defaulting:
+omission maps to an empty object; explicit values reach contracts.validate
+unchanged. False/null/scalars/arrays therefore yield invalid_arguments with
+execution_state not_started, without dispatch or lifecycle action. Valid object
+calls, absent close arguments, and missing-code execute errors retain their
+existing behavior. No handler lifecycle, schema or U1 changes were needed.
+
+The original wire reproducer is unchanged and now passes: invalid close returns
+failed, subsequent execution runs, and valid close ID 4 is acknowledged. Added
+`tests/u2_review_argument_matrix.lua` to cover both direct tools with false,
+true, null, number, string and array arguments; none dispatch. It also checks
+omitted/empty close arguments and omitted/valid execute arguments.
+
+Sequential `set -e` verification (Lua 5.4.6, Python 3.12.3, jsonschema 4.19.2):
+original regression, new matrix, U2 entrypoint, all nine U2 groups, U1 public
+entrypoint, all 14 U1 groups, diagnostic matrix, U1 invalid-key regression,
+`tests/u2_live.py`, `docs/check_contracts.py`, and `git diff --check` all pass
+(exit 0). Python used the existing card-local independent-u2-validation venv.
+Complete output read at
+`work:///cards/card-c-c/processes/proc-7a6060660110/stdout.log`; checker reports
+14 schemas, seven tools, two discovery results, 23 examples, 125 regressions.
+No alternate repair hypotheses or failed repair attempts were needed: the
+accepted defaulting diagnosis converged at the owning primitive. This is focused
+repair evidence; verify still owns final acceptance and later gates remain open.

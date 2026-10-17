@@ -46,7 +46,11 @@ function M.new(config)
     local p=r.params
     if not object(p) or type(p.name)~='string' then return rpc(id,-32602,'Invalid tool call') end
     if not config.names[p.name] then return rpc(id,-32602,'Unknown tool') end
-    local args,e=contracts.validate(p.name,p.arguments or codec.object({}))
+    -- Only omission selects defaults; explicit false/null/scalars must reach
+    -- validation unchanged and must never trigger a lifecycle action.
+    local input=p.arguments
+    if input==nil then input=codec.object({}) end
+    local args,e=contracts.validate(p.name,input)
     if not args then
       return ok(M.tool_result(require('lua_repl_mcp.errors').failure(e)))
     end
