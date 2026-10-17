@@ -101,7 +101,7 @@ end
 function S:execute(w,input,deadline)
  if w.state~='idle' then return nil,'worker not idle' end
  -- Validate the direct evaluator arguments before dispatch.
- local args,e=require('lua_repl_mcp.contracts').validate('repl_execute',input)
+ local args,e=require('lua_repl_mcp.contracts').validate('repl_execute',input,{max_depth=self.limits.max_depth,max_bytes=self.limits.input_bytes})
  if not args then return nil,e end
  local generation=w.execution_generation+1
  local text,err=p.encode(p.record('execute',w.allocation_generation,{execution_generation=generation,input=input}),self.limits)

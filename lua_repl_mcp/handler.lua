@@ -33,7 +33,7 @@ function M.serve(adapter,options)
       return v,e
     end
     local function send(response)
-      local encoded=codec.encode(response,{max_depth=eval_options.max_depth+32,max_bytes=response_bytes})
+      local encoded=codec.encode(response,{max_depth=eval_options.max_depth+4,max_bytes=response_bytes})
       local original=encoded~=nil
       if not encoded then
         local errors=require('lua_repl_mcp.errors')
@@ -54,6 +54,7 @@ function M.serve(adapter,options)
       return true,nil,original
     end
     local core=protocol.new({
+      max_depth=eval_options.max_depth,input_bytes=input_bytes,response_bytes=response_bytes,
       tools=assert(codec.decode(require('lua_repl_mcp.direct_schemas'))),
       names={repl_execute=true,repl_close=true},
       instructions=options.instructions or 'Trusted code runs in the host global environment. Explicit return is required. Close returns control to the parent; no host termination or managed cancellation.',

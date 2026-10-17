@@ -727,5 +727,21 @@
     "deadline": 90,
     "run": true,
     "expected_status": 0
+  },
+  {
+    "path": "u13_guardian_depth.lua",
+    "kind": "process",
+    "wrapper": "u9_suite.py",
+    "deadline": 90,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u13_protocol_depth.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 30,
+    "run": true,
+    "expected_status": 0
   }
 ]

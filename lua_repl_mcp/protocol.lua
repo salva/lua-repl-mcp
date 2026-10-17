@@ -40,7 +40,7 @@ end
 function M.new(config)
   local self={state='new'}
   function self:handle(text)
-    local r=codec.decode(text)
+    local r=codec.decode(text,{max_depth=(config.max_depth or 128)+4,max_bytes=config.input_bytes})
     if r==nil then return rpc(nil,-32700,'Parse error') end
     if not object(r) or r.jsonrpc~='2.0' or type(r.method)~='string' or
       (r.id~=nil and (type(r.id)~='string' and type(r.id)~='number')) or
@@ -86,12 +86,12 @@ function M.new(config)
       config.submit(id,p.name,input)
       return nil
     end
-    local args,e=contracts.validate(p.name,input)
+    local args,e=contracts.validate(p.name,input,{max_depth=config.max_depth or 128})
     if not args then
       return ok(M.tool_result(p.name=='repl_execute' and require('lua_repl_mcp.errors').failure(e) or {error=e}))
     end
     local payload,action=config.call(p.name,args)
-    return ok(M.tool_result(payload)),action,id
+    return ok(M.tool_result(payload,{max_depth=(config.max_depth or 128)+2,max_bytes=128*1048576})),action,id
   end
   return self
 end

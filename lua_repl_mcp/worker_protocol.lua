@@ -42,7 +42,7 @@ local function valid_error(e)
  end
  return true
 end
-function M.validate(v)
+function M.validate(v,limits)
  if type(v)~='table' or c.kind(v)=='array' then return nil,'expected record' end
  local spec=fields[v.type]
  if not spec or v.protocol_version~=1 or not integer(v.allocation_generation) then return nil,'invalid envelope' end
@@ -55,7 +55,7 @@ function M.validate(v)
      (t~='integer' and t~='optional_string' and type(v[k])~=t) then return nil,'invalid '..k end
  end
  if v.type=='execute' then
-  local args=require('lua_repl_mcp.contracts').validate('repl_execute',v.input)
+  local args=require('lua_repl_mcp.contracts').validate('repl_execute',v.input,{max_depth=limits and limits.max_depth or 128})
   if not args then return nil,'invalid execution input' end
  end
  if v.type=='startup_error' and v.reason~='spawn_failed' and v.reason~='cwd_setup_failed' and v.reason~='stdio_setup_failed' and v.reason~='handshake_failed' then return nil,'invalid startup reason' end
@@ -73,14 +73,14 @@ function M.record(kind,g,extra)
  local v=extra or {}; v.type=kind; v.protocol_version=1; v.allocation_generation=g; return v
 end
 function M.encode(v,limits)
- local ok,e=M.validate(v); if not ok then return nil,e end
- local s,err=c.encode(v,{max_bytes=(limits and limits.worker_bytes or M.max_frame),max_depth=(limits and limits.max_depth+16 or 140)}); if not s then return nil,err end
+ local ok,e=M.validate(v,limits); if not ok then return nil,e end
+ local s,err=c.encode(v,{max_bytes=(limits and limits.worker_bytes or M.max_frame),max_depth=(limits and limits.max_depth or 128)+3}); if not s then return nil,err end
  if #s>(limits and limits.worker_bytes or M.max_frame) then return nil,'frame too large' end
  return s..'\n'
 end
 function M.decode(s,limits)
  if #s>(limits and limits.worker_bytes or M.max_frame) then return nil,'frame too large' end
- local v,e=c.decode(s,{max_bytes=(limits and limits.worker_bytes or M.max_frame),max_depth=(limits and limits.max_depth+16 or 140)}); if not v then return nil,e end
- return M.validate(v)
+ local v,e=c.decode(s,{max_bytes=(limits and limits.worker_bytes or M.max_frame),max_depth=(limits and limits.max_depth or 128)+3}); if not v then return nil,e end
+ return M.validate(v,limits)
 end
 return M

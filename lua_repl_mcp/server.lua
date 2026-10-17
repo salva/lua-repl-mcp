@@ -8,6 +8,7 @@ function M.serve(io,options)
  manager=require('lua_repl_mcp.manager').new(options)
  transport=require('lua_repl_mcp.client_transport').new(manager,io)
  local core=protocol.new{
+  max_depth=manager.limits.max_depth,input_bytes=manager.limits.input_bytes,
   tools=assert(codec.decode(require('lua_repl_mcp.manager_schemas'))),
   names={session_create=true,session_execute=true,session_wait=true,session_kill=true,session_list=true},
   instructions='Trusted Lua code runs in separate persistent workers. Use explicit return; no automatic output capture. Terminal results are single-consumer. Wait deadlines do not kill; hard execution deadlines and request cancellation destroy the session.',

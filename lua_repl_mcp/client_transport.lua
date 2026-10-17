@@ -23,7 +23,7 @@ function M.new(manager,io,o)
   assert(bounds.response_bytes>=bounds.input_bytes+1024,'response cannot echo legal input ID')
  end
  local self=setmetatable({manager=manager,io=io,input=framing.new(bounds.input_bytes),
-  encode_depth=source.max_depth and source.max_depth+32 or 160,response_bytes=bounds.response_bytes,output_bytes=bounds.output_bytes,
+  encode_depth=source.max_depth and source.max_depth+4 or 132,response_bytes=bounds.response_bytes,output_bytes=bounds.output_bytes,
   queue={},pending={},bytes=0,high_water=0,input_high_water=0,closed=false},C)
  assert(self.output_bytes>=self.response_bytes+1,'output must hold a response plus newline')
  return self
