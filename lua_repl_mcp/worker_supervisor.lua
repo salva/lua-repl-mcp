@@ -98,21 +98,24 @@ function S:allocate(options,started)
  end
  return w
 end
-function S:execute(w,input,deadline,original)
+function S:execute(w,input,deadline,original,checkpoint)
  if w.state~='idle' then return nil,'worker not idle' end
  if original then
-  local resolved,problem=p.execution_input({request=original},self.limits)
+  local resolved,problem=p.execution_input({request=original},self.limits,checkpoint)
   if not resolved then return nil,problem end
   input=resolved
  end
  -- Validate the direct evaluator arguments before dispatch.
- local args,e=require('lua_repl_mcp.contracts').validate('repl_execute',input,{max_depth=self.limits.max_depth,max_bytes=not original and self.limits.input_bytes or math.huge})
+ local args,e=require('lua_repl_mcp.contracts').validate('repl_execute',input,{max_depth=self.limits.max_depth,max_bytes=not original and self.limits.input_bytes or math.huge,checkpoint=checkpoint})
  if not args then return nil,e end
  local generation=w.execution_generation+1
  local record={execution_generation=generation}
  if original then record.request=original else record.input=args end
- local text,err=p.encode(p.record('execute',w.allocation_generation,record),self.limits)
+ local text,err=p.encode(p.record('execute',w.allocation_generation,record),self.limits,checkpoint)
  if not text then return nil,err end
+ -- Preparation can suspend while independent abort/liveness owns this worker.
+ if w.state~='idle' then return nil,'worker no longer idle' end
+ if deadline and self.clock()>=deadline then self:abort(w,'execution_timeout'); return nil,'execution deadline expired' end
  w.execution_generation=generation; w.result=nil; w.result_at=nil; w.execution_deadline=deadline; w.state='running'; w.pending=text; w.offset=1
  self.pending_high_water=math.max(self.pending_high_water,#text)
  return generation

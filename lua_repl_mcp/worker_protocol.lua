@@ -43,22 +43,22 @@ local function valid_error(e)
  return true
 end
 -- The complete original body remains JSON data; public IDs never dispatch work.
-function M.execution_input(v,limits)
+function M.execution_input(v,limits,checkpoint)
  if v.request then
   if v.input then return nil,'conflicting execution representation' end
-  local r=c.json_value(v.request)
+  local r=c.json_value(v.request,checkpoint)
   if not r or c.json_bytes(v.request)>(limits and limits.input_bytes or 16*1048576) or
    r.jsonrpc~='2.0' or r.method~='tools/call' or type(r.params)~='table' or
    r.params.name~='session_execute' then return nil,'invalid original request' end
   local a=require('lua_repl_mcp.contracts').validate('session_execute',r.params.arguments,
-   {max_depth=limits and limits.max_depth or 128,max_bytes=math.huge})
+   {max_depth=limits and limits.max_depth or 128,max_bytes=math.huge,checkpoint=checkpoint})
   if not a then return nil,'invalid original arguments' end
   return {code=a.code,args=a.args}
  end
  if not v.input then return nil,'missing execution representation' end
  return v.input
 end
-function M.validate(v,limits)
+function M.validate(v,limits,checkpoint)
  if type(v)~='table' or c.kind(v)=='array' then return nil,'expected record' end
  local spec=fields[v.type]
  if not spec or v.protocol_version~=1 or not integer(v.allocation_generation) then return nil,'invalid envelope' end
@@ -72,9 +72,9 @@ function M.validate(v,limits)
      (t~='integer' and t~='optional_string' and t~='optional_table' and type(v[k])~=t) then return nil,'invalid '..k end
  end
  if v.type=='execute' then
-  local input,e=M.execution_input(v,limits)
+  local input,e=M.execution_input(v,limits,checkpoint)
   if not input then return nil,e end
-  local args=require('lua_repl_mcp.contracts').validate('repl_execute',input,{max_depth=limits and limits.max_depth or 128,max_bytes=v.request and math.huge or (limits and limits.input_bytes or 16*1048576)})
+  local args=require('lua_repl_mcp.contracts').validate('repl_execute',input,{max_depth=limits and limits.max_depth or 128,max_bytes=v.request and math.huge or (limits and limits.input_bytes or 16*1048576),checkpoint=checkpoint})
   if not args then return nil,'invalid execution input' end
  end
  if v.type=='startup_error' and v.reason~='spawn_failed' and v.reason~='cwd_setup_failed' and v.reason~='stdio_setup_failed' and v.reason~='handshake_failed' then return nil,'invalid startup reason' end
@@ -91,8 +91,8 @@ end
 function M.record(kind,g,extra)
  local v=extra or {}; v.type=kind; v.protocol_version=1; v.allocation_generation=g; return v
 end
-function M.encode(v,limits)
- local ok,e=M.validate(v,limits); if not ok then return nil,e end
+function M.encode(v,limits,checkpoint)
+ local ok,e=M.validate(v,limits,checkpoint); if not ok then return nil,e end
  local s,err=c.encode(v,{max_bytes=(limits and limits.worker_bytes or M.max_frame),max_depth=(limits and limits.max_depth or 128)+5}); if not s then return nil,err end
  if #s>(limits and limits.worker_bytes or M.max_frame) then return nil,'frame too large' end
  return s..'\n'
@@ -100,6 +100,6 @@ end
 function M.decode(s,limits,checkpoint)
  if #s>(limits and limits.worker_bytes or M.max_frame) then return nil,'frame too large' end
  local v,e=c.decode(s,{max_bytes=(limits and limits.worker_bytes or M.max_frame),max_depth=(limits and limits.max_depth or 128)+5,json_path="/request",checkpoint=checkpoint}); if not v then return nil,e end
- return M.validate(v,limits)
+ return M.validate(v,limits,checkpoint)
 end
 return M

@@ -45,7 +45,7 @@ function M.validate(tool,input,options)
     -- nested args. No untrusted conversion or indexing metamethod is invoked.
     -- Tool object and positional tuple are two fixed containers, not user
     -- nesting. Validate each user value below against its own D allowance.
-    local copy,e=codec.clone(input,{max_depth=depth+2,max_bytes=options.max_bytes})
+    local copy,e=codec.clone(input,{max_depth=depth+2,max_bytes=options.max_bytes,checkpoint=options.checkpoint})
     if not copy then invalid(e.path,e.reason) end
     if tool=='session_create' then create(copy,'') end
     if tool=='repl_execute' or tool=='session_execute' then
@@ -54,7 +54,10 @@ function M.validate(tool,input,options)
       if type(copy.args)~='table' or rawequal(copy.args,null) or codec.kind(copy.args)~='array' then invalid('/args','expected array') end
     end
     if copy.args then
+      local work=0
       local function nested(v,n,path)
+        work=work+1
+        if options.checkpoint and work>=65536 then work=0; options.checkpoint() end
         if type(v)~='table' or rawequal(v,null) then return end
         if n>depth then invalid(path,'nesting limit exceeded') end
         for k,child in next,v do nested(child,n+1,codec.pointer(path,k)) end
@@ -82,7 +85,7 @@ function M.validate(tool,input,options)
 end
 function M.from_json(tool,text,options)
   options=options or {}
-  local data,e=codec.decode(text,{max_depth=(options.max_depth or 128)+2,max_bytes=options.max_bytes})
+  local data,e=codec.decode(text,{max_depth=(options.max_depth or 128)+2,max_bytes=options.max_bytes,checkpoint=options.checkpoint})
   if data==nil then return nil,errors.new('invalid_arguments',e.reason,'validation','not_started',{path=e.path}) end
   return M.validate(tool,data,options)
 end

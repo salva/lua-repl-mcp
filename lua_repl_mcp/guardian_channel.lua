@@ -36,7 +36,7 @@ function M.flush(ch)
   if ch.offset>#ch.output then ch.output=''; ch.offset=1 end
  elseif not x.retryable(err) then error(msg or 'guardian write failed') end
 end
-function M.receive(ch,accept)
+function M.receive(ch,accept,paused)
  -- One parser slice per turn. Pending complete bytes remain private until
  -- strict decode finishes; caller can service control/liveness between slices.
  local function resume_validation()
@@ -50,6 +50,7 @@ function M.receive(ch,accept)
  end
  if ch.validation then
   if not resume_validation() then return true end
+  if paused and paused() then return true end
  end
  local budget=65536
  while budget>0 do
@@ -74,7 +75,7 @@ function M.receive(ch,accept)
     return assert(c.decode(text,{max_depth=520,max_bytes=ch.limit,json_path="/items/0/request",checkpoint=coroutine.yield}))
    end)
    rest=rest:sub(nl+1)
-   if not resume_validation() then if rest~='' then ch.rest=rest end; return true end
+   if not resume_validation() or (paused and paused()) then if rest~='' then ch.rest=rest end; return true end
   until rest==''
  end
  return true

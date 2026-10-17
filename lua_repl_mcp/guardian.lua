@@ -14,6 +14,7 @@ local function guardian(fd,control,live,options)
  local controls={}
  local admission=require('lua_repl_mcp.limits').admission(options.admission)
  local pending_aborts={}
+ local preparing
  local function abort(cmd)
   local w=allocations[cmd.id]
   if w then
@@ -53,7 +54,21 @@ local function guardian(fd,control,live,options)
     end)
     if open==false then dispose() end
    end
-   if not lost then
+   if preparing and not lost and preparing.deadline and backend.clock()>=preparing.deadline then
+    backend:abort(preparing.worker,'execution_timeout')
+   end
+   if preparing then
+    if lost or preparing.worker.state~='idle' then preparing=nil
+    else
+     local ok,value=coroutine.resume(preparing.thread)
+     assert(ok,value)
+     if coroutine.status(preparing.thread)=='dead' then
+      assert(value or preparing.worker.state=='terminating' or preparing.worker.state=='dead','execution preparation failed')
+      preparing=nil
+     end
+    end
+   end
+   if not lost and not preparing then
     local open=wire.receive(ch,function(fragment,done)
      -- A complete bounded frame is an independent command unit. Later
      -- commands in the sender batch are not a barrier to applying this one.
@@ -71,7 +86,12 @@ local function guardian(fd,control,live,options)
        local w=assert(allocations[id],'stale allocation')
        if cmd.op=='execute' then
         assert(cmd.generation==w.execution_generation+1,'stale execution generation')
-        if w.state~='terminating' and w.state~='dead' then assert(backend:execute(w,cmd.input,cmd.deadline,cmd.request)) end
+        if w.state~='terminating' and w.state~='dead' then
+         assert(not preparing,'overlapping execution preparation')
+         preparing={worker=w,deadline=cmd.deadline,thread=coroutine.create(function()
+          return backend:execute(w,cmd.input,cmd.deadline,cmd.request,coroutine.yield)
+         end)}
+        end
        elseif cmd.op=='abort' then
         -- Commands carry the manager's original monotonic origin. Never reset
         -- an already running disposal when the liveness channel is lost.
@@ -83,7 +103,7 @@ local function guardian(fd,control,live,options)
        else error('unknown guardian command') end
       end
      end
-    end)
+    end,function() return preparing~=nil end)
     if open==false then dispose() end
    end
    backend:step(0)

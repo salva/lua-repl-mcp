@@ -10,9 +10,9 @@ function M.json_data(text,options)
  local v,e=M.decode(text,options); if v==nil then return nil,e end
  local token={}; encoded_data[token]={text=text,depth=(options and options.max_depth) or 128}; return token
 end
-function M.json_value(token)
+function M.json_value(token,checkpoint)
  local v=encoded_data[token]
- if v then return M.decode(v.text,{max_bytes=#v.text,max_depth=v.depth}) end
+ if v then return M.decode(v.text,{max_bytes=#v.text,max_depth=v.depth,checkpoint=checkpoint}) end
 end
 function M.json_bytes(token) local v=encoded_data[token]; return v and #v.text end
 local safe = 9007199254740991
@@ -249,6 +249,12 @@ end
 function M.clone(value,options)
   options=options or {}
   local active,bytes={},0
+  local work=0
+  local function progress(n)
+    if not options.checkpoint then return end
+    work=work+(n or 1)
+    if work>=65536 then work=0; options.checkpoint() end
+  end
   local maxdepth,maxbytes=options.max_depth or 128,options.max_bytes or 16*1024*1024
   local function add(n,path)
     if n>maxbytes-bytes then fail('encoded size limit exceeded',path) end
@@ -258,6 +264,7 @@ function M.clone(value,options)
     if not utf8valid(s) then fail('invalid UTF-8',path) end
     local n=2+#s
     for i=1,#s do
+      progress()
       local b=s:byte(i)
       if b<32 then n=n+5 elseif b==34 or b==92 then n=n+1 end
     end
@@ -265,6 +272,7 @@ function M.clone(value,options)
   end
   local visit
   visit=function(v,path,depth)
+    progress()
     if rawequal(v,null) or v==nil then add(4,path); return null end
     local t=type(v)
     if t=='string' then stringbytes(v,path); return v
@@ -279,6 +287,7 @@ function M.clone(value,options)
     active[v]=true
     local count,highest,strings,nums=0,0,false,false
     for k in next,v do
+      progress()
       count=count+1
       if type(k)=='string' then strings=true
       elseif type(k)=='number' and k%1==0 and k>=1 then nums=true; highest=math.max(highest,k)
@@ -290,6 +299,7 @@ function M.clone(value,options)
     local copy=array and M.array({}) or M.object({})
     add(2+math.max(0,count-1),path)
     for k,item in next,v do
+      progress()
       local child=ptr(path,array and k-1 or k)
       if not array then stringbytes(k,child); add(1,child) end
       copy[k]=visit(item,child,depth+1)
