@@ -66,8 +66,17 @@ descendants. Root and both owning planners received replacement notifications.
 After verification, the Analyst notified the owning chain that the adoption-turn
 hold was released and invoked normal `start_project`: success/started:true at
 2026-10-17T20:42:30.610Z. No reset, generated-state filesystem edit or runtime
-deployment change. Root planner became active/busy. Actual child returned-tool
-verification remains pending; running status alone is not implementation proof.
+deployment change. Root planner became active/busy, then resumed the owning chain
+and executor `agent:executor:card-f-a-a` for scoped reconciliation.
+
+Fresh actual execution verified: its first command returned exit1 due to a mistaken
+combined documentation path (not a successful qualification). It corrected the
+path and returned successful `run_command`, process `proc-90440b95b332`, exit0 at
+2026-10-17T20:44:32.352Z, reading the current minimal plan/adoption directions.
+This proves real child resumption, not completion of the remaining repairs.
 
 Private complete receipts: `accepted-adoption-response.json`, `run-response.json`
-and resumed-state/agents snapshots in the protected adoption directory above.
+and resumed-state/agents snapshots plus `executor-successful-resume.json` in the
+protected adoption directory above. Earlier `verified-execution.json` includes
+the first failed command; the later successful receipt is authoritative for
+exit0. Both are retained rather than masking the failed attempt.
