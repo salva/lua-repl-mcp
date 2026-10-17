@@ -10,6 +10,9 @@ The root goal is delivery of the independently embeddable pure-Lua handler and
 POSIX session manager, not merely research or documentation. Finish dependency
 qualification, implementation, contract/race/process tests, packaging, clean
 installation, and user/embedding documentation with evidence of acceptance.
+After the package is ready, complete plan U10's real Saivage MCP-client trial.
+Record any Saivage-side failures in reproducible local bug reports and mark
+affected scenarios honestly; do not modify the shared runtime to fix them.
 
 Use the bundled general software-development workflow. Make coherent related
 implementation/test batches, reuse applicable evidence, and commit completed

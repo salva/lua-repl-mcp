@@ -43,6 +43,7 @@ creating a second public MCP connection.
 | U7 | U6 | Resource limits, admission fairness and payload budgeting |
 | U8 | U2, U7 | Complete manager MCP integration and live conformance |
 | U9 | U8 | Packaging, real embedding integration and release acceptance |
+| U10 | U9 | Real Saivage MCP-client integration and defect reporting |
 
 Test seams are internal: injectable monotonic clock, poll/process operations and
 response-commit boundary, plus controllable process fixtures. They must not add
@@ -289,6 +290,48 @@ integration. Run the full acceptance matrix below and publish commands, versions
 pass/fail outcomes and any concrete unresolved blockers. Completion means all
 required criteria pass; reviews or documentation alone do not complete the project.
 
+## U10 — Try the completed MCP server with Saivage
+
+Once the MCP implementation and clean-installed package are ready, configure it
+as an actual stdio MCP server in Saivage using supported configuration and MCP
+server controls. Exercise it through a real Saivage agent, not just the standalone
+conformance client. Use isolated integration sessions and bounded workloads.
+Keep the development instance's active work and credentials intact; use an
+isolated Saivage test project when client lifecycle/cancellation tests would
+interfere with the running implementation workflow.
+
+Cover server launch and initialization, tool discovery and usable schemas,
+explicit and implicit session creation, persistent globals and functions,
+JSON arguments/results, synchronous execution, async execution and wait,
+single-consumer results, recoverable errors, list, kill, and client disconnect
+cleanup. Exercise finite wait expiry and hard execution timeout independently,
+and determine how Saivage's own request deadline/cancellation affects the session.
+Verify the agent actually receives and interprets pending, terminal, and tool-error
+results. Retain returned tool-call evidence, not merely configuration screenshots
+or a connected-server indicator. Confirm unrelated sessions remain usable.
+
+**Acceptance/evidence:** write `docs/validation/SAIVAGE_INTEGRATION.md` with the
+MCP package revision, Saivage release/revision, Lua/dependency versions, sanitized
+server configuration, reproduction commands/agent instructions, scenario matrix,
+actual responses, pass/fail/blocked outcomes, and cleanup results. Use exact
+versions and make clear which scenarios were actually run.
+
+Saivage may contain MCP-client defects. For each suspected Saivage-side failure,
+write a report under `docs/reports/saivage/` containing expected versus observed
+behaviour, minimal reproduction, relevant sanitized protocol/tool evidence,
+frequency, impact, and the Saivage revision. Compare with the independent stdio
+client when possible to distinguish a server defect from a client defect; label
+uncertain attribution explicitly. Link each report from the integration matrix.
+Never include credentials or unrelated private conversation content.
+
+Fix defects in this project's server and rerun affected scenarios. Do not patch
+the shared Saivage deployment, relax the public contract to hide client bugs, or
+claim a blocked scenario passed. External bug reports are a valid documented
+outcome for affected U10 scenarios; complete other independent scenarios and
+report the remaining integration limitation. Filing public upstream issues or
+modifying Saivage itself requires separate operator direction. A concrete report
+is required even when no upstream fix can be made during this project.
+
 ## Test orchestration and evidence rules
 
 - Pure tests use deterministic clocks, process-operation fakes and response-commit
@@ -305,7 +348,8 @@ required criteria pass; reviews or documentation alone do not complete the proje
   dependencies are reported as blocked validation, never passing tests. Use the
   pinned upstream schema digest and documented offline mode for reproducibility.
 - Run focused checks per increment, then the complete clean-install suite at U9.
-  Fix demonstrated defects and regressions; avoid redundant review-only stages.
+  Run real Saivage integration and defect reporting at U10. Fix demonstrated
+  project defects and regressions; avoid redundant review-only stages.
 
 ## Specification acceptance traceability
 
