@@ -10,9 +10,8 @@ the code executes synchronously, and the client receives its output, returned
 values, or errors.
 
 The project must support both standalone sessions and integration into existing
-applications embedding Lua. The sibling project `../dosbox-y` is a motivating
-integration target; compatibility with its actual embedding API must be verified
-before defining that integration.
+applications embedding Lua. Host-specific adapters must be validated against
+their application's embedding API without coupling the core to a particular host.
 
 ## 2. Components and independence
 
@@ -524,9 +523,6 @@ immediately. Listing has no pagination initially and is bounded by session limit
 
 Target **PUC-Rio Lua 5.4 and newer (5.4+)** for standalone and embedded use.
 Lua 5.4 is the minimum supported version and the initial integration test target.
-This matches `dosbox-y`:
-its `configure.ac` enables the embedded debugger with Lua 5.4 and explicitly
-checks `LUA_VERSION_NUM == 504`.
 
 The session handler must be implemented in Lua, without requiring a native
 component supplied by this project. It must work inside the host's existing
@@ -1061,8 +1057,8 @@ evaluation always uses the existing interpreter's global environment.
 
 The lifecycle return record contains `reason` (`close_requested|eof|transport_error|handler_error`),
 `acknowledgement_sent`, and optional diagnostics. The standard worker wrapper
-exits after return; custom parents choose their continuation. Validate the
-actual dosbox-y adapter against its embedding API during implementation.
+exits after return; custom parents choose their continuation. Validate adapters
+against the host's actual embedding API during integration.
 
 Internal worker traffic uses versioned newline-framed private ready/execute/
 result messages on dedicated descriptors, not a second public MCP connection.
