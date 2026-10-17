@@ -107,3 +107,27 @@ claim of general descendant containment, simultaneous owner death protection or
 real KILL-resistant kernel process testing is made. Embedded handler changes were
 not required or made. U9 clean-install and U10 checks remain with their assigned
 owners. No host/shared-runtime changes, restart, push or publication performed.
+
+## Repair-node continuation: contain and strengthen the audit fixture
+
+The accepted brief assigns original-scope product corrections to the original
+implementation card. Accordingly this continuation does **not** change manager,
+guardian or deadline semantics. It repairs weaknesses in the audit fixture:
+all setup/barrier/assertion failures now converge on protected backend cleanup,
+the execute-flush loop has a watchdog, successful responses must contain the
+unchanged 1MiB payload, and `tests/u12_audit_relay.py` bounds the complete isolated
+process group externally at45s. This wrapper preserves the Lua exit status and
+contains only its own test group on every path.
+
+With the same environment above, run `python3 tests/u12_audit_relay.py`.
+On product code unchanged from the prior audit (documentation HEAD `d48cf1d`),
+it completed exit1: `response_status=failed error=execution_timeout`, guardian
+completion878584.34063064 before deadline878586.12856899. The pre-deadline
+fixture check passed; the expected completion assertion still failed. Primary
+outputs: `work:///cards/card-d-b/processes/proc-793eb8a76c5b/stdout.log` and
+`work:///cards/card-d-b/processes/proc-793eb8a76c5b/stderr.log`.
+`git diff --check` passed. Earlier ownership successes apply to unchanged product
+inputs but are not acceptance of this regression. Required useful next attempt:
+route the owning outcome/relay arbitration repair described above to the original
+implementation card, then rerun this externally bounded fixture and ordering suite.
+No test assertion was weakened to make the faulty behavior pass.
