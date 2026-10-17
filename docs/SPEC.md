@@ -254,6 +254,22 @@ values must be rejected before execution starts.
 The public API uses `session_id` for all execution and lifecycle operations;
 there is no public `task_id`. Session creation returns the session ID, session
 listing includes it, and all subsequent session-scoped tools accept it.
+
+`session_execute` also accepts `session_id: null`: the manager allocates a fresh
+session and dispatches the supplied code to it in the same tool call. Explicit
+preallocation with `session_create` remains available but is not required.
+Auto-created sessions have the same persistence, ownership, timeout, and cleanup
+semantics as explicitly created sessions; completion does not dispose of them.
+Every accepted execution response includes the actual allocated session ID,
+whether pending, successful, or failed, so the client can reuse, wait on, or kill
+that session. Allocation failure must be reported without claiming execution
+started. Validate execution parameters before allocating a worker.
+
+Null means allocation only for execution, not an implicit current-session alias
+or a wildcard. Wait, kill, and reset require a concrete session ID and must not
+allocate workers as a side effect. The behaviour of an omitted `session_id`
+remains a schema decision; explicit null must be supported.
+
 JSON-RPC request IDs correlate protocol requests and responses, not executions.
 A response identifies the session and whether its execution is pending or
 terminal. If the wait expires, the manager must return control without cancelling,
@@ -386,6 +402,10 @@ to implement background execution or to kill its host.
     sessions; pending execution waits resolve as killed. Repeating the kill
     without reset has no further side effects. Accepted kill cleanup never
     targets a replacement worker.
+18. `session_execute` with a null session ID allocates a fresh persistent session
+    and returns its concrete ID in synchronous, asynchronous, and wait-expired
+    responses, including execution-error outcomes. A later execution can reuse
+    that ID and its state. Wait and kill reject null rather than allocate sessions.
 
 ## 9. Lua version support
 
