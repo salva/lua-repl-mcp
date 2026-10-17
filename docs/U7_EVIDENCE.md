@@ -463,3 +463,8 @@ UNRESOLVED OWNER DECISION: unchanged194-byte normative default successful maximu
 fit conflict only. No claim of full original U7 green while this remains red.
 U8 complete external MCP lifecycle conformance is separate. Default values are
 unchanged; no push/publication authorized or performed.
+
+Max-ID follow-up uses full default65536-byte diagnostic source budgets (quote,
+NUL and above-bound backslash/truncation), not only the256-byte configured
+case. The same six maximum-default-ID cases pass with exact echoed ID and
+compatibility equality; configured ASCII/backslash ID cases retain D256.

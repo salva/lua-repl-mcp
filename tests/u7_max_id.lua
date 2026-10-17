@@ -10,10 +10,11 @@ local function check(I,R,escaped)
  request.id=string.rep(escaped and '\\' or 'i',n)
  local frame=assert(c.encode(request,{max_bytes=I}))
  assert(#frame<=I and #frame+width>I)
+ local D=I>4096 and 65536 or 256
  local payloads={
-  errors.failure(errors.new('invalid_arguments',string.rep('"',256),'validation','not_started',nil,256)),
-  errors.failure(errors.new('lua_runtime_error',string.rep('\0',256),'execution','started',nil,256)),
-  errors.failure(errors.new('result_serialization_error',string.rep('\\',257),'serialization','completed',nil,256)),
+  errors.failure(errors.new('invalid_arguments',string.rep('"',D),'validation','not_started',nil,D)),
+  errors.failure(errors.new('lua_runtime_error',string.rep('\0',D),'execution','started',nil,D)),
+  errors.failure(errors.new('result_serialization_error',string.rep('\\',D+1),'serialization','completed',nil,D)),
   {status='killed',process_exit_confirmed=false,notice='Worker exit was not confirmed; external side effects may continue. Descendant termination is not guaranteed.'},
   {error={code='stdio_setup_failed',message='setup',created_files=c.array({'/'..string.rep('p',I//2)}),created_files_complete=false}},
   {sessions=c.array({{session_id='session-1-1',cwd='/'..string.rep('c',2*I),session_status='idle'}})}
