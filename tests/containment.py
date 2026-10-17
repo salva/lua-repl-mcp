@@ -41,30 +41,38 @@ def run(command, timeout):
     if sys.platform != 'linux' or not hasattr(os, 'pidfd_open'):
         print('BLOCKED Linux subreaper/pidfd containment unavailable', file=sys.stderr)
         return 125
-    # Qualify both pidfd operations before acquiring fixture processes.
-    try:
-        fd = os.pidfd_open(os.getpid())
-        try:
-            signal.pidfd_send_signal(fd, 0)
-        finally:
-            os.close(fd)
-    except (OSError, AttributeError):
-        print('BLOCKED pidfd signalling unavailable', file=sys.stderr)
-        return 125
-    libc = ctypes.CDLL(None, use_errno=True)
-    if libc.prctl(36, 1, 0, 0, 0) != 0:  # PR_SET_CHILD_SUBREAPER
-        print('BLOCKED PR_SET_CHILD_SUBREAPER unavailable', file=sys.stderr)
-        return 125
-    env = dict(os.environ, **{CONTEXT: str(os.getpid())})
-    child = subprocess.Popen(command, env=env, start_new_session=True)
-    deadline = time.monotonic() + timeout
     interrupted = []
+    old = {}
+    child = None
+    result = 124
     def stop(sig, frame):
         interrupted.append(sig)
-    old = {sig: signal.signal(sig, stop) for sig in (signal.SIGTERM, signal.SIGINT)}
-    result = 124
+    # Install non-raising handlers before acquiring even the qualification FD.
+    # The finally also covers partial handler setup and a Popen which raises
+    # after acquiring a child: cleanup uses observed ownership, not assignment.
     try:
-        while not interrupted and time.monotonic() < deadline:
+        for sig in (signal.SIGTERM, signal.SIGINT):
+            old[sig] = signal.getsignal(sig)
+            signal.signal(sig, stop)
+        # Qualify both pidfd operations before acquiring fixture processes.
+        try:
+            fd = os.pidfd_open(os.getpid())
+            try:
+                signal.pidfd_send_signal(fd, 0)
+            finally:
+                os.close(fd)
+        except (OSError, AttributeError):
+            print('BLOCKED pidfd signalling unavailable', file=sys.stderr)
+            return 125
+        libc = ctypes.CDLL(None, use_errno=True)
+        if libc.prctl(36, 1, 0, 0, 0) != 0:  # PR_SET_CHILD_SUBREAPER
+            print('BLOCKED PR_SET_CHILD_SUBREAPER unavailable', file=sys.stderr)
+            return 125
+        env = dict(os.environ, **{CONTEXT: str(os.getpid())})
+        deadline = time.monotonic() + timeout
+        if not interrupted:
+            child = subprocess.Popen(command, env=env, start_new_session=True)
+        while child is not None and not interrupted and time.monotonic() < deadline:
             info = os.waitid(os.P_PID, child.pid, os.WEXITED | os.WNOHANG | os.WNOWAIT)
             if info:
                 result = info.si_status if info.si_code == os.CLD_EXITED else 128 + info.si_status
@@ -73,37 +81,39 @@ def run(command, timeout):
         if interrupted:
             result = 128 + interrupted[0]
     finally:
-        # Keep the immediate child unreaped until cleanup starts; no stale PGID
-        # or process-name matching. Escaped sessions become our direct children.
-        end = time.monotonic() + 5
-        while True:
-            for pid in children():
-                try:
-                    fd = os.pidfd_open(pid)
-                    try:
-                        signal.pidfd_send_signal(fd, signal.SIGKILL)
-                    finally:
-                        os.close(fd)
-                except ProcessLookupError:
-                    pass
+        try:
+            # Keep the immediate child unreaped until cleanup starts; no stale PGID
+            # or process-name matching. Escaped sessions become our direct children.
+            end = time.monotonic() + 5
             while True:
-                try:
-                    pid, status = os.waitpid(-1, os.WNOHANG)
-                    if not pid:
+                for pid in children():
+                    try:
+                        fd = os.pidfd_open(pid)
+                        try:
+                            signal.pidfd_send_signal(fd, signal.SIGKILL)
+                        finally:
+                            os.close(fd)
+                    except ProcessLookupError:
+                        pass
+                while True:
+                    try:
+                        pid, status = os.waitpid(-1, os.WNOHANG)
+                        if not pid:
+                            break
+                        if child is not None and pid == child.pid:
+                            child.returncode = os.waitstatus_to_exitcode(status)
+                    except ChildProcessError:
                         break
-                    if pid == child.pid:
-                        child.returncode = os.waitstatus_to_exitcode(status)
-                except ChildProcessError:
+                if not children():
                     break
-            if not children():
-                break
-            if time.monotonic() >= end:
-                print('FAIL containment cleanup unconfirmed', file=sys.stderr)
-                result = 126
-                break
-            time.sleep(.01)
-        for sig, handler in old.items():
-            signal.signal(sig, handler)
+                if time.monotonic() >= end:
+                    print('FAIL containment cleanup unconfirmed', file=sys.stderr)
+                    result = 126
+                    break
+                time.sleep(.01)
+        finally:
+            for sig, handler in old.items():
+                signal.signal(sig, handler)
     return result
 
 

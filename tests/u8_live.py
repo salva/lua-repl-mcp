@@ -48,25 +48,30 @@ class Client:
         for i in range(0, len(data), 3 if fragmented else len(data)):
             self.p.stdin.write(data[i:i + (3 if fragmented else len(data))])
         return r.get('id')
-    def receive(self):
+    def receive(self, scenario_deadline=None):
         deadline = time.monotonic() + 8
+        if scenario_deadline is not None:
+            deadline = min(deadline, scenario_deadline)
         while b'\n' not in self.buf:
             assert time.monotonic() < deadline, 'response timeout'
             assert select.select([self.p.stdout], [], [], max(0, deadline-time.monotonic()))[0], 'response timeout'
             data = os.read(self.p.stdout.fileno(), 4096)
             assert data, 'unexpected protocol EOF: ' + self.p.stderr.read().decode()
             self.buf += data
+        assert time.monotonic() < deadline, 'response timeout'
         line, self.buf = self.buf.split(b'\n', 1)
         r = json.loads(line)
         assert r['jsonrpc'] == '2.0'
+        assert time.monotonic() < deadline, 'response timeout'
         return r
     def get(self, id):
         deadline = time.monotonic() + 15
         while id not in self.saved:
             assert time.monotonic() < deadline, 'total response scenario deadline'
-            r = self.receive()
+            r = self.receive(deadline)
             assert r['id'] not in self.saved
             self.saved[r['id']] = r
+        assert time.monotonic() < deadline, 'total response scenario deadline'
         return self.saved.pop(id)
     def rpc(self, method, params=None):
         return self.get(self.send(method, params))

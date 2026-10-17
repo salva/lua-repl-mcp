@@ -16,25 +16,31 @@ print('PASS installed module byte identity; outside cwd; installation-only paths
 for guide in ['site-docs/getting-started.md','README-IF-YOR-ARE-AN-AI.md']:
     p=subprocess.Popen([str(tree/'bin/lua-repl-mcp')],cwd=outside,env=env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,bufsize=0)
     pending=b''; seq=0
-    def rpc(method,params):
+    def rpc(method,params,scenario_deadline=None):
         global seq,pending
         seq+=1;p.stdin.write((json.dumps(dict(jsonrpc='2.0',id=seq,method=method,params=params))+'\n').encode())
         deadline=time.monotonic()+8
+        if scenario_deadline is not None:
+            deadline=min(deadline,scenario_deadline)
         while b'\n' not in pending:
             remaining=deadline-time.monotonic()
             assert remaining>0 and select.select([p.stdout],[],[],remaining)[0], 'complete-frame deadline'
             chunk=os.read(p.stdout.fileno(),65536);assert chunk,'EOF';pending+=chunk
+        assert time.monotonic()<deadline, 'complete-frame deadline'
         line,pending=pending.split(b'\n',1);r=json.loads(line);assert r['id']==seq,r
+        assert time.monotonic()<deadline, 'complete-frame deadline'
         return r['result']
     try:
         assert rpc('initialize',dict(protocolVersion='2025-11-25',capabilities={},clientInfo=dict(name='website-consumer',version='1')))['protocolVersion']=='2025-11-25'
         p.stdin.write(b'{"jsonrpc":"2.0","method":"notifications/initialized"}\n')
         tools={t['name']:t for t in rpc('tools/list',{})['tools']}
         assert set(tools)==set('session_create session_list session_execute session_wait session_kill'.split())
-        def call(name,args):
+        def call(name,args,scenario_deadline=None):
             Draft202012Validator(tools[name]['inputSchema']).validate(args)
-            r=rpc('tools/call',dict(name=name,arguments=args));v=r['structuredContent']
+            r=rpc('tools/call',dict(name=name,arguments=args),scenario_deadline);v=r['structuredContent']
             Draft202012Validator(tools[name]['outputSchema']).validate(v)
+            if scenario_deadline is not None:
+                assert time.monotonic()<scenario_deadline, 'total scenario deadline'
             return v
         blocks=re.findall(r'```json\n(.*?)\n\s*```',(ROOT/guide).read_text(),re.S)
         first=json.loads(blocks[0]);v=call('session_execute',first);sid=v['session_id']
@@ -42,7 +48,8 @@ for guide in ['site-docs/getting-started.md','README-IF-YOR-ARE-AN-AI.md']:
             deadline=time.monotonic()+15
             while v.get('status') in ('pending','running'):
                 assert time.monotonic()<deadline, 'total scenario deadline'
-                v=call('session_wait',dict(session_id=sid,wait_timeout_ms=1000))
+                v=call('session_wait',dict(session_id=sid,wait_timeout_ms=1000),deadline)
+            assert time.monotonic()<deadline, 'total scenario deadline'
             return v
         v=completed(v);assert v['values']==([42] if 'getting-started' in guide else [2]),v
         again=json.loads(blocks[1]);again['session_id']=sid
