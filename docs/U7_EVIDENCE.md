@@ -139,3 +139,45 @@ raise complete response/output budgets as needed, specify an ID bound, or
 explicitly narrow the legal-maximum fit guarantee. No normative limit was
 silently changed. Other previously listed incomplete U7 tests remain incomplete;
 this conflict is not evidence that those independent tests pass.
+
+## Pending ownership flood repair
+
+Preserved `tests/u7_pending_flood_red.lua` now passes. The manager marks a
+slotless admission rejection explicitly; transport immediately encodes/enqueues
+it under the existing complete-response/output budget instead of retaining an
+unowned pending handle. `submit` also removes cancelled/done handles before
+admitting another call, bounding no-tick cancellation churn. Requests with slots
+retain original commit/cancellation semantics; rejects never bind a cancellable
+ID or dispatch work. Output overflow still disconnects and cleans up.
+
+`tests/u7_pending_ownership.lua` covers 256 ordinary + 24 general-control + 8
+kill-only pending handles, rejected response ID/error equality, stopped-reader
+output overflow/cleanup, 2048 submit/cancel cycles without a tick and inert
+rejected IDs. The preserved flood now measures pending **256 -> 256**, with
+**1506221** bytes explicitly charged to output (bound 134217728), instead of
+4352 unaccounted handles. This is deterministic ownership coverage, not a claim
+of real saturated transport fairness.
+
+Commands completed exit 0:
+
+```sh
+lua5.4 tests/u7_pending_flood_red.lua
+lua5.4 tests/u7_pending_ownership.lua
+lua5.4 tests/u7_admission.lua
+lua5.4 tests/u7_transport.lua
+lua5.4 tests/u7_bounds_red.lua
+lua5.4 tests/u5.lua
+lua5.4 tests/u6_policy.lua
+# Existing LUA_PATH/LUA_CPATH environment above:
+(ulimit -n 256; timeout 25 lua5.4 tests/u7_transport_process.lua)
+python3 tests/u5_process.py
+python3 tests/u6_process.py
+python3 docs/check_contracts.py
+git diff --check
+```
+
+The 194-byte coupled-default reproducer remains deliberately red and unchanged;
+only universal legal-maximum default-fit acceptance needs an owner decision.
+Real saturated transport/timer/cancellation fairness, fragmented-worker/adversarial
+payload and exhaustive boundary obligations remain open as previously listed.
+No normative limits or failing acceptance expectations have been relaxed.

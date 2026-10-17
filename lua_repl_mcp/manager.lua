@@ -74,7 +74,9 @@ function C:accept(tool,input,request_id)
  self:refresh()
  local a,err=contracts.validate(tool,input)
  local r={tool=tool,accepted_at=self.clock()}
- if not self:admit(r,tool) then r.response=failure('limit_exceeded'); return r end
+ if not self:admit(r,tool) then
+  r.admission_rejected=true; r.response=failure('limit_exceeded'); return r
+ end
  if request_id~=nil then self:bind(request_id,r) end
  if a and tool~='session_create' and tool~='session_execute' and tool~='session_wait' and tool~='session_list' and tool~='session_kill' then
   r.response={error=errors.new('invalid_arguments','unknown manager tool','validation','not_started')}; return r

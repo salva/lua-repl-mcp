@@ -27,7 +27,22 @@ function C:enqueue(text)
 end
 function C:submit(id,tool,args)
  if self.closed then return end
+ -- Cancelled handles no longer own slots. Remove them before admitting another
+ -- handle even when the caller submits/cancels repeatedly without a tick.
+ local live={}
+ for _,p in ipairs(self.pending) do
+  if not p.request.cancelled and not p.request.done then live[#live+1]=p end
+ end
+ self.pending=live
  local r=self.manager:accept(tool,args,id)
+ if r.admission_rejected then
+  -- No slot means no pending-handle ownership. Charge the rejection to encoded
+  -- output immediately; a stopped reader eventually trips the output bound.
+  local text=protocol.encode_result(id,assert(self.manager:preview(r)),
+   {max_bytes=self.response_bytes,max_depth=160})
+  if not text then self:close('response bound'); return false end
+  return self:enqueue(text)
+ end
  self.pending[#self.pending+1]={id=id,request=r}
 end
 function C:cancel(id) return self.manager:cancel(id) end
