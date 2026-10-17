@@ -15,7 +15,7 @@ function M.new(options)
 end
 local function close(w)
  for _,key in ipairs({'read_fd','write_fd'}) do if w[key] then x.u.close(w[key]); w[key]=nil end end
- w.pending=''; w.buffer=''
+ w.pending=''; w.buffer=''; w.validation=nil; w.validation_rest=nil
 end
 -- One signal per eligible turn. Phase/deadline use the original monotonic
 -- origin; a delayed turn never resets the total bound or replays missed ticks.
@@ -142,9 +142,22 @@ function S:receive(w,v)
  else self:abort(w,'corrupt_worker') end
 end
 function S:drain(w)
+ if w.validation then
+  if self.turn_validated then return end
+  self.turn_validated=true
+  local ok,v=coroutine.resume(w.validation)
+  if not ok then return self:abort(w,'corrupt_worker') end
+  if coroutine.status(w.validation)~='dead' then return end
+  w.validation=nil
+  if not v then return self:abort(w,'corrupt_worker') end
+  self:receive(w,v)
+  if not w.read_fd then return end
+ end
  local budget=math.min(self.limits.worker_bytes+1,self.turn_read_remaining or 65536)
  while w.read_fd and budget>0 do
-  local text,_,err=x.u.read(w.read_fd,math.min(65536,budget))
+  local text,_,err
+  if w.validation_rest then text=w.validation_rest; w.validation_rest=nil
+  else text,_,err=x.u.read(w.read_fd,math.min(65536,budget)) end
   if not text then if x.retryable(err) then return end; return self:abort(w,'transport_failed') end
   if text=='' then
    -- Endpoint closure is a logical worker loss, not proof of an OS exit.
@@ -163,10 +176,11 @@ function S:drain(w)
    w.buffer=w.buffer..part
    self.buffer_high_water=math.max(self.buffer_high_water,#w.buffer)
    if not nl then break end
-   local v=p.decode(w.buffer,self.limits); w.buffer=''
-   if not v then return self:abort(w,'corrupt_worker') end
-   self:receive(w,v); rest=rest:sub(nl+1)
-   if rest=='' then break end
+   local frame=w.buffer; w.buffer=''
+   w.validation=coroutine.create(function() return p.decode(frame,self.limits,coroutine.yield) end)
+   rest=rest:sub(nl+1)
+   if rest~='' then w.validation_rest=rest end
+   return -- first validation slice belongs to the next native control turn
   end
  end
 end
@@ -174,7 +188,7 @@ function S:step(timeout_ms)
  -- Share existing IO units across admitted workers. A frame's maximum size
  -- is a retention bound, not a per-worker loop quota. Rotate ownership so
  -- continuously readable peers cannot monopolize later turns.
- self.turn_read_remaining=65536; self.turn_write_remaining=65536
+ self.turn_read_remaining=65536; self.turn_write_remaining=65536; self.turn_validated=false
  local workers={}; local n=#self.workers
  local start=(self.turn_cursor or 0)%math.max(n,1)+1
  for i=0,n-1 do workers[#workers+1]=self.workers[(start+i-1)%n+1] end
@@ -215,13 +229,17 @@ function S:step(timeout_ms)
     w.reaped=true; w.process_exit_confirmed=true; w.exit_reason=why; w.exit_status=status
     -- Drain already available data before recording exit; U6 owns full races.
     if w.read_fd then self:drain(w) end
-    if not w.failure and w.state~='closing' then w.failure=w.state=='starting' and 'handshake_failed' or 'worker_exited' end
-    if w.state=='starting' then w.files_complete=false end
-    close(w); w.state='dead'
+    w.exit_pending=true
+
    elseif not pid then
     -- Ownership is no longer confirmable. Never signal a possibly reused PID.
     w.pid=nil; self:abort(w,'wait_failed')
    end
+  end
+  if w.exit_pending and not w.validation then
+   if not w.failure and w.state~='closing' then w.failure=w.state=='starting' and 'handshake_failed' or 'worker_exited' end
+   if w.state=='starting' then w.files_complete=false end
+   close(w); w.state='dead'; w.exit_pending=nil
   end
   -- Reap before retrying: never signal again after confirmed child exit.
   if w.state=='terminating' then self:termination_signal(w) end
@@ -230,7 +248,7 @@ function S:step(timeout_ms)
    if w.pid and not w.reaped then self.reaping[#self.reaping+1]=w.pid end
    x.u.write(2,'worker exit unconfirmed after bounded disposal; external side effects may continue\n')
   end
-  if w.eof and w.state~='dead' and w.state~='closing' then self:abort(w,w.state=='starting' and 'handshake_failed' or (w.control_eof and 'worker_exited' or 'transport_failed')) end
+  if w.eof and not w.validation and w.state~='dead' and w.state~='closing' then self:abort(w,w.state=='starting' and 'handshake_failed' or (w.control_eof and 'worker_exited' or 'transport_failed')) end
  end
  local live={}; for _,w in ipairs(self.workers) do
   if w.state~='dead' then live[#live+1]=w end

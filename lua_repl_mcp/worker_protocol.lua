@@ -97,9 +97,9 @@ function M.encode(v,limits)
  if #s>(limits and limits.worker_bytes or M.max_frame) then return nil,'frame too large' end
  return s..'\n'
 end
-function M.decode(s,limits)
+function M.decode(s,limits,checkpoint)
  if #s>(limits and limits.worker_bytes or M.max_frame) then return nil,'frame too large' end
- local v,e=c.decode(s,{max_bytes=(limits and limits.worker_bytes or M.max_frame),max_depth=(limits and limits.max_depth or 128)+5,json_path="/request"}); if not v then return nil,e end
+ local v,e=c.decode(s,{max_bytes=(limits and limits.worker_bytes or M.max_frame),max_depth=(limits and limits.max_depth or 128)+5,json_path="/request",checkpoint=checkpoint}); if not v then return nil,e end
  return M.validate(v,limits)
 end
 return M
