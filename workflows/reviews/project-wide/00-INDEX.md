@@ -22,8 +22,8 @@ remain unresolved for two successive rounds. No claim of absolute perfection.
 - [x] Iterate per-issue plans with Astra until approved.
 - [x] Order approved work and review integrated metaplan.
 - [x] Check baseline drift and communicate applicability.
-- [ ] Notify owning/root planners through supported controls and verify adoption.
-- [ ] Resume via supported Run if stopped; otherwise preserve running work.
+- [x] Notify owning/root planners through supported controls and verify adoption.
+- [x] Resume via supported Run if stopped; otherwise preserve running work.
 
 ## Findings
 
@@ -71,3 +71,20 @@ current source before execution. All13 exact selected phase editions have explic
 approved matching reviews; local review-document links checked. Contract gate
 passes14 schemas,7 tools,23 examples,125 regressions. No fix implementation is
 claimed by these structural/documentation checks.
+
+## Verified adoption and resume
+
+Analyst updated accepted root scope through supported tools to
+`record:///brief.md?card=project&v=11`, created U13 goal `card-f` with accepted
+`record:///brief.md?card=card-f&v=1`, and notified the root planner
+(`09eff0a3-b49a-44da-9dd0-b775a45c92c9`). The accepted goal records batches A–E,
+selected transport/limit/ordering contracts, current acceptance and no-publication
+executor boundary. This is actual accepted scope, not only a queued message.
+
+Normal `start_project` succeeded at2026-10-17T19:45:39Z. Owning planners activated
+`card-f-a` (A containment/claims/reconciliation) and executor `card-f-a-a`.
+Its current conversation contains successful returned accepted-brief read and
+`run_command` activity: at19:47:49Z process `proc-3f5174b8242e` exited0 while
+reading the metaplan/current verdict from `/work/lua-repl-mcp`. This establishes
+real executor uptake, not completed implementation. No generated-state file
+edits, history resets or service restarts were used.
