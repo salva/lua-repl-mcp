@@ -76,7 +76,9 @@ function M.encode(value, options)
     elseif t == 'string' then put(quote(v,path),path)
     elseif t == 'number' then
       number(v,path)
-      put(math.type(v) == 'integer' and tostring(v) or string.format('%.17g',v),path)
+      -- Only the codec's output is normalized; never mutate the host locale.
+      local text=math.type(v) == 'integer' and tostring(v) or string.format('%.17g',v)
+      put((text:gsub(',', '.')),path)
     elseif t == 'table' then
       if depth > maxdepth then fail('nesting limit exceeded',path) end
       if active[v] then fail('cycle',path) end

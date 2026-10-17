@@ -149,6 +149,10 @@ function C:terminate(s,cause)
  self:freeze(s,cause); self.backend:abort(s.worker,cause)
 end
 function C:exit_info(v,w)
+ if v.error then
+  if w.exit_reason=='exited' then v.error.exit_code=w.exit_status
+  elseif w.exit_reason=='killed' then v.error.signal=w.exit_status end
+ end
  v.process_exit_confirmed=w.process_exit_confirmed==true or w.reaped==true
  if not v.process_exit_confirmed then
   v.notice='Worker exit was not confirmed; external side effects may continue. Descendant termination is not guaranteed.'
@@ -243,8 +247,11 @@ function C:preview(r)
   if state=='starting' or state=='terminating' then return nil end
   r.starting=nil
   if state~='idle' then
-   r.response=failure('session_creation_error')
-   r.response.error.stage='creation'; r.response.error.reason=s.worker.failure or 'spawn_failed'
+   local reason=s.worker.failure
+   local allowed={startup_timeout=true,spawn_failed=true,cwd_setup_failed=true,stdio_setup_failed=true,handshake_failed=true}
+   if not allowed[reason] then reason='handshake_failed' end
+   r.response={error=errors.new('session_creation_error',s.worker.startup_message or s.worker.failure or 'spawn_failed',
+    'creation','not_started',{reason=reason},self.limits.diagnostic_bytes)}
    r.response.error.created_files=codec.array(s.worker.created_paths or {})
    r.response.error.created_files_complete=s.worker.files_complete or false
    self:exit_info(r.response,s.worker)

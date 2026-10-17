@@ -37,8 +37,8 @@ function M.serve(adapter,options)
       local original=encoded~=nil
       if not encoded then
         local errors=require('lua_repl_mcp.errors')
-        response={jsonrpc='2.0',id=response.id,result=protocol.tool_result(errors.failure(errors.new(
-          'limit_exceeded','Complete response exceeds configured bound','serialization','completed')))}
+        response={jsonrpc='2.0',id=response.id,result=protocol.tool_result({error=errors.new(
+          'limit_exceeded','Complete response exceeds configured bound','serialization','completed')})}
         encoded=assert(codec.encode(response,{max_bytes=response_bytes}))
       end
       local bytes=encoded..'\n'

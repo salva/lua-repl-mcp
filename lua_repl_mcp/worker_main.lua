@@ -10,9 +10,11 @@ function M.run(input,output,g,options,limit_options)
  local function send(kind,extra)
   return x.write_all(output,assert(p.encode(p.record(kind,g,extra),limits)))
  end
+ local setup_reason='cwd_setup_failed'
  local function setup()
   if options.cwd then assert(x.u.chdir(options.cwd)) end
   local cwd=assert(x.u.getcwd())
+  setup_reason='stdio_setup_failed'
   local function open(path,flags,report)
    local fd,msg=x.f.open(path,flags,tonumber('600',8)); assert(fd,msg)
    if report then
@@ -33,7 +35,7 @@ function M.run(input,output,g,options,limit_options)
   assert(x.u.dup2(inp,0)); x.u.close(inp)
  end
  local ok,msg=pcall(setup)
- if not ok then send('startup_error',{reason='stdio_setup_failed',message=tostring(msg)}); return end
+ if not ok then send('startup_error',{reason=setup_reason,message=tostring(msg)}); return end
  if not send('ready',{cwd=assert(x.u.getcwd())}) then return end
  local last=0
  while true do

@@ -58,7 +58,7 @@ function M.validate(v)
   local args=require('lua_repl_mcp.contracts').validate('repl_execute',v.input)
   if not args then return nil,'invalid execution input' end
  end
- if v.type=='startup_error' and v.reason~='spawn_failed' and v.reason~='stdio_setup_failed' and v.reason~='handshake_failed' then return nil,'invalid startup reason' end
+ if v.type=='startup_error' and v.reason~='spawn_failed' and v.reason~='cwd_setup_failed' and v.reason~='stdio_setup_failed' and v.reason~='handshake_failed' then return nil,'invalid startup reason' end
  if v.type=='result' then
   local r=v.result
   if r.status~='completed' and r.status~='failed' then return nil,'invalid result' end

@@ -63,7 +63,7 @@ function C:submit(id,tool,args)
   -- No slot means no pending-handle ownership. Charge the rejection to encoded
   -- output immediately; a stopped reader eventually trips the output bound.
   local text=protocol.encode_result(id,assert(self.manager:preview(r)),
-   {max_bytes=self.response_bytes,max_depth=self.encode_depth})
+   {max_bytes=self.response_bytes,max_depth=self.encode_depth},r.tool)
   if not text then self:close('response bound'); return false end
   return self:enqueue(text)
  end
@@ -100,13 +100,13 @@ function C:step(on_frame)
    local v=self.manager:preview(r)
    if v then
     local text,original=protocol.encode_result(p.id,v,
-     {max_bytes=self.response_bytes,max_depth=self.encode_depth})
+     {max_bytes=self.response_bytes,max_depth=self.encode_depth},r.tool)
     if not text then self:close('response bound'); return false end
     if original then
      local committed=self.manager:commit(r,function(current)
       -- Recheck at the owning commit boundary, never enqueue stale preview.
       local encoded,full=protocol.encode_result(p.id,current,
-       {max_bytes=self.response_bytes,max_depth=self.encode_depth})
+       {max_bytes=self.response_bytes,max_depth=self.encode_depth},r.tool)
       return full and self:enqueue(encoded)
      end)
      if self.cleanup_pending then

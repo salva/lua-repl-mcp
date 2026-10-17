@@ -17,16 +17,26 @@ function M.execute(input,options)
   end
   local f,compile_error=load(args.code,'=(repl)','t',_G)
   if not f then return err('lua_syntax_error',compile_error,'execution','not_started') end
-  local thrown,trace
-  local result=pack(xpcall(f,function(v)
+  local thrown,trace,started
+  local function invoke(...)
+    started=true
+    return f(...)
+  end
+  local result=pack(xpcall(function()
+    -- Argument expansion and the call frame must fit before the witness.
+    return invoke(unpack(args.args,1,#args.args))
+  end,function(v)
     thrown=v
     if traceback then
       local ok,value=pcall(traceback,'',2)
       if ok and type(value)=='string' then trace=value end
     end
     return v
-  end,unpack(args.args,1,#args.args)))
-  if not result[1] then return err('lua_runtime_error',thrown,'execution','started',{traceback=trace}) end
+  end))
+  if not result[1] then
+    return err(started and 'lua_runtime_error' or 'limit_exceeded',thrown,'execution',
+      started and 'started' or 'not_started',{traceback=trace})
+  end
   local values=codec.array({})
   for i=2,result.n do
     local v=result[i]

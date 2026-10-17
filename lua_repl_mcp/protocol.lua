@@ -17,15 +17,23 @@ function M.tool_result(payload,options)
 end
 -- Budget the entire frame before any write or single-consumer commitment.
 -- A replacement does not claim the original result: callers must preserve it.
-function M.encode_result(id,payload,options)
+function M.encode_result(id,payload,options,tool)
   options=options or {max_bytes=128*1048576,max_depth=160}
   local result=M.tool_result(payload,options)
   local encoded=result and codec.encode({jsonrpc='2.0',id=id,result=result},options)
   if encoded then return encoded,true end
   local errors=require('lua_repl_mcp.errors')
-  result=M.tool_result(errors.failure(errors.new('limit_exceeded',
-    'Complete response exceeds configured bound','serialization','completed')),
-    {max_bytes=128*1048576,max_depth=160})
+  -- An overflow is not necessarily an execution result (list/create/kill and
+  -- close forbid status=failed). Error-only is valid for every tool. Retain
+  -- execution/session context when the original result has it.
+  local fallback_payload={error=errors.new('limit_exceeded',
+    'Complete response exceeds configured bound','serialization',
+    payload.error and payload.error.execution_state or
+    ((payload.status=='completed' or payload.status=='failed') and 'completed' or 'not_started'))}
+  for _,key in ipairs({'session_id','session_status','session_usable','process_exit_confirmed','notice'}) do
+    if tool~='session_create' and tool~='session_list' then fallback_payload[key]=payload[key] end
+  end
+  result=M.tool_result(fallback_payload,{max_bytes=128*1048576,max_depth=160})
   local fallback,err=codec.encode({jsonrpc='2.0',id=id,result=result},options)
   return fallback,false,err
 end
@@ -80,7 +88,7 @@ function M.new(config)
     end
     local args,e=contracts.validate(p.name,input)
     if not args then
-      return ok(M.tool_result(require('lua_repl_mcp.errors').failure(e)))
+      return ok(M.tool_result(p.name=='repl_execute' and require('lua_repl_mcp.errors').failure(e) or {error=e}))
     end
     local payload,action=config.call(p.name,args)
     return ok(M.tool_result(payload)),action,id
