@@ -47,7 +47,7 @@ state. Host APIs and live application state are directly accessible. Definitions
 and mutations made by REPL execution remain visible to the host.
 
 The host retains ownership of its interpreter. The handler must not implicitly
-destroy or reinitialize that interpreter when a connection ends or a reset or
+destroy or reinitialize that interpreter when a connection ends or a
 close is requested.
 
 MCP framing and transport concerns must remain separable from code evaluation
@@ -180,15 +180,14 @@ information for the host to decide what happens next. Relevant reasons include:
 
 - Client disconnect or transport end-of-input.
 - Explicit session-close request.
-- Explicit reset request, when supported by the integration.
 - Unrecoverable handler or transport error.
 
 A syntax or runtime error in submitted Lua code is an execution result, not
 automatically an unrecoverable handler error.
 
-Reset and close are application-level lifecycle operations, not assumptions
-about standard MCP protocol methods. Exact tool names and wire schemas remain
-to be defined.
+Close is an application-level MCP tool operation, not a standard MCP shutdown
+method. The direct-handler tool is `repl_close`; manager disposal uses
+`session_kill`.
 
 For embedded use, the host may keep the Lua state, reset it, or terminate the
 interpreter or application. The handler must convey the reason and relevant
@@ -199,8 +198,9 @@ point at which it resets or shuts down.
 For standalone sessions, `session_kill` releases manager-owned session resources,
 whether the session is idle or executing. No separate `session_close` tool is
 required.
-A reset operation must be available to obtain a fresh standalone REPL state;
-whether it preserves the session identifier remains an API design decision.
+There is no reset tool. To obtain fresh state, kill the old session and create
+another, explicitly or with a null session ID on execution. A new session gets
+a new ID; IDs must not be reused during the manager's lifetime.
 
 The implementation must define response and handoff ordering for lifecycle
 operations so the host knows whether a response has already been sent before it
@@ -226,10 +226,11 @@ Consequently:
 - Deployments must configure client request timeouts for their expected workloads.
 - The initial version does not promise safe interruption of arbitrary Lua or
   native host operations.
-- A cancellation or disconnect occurring during execution may not be observed
-  until execution returns.
-- Client timeout, cancellation, or disconnection does not imply execution stopped
-  or its side effects were undone.
+- An embedded handler may not observe cancellation or disconnect until execution
+  returns. The manager can observe them independently of a running worker.
+- Managed-request cancellation triggers termination as specified in section 11.3;
+  it does not undo side effects or imply instantaneous process exit. Client-side
+  timeout without notification does not by itself stop execution.
 - An infinite loop or permanently blocked native call may require external host
   intervention. Full system access does not make forced interruption safe.
 - Clients must not automatically retry a timed-out state-changing execution on
@@ -302,7 +303,7 @@ that session. Allocation failure must be reported without claiming execution
 started. Validate execution parameters before allocating a worker.
 
 Null means allocation only for execution, not an implicit current-session alias
-or a wildcard. Wait, kill, and reset require a concrete session ID and must not
+or a wildcard. Wait and kill require a concrete session ID and must not
 allocate workers as a side effect. The behaviour of an omitted `session_id`
 remains a schema decision; explicit null must be supported.
 
@@ -353,10 +354,10 @@ not a destructive consume operation. Unknown sessions, expired results, and
 sessions without an execution produce explicit, distinguishable errors.
 
 Each session exposes at most one current execution and its result. Starting a
-new execution replaces the previous retained result; reset clears it. Historical
+new execution replaces the previous retained result. Historical
 executions cannot be addressed through this API. A pending wait is internally
 bound to the execution current when the wait was accepted, so a later execution
-or reset cannot substitute a different result for that waiter. Internal generation
+cannot substitute a different result for that waiter. Internal generation
 identifiers may be used for this purpose but are not client-facing task IDs.
 
 The manager remains responsive while a wait is pending, including to a kill
@@ -387,12 +388,18 @@ Because selection is by session, a delayed kill received after a new execution
 starts targets that new execution. Clients must coordinate execution and kill
 requests accordingly; the API cannot express "kill only an older run". Once a
 kill is accepted, cleanup must be internally bound to the selected worker so it
-cannot subsequently kill a replacement worker after reset or another execution.
+cannot subsequently kill another worker or execution.
 
 A successful kill response must not claim termination before the manager has
 confirmed worker exit. Requests waiting for the task must resolve consistently
 with its recorded terminal outcome. Failure to terminate a worker must be
 reported, not presented as successful cleanup. Other sessions remain available.
+
+Kill has only a synchronous interface: no wait-timeout parameter or asynchronous
+kill handle. Its request remains pending until termination and cleanup are
+confirmed or a termination error is reported. The manager continues servicing
+other sessions while this request waits. Internally the target is terminating
+and rejects new execution; this is not a client-visible asynchronous kill mode.
 
 Both task tools are manager facilities; they do not require an embedded handler
 to implement background execution or to kill its host.
@@ -426,7 +433,7 @@ Exact status names and any pagination remain schema decisions.
    automatically resetting or destroying the host interpreter.
 6. A custom host can use that reason to perform its own reset or shutdown.
 7. The manager creates independent standalone Lua states and closes resources it
-   owns; standalone reset produces a fresh state.
+   owns; a fresh session starts with fresh state and a new ID.
 8. Execution uses no module-created background threads and respects the invoking
    host thread.
 9. Long-running execution returns a result when it completes and the client is
@@ -453,7 +460,7 @@ Exact status names and any pagination remain schema decisions.
     timeout, and retrieves the same result repeatedly without re-execution.
 17. `session_kill(session_id)` disposes of newly allocated, idle, or running
     sessions; pending execution waits resolve as killed. Repeating the kill
-    without reset has no further side effects. Accepted kill cleanup never
+    has no further side effects. Accepted kill cleanup never
     targets a replacement worker.
 18. `session_execute` with a null session ID allocates a fresh persistent session
     and returns its concrete ID in synchronous, asynchronous, and wait-expired
@@ -502,9 +509,12 @@ compatibility shims for those runtimes are not required.
 
 ### 10.1 Independent session handler
 
-The handler must support a host-supplied bidirectional socket or a pair of input
-and output file descriptors. It must not require opening a listener, creating a
-connection, or launching the manager.
+The handler communicates through a dedicated pair of input/output file
+descriptors, separate from the application's standard input, output, and error.
+A host-supplied bidirectional socket may back these logical read/write endpoints.
+The handler must not require opening a listener, creating a connection, or
+launching the manager. The host supplies the dedicated channel through the I/O
+adapter; the standalone manager arranges descriptors during worker startup.
 
 Because standard Lua has no portable API for arbitrary sockets and file
 descriptors, the pure-Lua handler accepts a host-supplied I/O adapter wrapping
@@ -548,7 +558,7 @@ not stall unrelated sessions. The worker transport is internal and does not
 require the client to establish another MCP connection.
 
 Killing a managed session terminates its worker and releases its private
-transport. Resetting replaces the worker with a fresh interpreter. The manager
+transport. A new session requires new allocation. The manager
 must detect worker termination, report affected request failures, and remain
 available for other sessions. Process separation protects against ordinary
 worker exit but is not a sandbox against full-access code deliberately affecting
@@ -560,15 +570,55 @@ sockets and raw TCP remain possible custom integrations through the supplied
 I/O adapter; the initial manager need not listen on either. Legacy HTTP+SSE
 transport is not required.
 
+### 10.3 Worker startup and standard streams
+
+Session creation is successful only after the manager receives a valid worker
+ready handshake confirming that the handler and its dedicated control channel
+are usable. Enforce a configurable, finite `startup_timeout_ms` using a monotonic
+clock, starting when allocation begins. The default and permitted range must
+be documented. This deadline is separate from execution and wait deadlines.
+
+If startup fails or readiness is not established before the deadline, abort
+allocation, terminate and reap any started worker, close allocated descriptors,
+and return a `session_creation_error` with a reason such as `startup_timeout`,
+`spawn_failed`, `stdio_setup_failed`, or `handshake_failed`. No user code may run
+before readiness. Apply the same checks to implicit allocation by execution.
+The manager must remain responsive during startup and cleanup, and late ready
+messages must not revive an aborted allocation.
+
+`session_create` accepts optional `stdin_path`, `stdout_path`, and `stderr_path`
+parameters. Standard input reads from the supplied file; standard output and
+error write to their supplied files. Each omitted stream defaults to `/dev/null`.
+Output file append/truncate policy and path resolution must be finalized before
+implementation. These streams are separate from captured Lua `print` output
+included in execution results; any mirroring of captured output must be explicit.
+For implicit creation, the execution API must expose equivalent creation options
+or document that it uses defaults; that schema choice remains open.
+
+During worker setup, establish the dedicated control descriptors and redirect
+FDs 0, 1, and 2 without overwriting control endpoints. Close unused pipe ends and
+unrelated inherited descriptors. Arrange descriptor inheritance so child
+programs do not unintentionally retain the control channel and prevent EOF
+detection. The manager must monitor worker exit independently of EOF.
+
+Worker standard output must never inherit the manager's MCP protocol stdout.
+Ordinary `io.write`, native-library output, and subprocess standard output go
+to the configured file or `/dev/null`, not into protocol framing. Failure to
+open a configured stream is a creation error rather than silent fallback.
+Automatic stream redirection is a managed-worker feature; an embedded host
+retains control of its own standard streams.
+
 ## 11. Proposed decisions for review
 
 This section contains recommendations, not yet accepted requirements. Resolve
 these policies before implementation rather than letting them emerge accidentally.
+Decisions explicitly stated as requirements elsewhere, and the cancellation
+policy below, supersede earlier proposals.
 
 ### 11.1 Public tool surface and code entry
 
-Manager tools include `session_create`, `session_list`, and `session_execute`;
-`session_reset` remains proposed. Required execution-control and disposal tools are
+Manager tools include `session_create`, `session_list`, and `session_execute`.
+Required execution-control and disposal tools are
 `session_wait` and `session_kill`, as specified in sections 7.3 and 7.4. All
 session-scoped tools use `session_id`, not a separate task identifier.
 The single execution tool implements all waiting modes in section 7.2 rather
@@ -585,9 +635,8 @@ a global and a later `return x * 2` returns its computed value.
 
 Propose rejecting another execution with a `session_busy` tool error while that
 session is running, rather than maintaining a request queue. Other sessions
-remain available. Kill and reset must remain actionable while a worker is busy;
-either operation terminates the active worker and resolves its pending execution
-as interrupted. Reset preserves the logical session ID but starts fresh Lua state.
+remain available. Kill must remain actionable while a worker is busy; it
+terminates the active worker and resolves its pending execution as killed.
 
 ### 11.3 Timeout and cancellation policy
 
@@ -598,11 +647,33 @@ Use a monotonic clock and define completion as the manager receiving a complete,
 valid worker response before the deadline. Disarm the request's timer on
 completion so it cannot later kill an idle or replacement worker.
 
-Propose explicit MCP cancellation of an active managed execution terminates its
-worker, using the same state-loss policy as an execution timeout. Cancellation
-must follow MCP response rules rather than promising a normal tool response to
-a request the client has cancelled. This is distinct from a client merely
-stopping its wait without notifying the manager.
+MCP cancellation of an in-progress `session_execute` or `session_wait` request
+kills its associated managed session, with the same process termination and
+state-loss semantics as `session_kill`. This also resolves other pending waits
+for that execution as terminated. Cancelling in-progress creation, including
+implicit creation, aborts allocation and cleans up any started worker without
+dispatching user code. Cancellation of an already accepted kill must not stop
+cleanup. Read-only listing cancellation has no session-termination side effect.
+
+Resolve cancellation by the JSON-RPC request ID, using the session/worker bound
+to that outstanding request. Unknown, already completed, or already answered
+request IDs must not kill any session. In particular, cancelling an async
+execution call after its pending response has been sent cannot kill its worker;
+the client must use `session_kill` instead. Late cancellation must never target
+a later execution or newly allocated worker.
+
+Standard MCP `notifications/cancelled` is a notification, with no response of
+its own. Follow MCP guidance on suppressing responses to cancelled requests;
+clients may ignore any late response. The terminated state and reason remain
+observable through session listing and retained execution results. Tool
+descriptions must explicitly state that request cancellation destroys session
+state, including cancellation sent automatically by a client on its deadline.
+
+This is distinct from an ordinary `wait_timeout_ms` expiry, which returns a
+pending response and leaves execution running. A client-side timeout without
+an actual cancellation notification does not itself trigger worker termination.
+Direct embedded handlers cannot service cancellation while running code and
+must never implement this policy by killing their host.
 
 ### 11.4 Connection ownership and shutdown
 
@@ -742,8 +813,7 @@ The following have not yet been agreed:
 
 - MCP protocol version and dependency strategy.
 - Manager launch command, packaging, and optional programmatic module API.
-- Session identifiers, tool names, request and response schemas, and reset
-  identifier semantics.
+- Session identifiers and complete tool request and response schemas.
 - Precise Lua embedding API and its compatibility with `dosbox-y`.
 - Result rendering, output limits, and oversized-result behaviour.
 - Null sentinel API, exact numeric conversion policy, and typed return-value
@@ -754,6 +824,8 @@ The following have not yet been agreed:
   rules for completion racing with the deadline.
 - Wait-timeout omitted-value default and numeric precision; task tool schemas,
   retention and expiry limits, and ordering for kill racing with completion.
+- Startup deadline default/bounds, standard-stream file open modes and path
+  resolution, and creation options for implicit session allocation.
 - Deployment authentication and authorization for any network transport.
 - Acceptance or revision of the proposed policies in section 11, including
   disconnect cleanup, cancellation, platform support, and resource bounds.
