@@ -251,8 +251,8 @@ Managed execution requests may specify an execution timeout. The manager owns
 worker process creation, supervision, and termination, and enforces the timeout
 using its event loop independently of the worker's Lua execution.
 
-The timeout starts when execution is dispatched to the worker, not while a
-request is waiting in a session queue. If execution has not completed before
+The timeout starts when execution is dispatched to the worker. Busy sessions
+reject additional execution requests rather than queueing them. If execution has not completed before
 the deadline, the manager must forcibly terminate the worker, reap the process,
 and report an execution-timeout failure to the client. It must not rely on the
 blocked handler to acknowledge cancellation or voluntarily stop. Other managed
@@ -270,8 +270,9 @@ descendant processes. Timeout handling must document those limitations.
 
 This server-enforced execution timeout is distinct from a client's own MCP
 request deadline. A client-side timeout alone does not request or guarantee
-worker termination. Timeout field names, units, permitted bounds, and any
-default when omitted remain API decisions.
+worker termination. The optional `execution_timeout_ms` is a positive integer
+in milliseconds. When omitted, there is no manager-imposed hard execution
+deadline. Permitted upper bounds remain a schema decision.
 
 Embedded handlers do not kill their host application to implement this feature.
 They must reject requests requiring this enforced timeout unless the host
@@ -620,12 +621,10 @@ open a configured stream is a creation error rather than silent fallback.
 Automatic stream redirection is a managed-worker feature; an embedded host
 retains control of its own standard streams.
 
-## 11. Proposed decisions for review
+## 11. API policies and remaining proposals
 
-This section contains recommendations, not yet accepted requirements. Resolve
-these policies before implementation rather than letting them emerge accidentally.
-Decisions explicitly stated as requirements elsewhere, and the cancellation
-policy below, supersede earlier proposals.
+Policies in this section are requirements unless explicitly marked as proposals.
+Code-entry syntax and dependency selection still require final decisions.
 
 ### 11.1 Public tool surface and code entry
 
@@ -645,14 +644,15 @@ a global and a later `return x * 2` returns its computed value.
 
 ### 11.2 Busy sessions and lifecycle operations
 
-Propose rejecting another execution with a `session_busy` tool error while that
-session is running, rather than maintaining a request queue. Other sessions
+Reject another execution with a `session_busy` tool error while that
+session is running. There is no execution request queue. Rejection must not
+execute any code, alter the active execution, or replace its result. Other sessions
 remain available. Kill must remain actionable while a worker is busy; it
 terminates the active worker and resolves its pending execution as killed.
 
 ### 11.3 Timeout and cancellation policy
 
-Propose an optional positive integer `execution_timeout_ms` on managed execution,
+Accept an optional positive integer `execution_timeout_ms` on managed execution,
 separate from `wait_timeout_ms`. When
 omitted, execution has no manager-imposed deadline; client deadlines still apply.
 Use a monotonic clock and define completion as the manager receiving a complete,
@@ -689,8 +689,11 @@ must never implement this policy by killing their host.
 
 ### 11.4 Connection ownership and shutdown
 
-Propose managed sessions are owned by the manager's stdio connection. End-of-input
-or manager shutdown terminates and reaps all owned workers; reconnecting does not
+Managed sessions are owned by the manager's stdio connection. Client disconnect,
+including end-of-input or unrecoverable client-output failure, and manager
+shutdown terminate and reap all owned workers, including starting, idle, and
+running sessions. Stop accepting new work and abort pending allocations when
+disconnect is detected. Reconnecting does not
 restore their state. No detached sessions, persistence to disk, or automatic
 recovery of interpreter state is required initially.
 
@@ -717,10 +720,12 @@ The pure-Lua handler and host-supplied I/O adapter do not imply the standalone
 manager can use only standard Lua libraries: standard Lua does not provide the
 required portable process supervision and nonblocking descriptor APIs.
 
-Propose Linux/POSIX as the initial manager platform, allowing an established
-OS/event-loop dependency with native bindings if needed. This must not become a
-required dependency of the embeddable handler. Windows manager support and
-robust descendant-process cleanup require separate explicit decisions.
+The initial manager platform is POSIX. Windows support is outside the initial
+scope. Any platform-specific implementation extensions must be identified;
+Linux-only APIs must not silently become baseline requirements. Selection of an
+OS/event-loop dependency, potentially with native bindings, remains open. Such
+a dependency must not become required by the embeddable handler. Robust
+descendant-process cleanup remains a separate explicit decision.
 
 ## 12. Task input data
 
@@ -851,17 +856,15 @@ The following have not yet been agreed:
 - Result rendering, output limits, and oversized-result behaviour.
 - Null sentinel API, exact numeric conversion policy, and JSON return-value
   schema, including table shape and empty-table conventions.
-- Event-loop and process-spawning dependencies, internal worker protocol, and
-  per-session request queueing or busy-response policy.
-- Execution timeout field, units, bounds, omitted-timeout policy, and ordering
+- Event-loop and process-spawning dependencies and internal worker protocol.
+- Execution timeout upper bounds and ordering
   rules for completion racing with the deadline.
 - Wait-timeout omitted-value default and numeric precision; task tool schemas,
   retention and expiry limits, and ordering for kill racing with completion.
 - Startup deadline default/bounds, standard-stream file open modes and path
   resolution, and creation options for implicit session allocation.
 - Deployment authentication and authorization for any network transport.
-- Acceptance or revision of the proposed policies in section 11, including
-  disconnect cleanup, cancellation, platform support, and resource bounds.
+- Code-entry expression convenience and resource-bound defaults.
 
 These decisions must preserve the independent handler, shared host environment,
 full-access trust model, explicit lifecycle handoff, and blocking single-threaded
