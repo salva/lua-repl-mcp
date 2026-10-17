@@ -17,11 +17,24 @@ local function close(w)
  for _,key in ipairs({'read_fd','write_fd'}) do if w[key] then x.u.close(w[key]); w[key]=nil end end
  w.pending=''; w.buffer=''
 end
+-- One signal per eligible turn. Phase/deadline use the original monotonic
+-- origin; a delayed turn never resets the total bound or replays missed ticks.
+function S:termination_signal(w)
+ if not w.pid or w.reaped then return end
+ local now=self.clock()
+ if now>=w.cleanup_deadline then return end
+ local phase=now>=w.termination_started+20 and 'kill' or 'term'
+ if phase~=w.termination_phase or now>=(w.next_signal_at or now) then
+  x.s.kill(w.pid,phase=='kill' and x.s.SIGKILL or x.s.SIGTERM)
+  w.termination_phase=phase; w.next_signal_at=now+1
+ end
+end
 function S:abort(w,reason)
  if w.state=='terminating' or w.state=='dead' then return end
  w.failure=reason; w.state='terminating'; w.files_complete=false
- w.cleanup_deadline=self.clock()+30; w.execution_deadline=nil
- close(w); if w.pid then x.s.kill(w.pid,x.s.SIGKILL) end
+ w.termination_started=self.clock(); w.cleanup_deadline=w.termination_started+30
+ w.execution_deadline=nil
+ close(w); self:termination_signal(w)
 end
 function S:allocate(options)
  options=options or {}
@@ -127,7 +140,14 @@ function S:step(timeout_ms)
    if now>=w.execution_deadline then self:abort(w,'execution_timeout')
    else delay=math.min(delay,math.max(0,math.ceil((w.execution_deadline-now)*1000))) end
   end
-  if w.cleanup_deadline then delay=math.min(delay,math.max(0,math.ceil((w.cleanup_deadline-now)*1000))) end
+  if w.cleanup_deadline then
+   local wake=w.cleanup_deadline
+   if w.pid and not w.reaped then
+    wake=math.min(wake,w.next_signal_at or now)
+    if w.termination_phase~='kill' then wake=math.min(wake,w.termination_started+20) end
+   end
+   delay=math.min(delay,math.max(0,math.ceil((wake-now)*1000)))
+  end
   if w.state=='starting' then
    if now>=w.deadline then self:abort(w,'startup_timeout') else delay=math.min(delay,math.max(0,math.ceil((w.deadline-now)*1000))) end
   end
@@ -155,6 +175,8 @@ function S:step(timeout_ms)
     close(w); w.state='dead'
    elseif not pid then self:abort(w,'wait_failed') end
   end
+  -- Reap before retrying: never signal again after confirmed child exit.
+  if w.state=='terminating' then self:termination_signal(w) end
   if w.state=='terminating' and self.clock()>=w.cleanup_deadline then
    close(w); w.state='dead'; w.process_exit_confirmed=false
    if w.pid and not w.reaped then self.reaping[#self.reaping+1]=w.pid end
