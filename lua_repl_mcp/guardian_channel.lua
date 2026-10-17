@@ -5,7 +5,7 @@ local c=require('lua_repl_mcp.codec')
 local M={}
 function M.new(fd,limit)
  x.nonblock(fd); x.clo(fd,true)
- return {fd=fd,limit=limit,input='',output='',offset=1}
+ return {fd=fd,limit=limit,input='',input_parts={},input_bytes=0,output='',offset=1}
 end
 -- A logical batch is streamed as one bounded item per frame. Retain references
 -- to the bounded allocation/command snapshot, never an encoded aggregate.
@@ -47,10 +47,14 @@ function M.receive(ch,accept)
   repeat
    local nl=rest:find('\n',1,true)
    local part=nl and rest:sub(1,nl-1) or rest
-   assert(#ch.input+#part<=ch.limit,'guardian frame bound')
-   ch.input=ch.input..part
+   -- Retain each received chunk once; concatenate only for full validation.
+   ch.input_parts=ch.input_parts or {}
+   ch.input_bytes=(ch.input_bytes or 0)+#part
+   assert(ch.input_bytes<=ch.limit,'guardian frame bound')
+   ch.input_parts[#ch.input_parts+1]=part
    if not nl then break end
-   local value=assert(c.decode(ch.input,{max_depth=520,max_bytes=ch.limit,json_path="/items/0/request"})); ch.input=''
+   local text=table.concat(ch.input_parts); ch.input_parts={}; ch.input_bytes=0
+   local value=assert(c.decode(text,{max_depth=520,max_bytes=ch.limit,json_path="/items/0/request"})); ch.input=''
    assert(type(value)=='table' and type(value.items)=='table' and type(value.done)=='boolean','invalid guardian fragment')
    accept(value.items,value.done)
    rest=rest:sub(nl+1)
