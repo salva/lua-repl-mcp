@@ -46,7 +46,28 @@ qualification or a claim all13 defects are fixed.
 
 ## Restart/adoption/resume status
 
-Pending. Restart the exact dedicated service while execution stays stopped;
-align accepted root/immediate-owner/stale descendant directions through supported
-record/lifecycle tools; only then Run. Record actual returned child tools before
-claiming successful resumption. Preserve existing effects and completed evidence.
+Dedicated service restarted active/running, MainPID40486, same user/cwd. Readiness
+passed; `/api/state` runtime stayed null throughout accepted brief adoption.
+Supported Analyst record writes/readbacks aligned the complete U13 tree:
+
+- root `record:///brief.md?card=project&v=12`;
+- U13 `record:///brief.md?card=card-f&v=3`;
+- immediate owner `record:///brief.md?card=card-f-a&v=3`;
+- implementation `record:///brief.md?card=card-f-a-a&v=4`;
+- review `record:///brief.md?card=card-f-a-b&v=3`.
+
+All supersede old implementation directions and preserve existing evidence.
+Supported propagation marked the previously completed children CHANGED; this is
+disclosed, not represented as unchanged lifecycle status. Current directions and
+notifications explicitly forbid replaying completed containment merely because
+of that transition or historical titles. The full U13 subtree had no omitted
+descendants. Root and both owning planners received replacement notifications.
+
+After verification, the Analyst notified the owning chain that the adoption-turn
+hold was released and invoked normal `start_project`: success/started:true at
+2026-10-17T20:42:30.610Z. No reset, generated-state filesystem edit or runtime
+deployment change. Root planner became active/busy. Actual child returned-tool
+verification remains pending; running status alone is not implementation proof.
+
+Private complete receipts: `accepted-adoption-response.json`, `run-response.json`
+and resumed-state/agents snapshots in the protected adoption directory above.
