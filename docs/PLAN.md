@@ -8,10 +8,10 @@ contracts; it is not evidence that a server exists or works. The specification,
 including section 14's settled defaults and ordering rules, remains authoritative.
 This plan neither changes that contract nor implements runtime code.
 
-Before launching autonomous implementation, obtain independent review of this
-plan against all four source documents and resolve concrete findings. That review
-is pending, not certified by this document. Launch is an operator/owning-session
-action. Once approved, implement the dependency-ordered units below, committing
+Independent review of this plan against all four source documents approved
+revision `fa2e96b` with no required corrections; see `workflows/REVIEW.md` for
+the receipt. Launch is an operator/owning-session action. Implement the
+dependency-ordered units below, committing
 working increments with their evidence. Do not turn the project into repeated
 design reviews: each unit ends in executable behavior and focused validation.
 Escalate an actual dependency blocker or contract contradiction with reproducing
