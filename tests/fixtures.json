@@ -871,5 +871,21 @@
     "deadline": 40,
     "run": true,
     "expected_status": 0
+  },
+  {
+    "path": "u13_configured_stdio.py",
+    "kind": "process",
+    "wrapper": "u13_configured_stdio.py",
+    "deadline": 180,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u13_session_population.lua",
+    "kind": "process",
+    "wrapper": "u9_suite.py",
+    "deadline": 60,
+    "run": true,
+    "expected_status": 0
   }
 ]
