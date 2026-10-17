@@ -52,5 +52,19 @@ Reviewer: OpenAI GPT-6 Astra (`openai/gpt-6-astra`), separate agent session
 
 Clean-installed manager commands/examples and the full website user journey
 remain explicit U11 gates. Current checks do not claim those tests have run.
-Planner notification/adoption must be confirmed through supported controls;
-editing a tracked requirement file alone does not establish it.
+## Planner delivery status
+
+Supported Analyst delivery completed after commit `3527a29`; it confirmed the
+active `card-d-a` was U12 runtime work, not documentation. Actual U11 owner is
+backlog `card-e`. Notifications queued successfully to root `project`
+(`f4341652-1d14-43ab-bcff-96edc5c93aa6`), U11 `card-e`
+(`c6ce802d-ecd0-40f0-a8c0-c22c77a40bae`) and active U12 parent `card-d`
+(`89eaf1da-d3f6-4c32-b74a-23fa83168422`). No interruption was requested.
+
+That receipt did **not** establish adoption: root/card-e accepted briefs still
+contained superseded instructions. A supported Analyst follow-up requests a
+safe backlog-brief amendment or owning-planner adoption and inspection of the
+accepted text/version. It is pending, not represented as completed here. No
+generated state was edited directly and no service/project restart was requested.
+The final review/test-watchdog correction is in follow-up commit `17ff8d4`;
+it does not change the product documentation requirements.
