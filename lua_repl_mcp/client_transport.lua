@@ -24,13 +24,13 @@ function M.new(manager,io,o)
  end
  local self=setmetatable({manager=manager,io=io,input=framing.new(bounds.input_bytes),
   encode_depth=source.max_depth and source.max_depth+4 or 132,response_bytes=bounds.response_bytes,output_bytes=bounds.output_bytes,
-  queue={},pending={},bytes=0,high_water=0,input_high_water=0,closed=false},C)
+  queue={},pending={},preparing={},preparation_count=0,bytes=0,high_water=0,input_high_water=0,closed=false},C)
  assert(self.output_bytes>=self.response_bytes+1,'output must hold a response plus newline')
  return self
 end
 function C:close(reason)
  if not self.closed then
-  self.closed=reason or 'disconnect'; self.queue={}; self.pending={}; self.bytes=0
+  self.closed=reason or 'disconnect'; self.queue={}; self.pending={}; self.preparing={}; self.preparation_count=0; self.bytes=0
   -- Enqueue can fail inside a manager commit callback. Stop transport now but
   -- defer manager teardown until the callback releases its non-reentry guard.
   if self.manager.committing then self.cleanup_pending=true
@@ -47,7 +47,7 @@ function C:enqueue(text)
 end
 function C:submit(id,tool,args,original)
  if self.closed then return end
- if self.manager.requests[id] then
+ if self:outstanding(id) then
   local text=require('lua_repl_mcp.codec').encode(protocol.error(nil,-32600,'Duplicate outstanding request ID'))
   return self:enqueue(text)
  end
@@ -58,7 +58,40 @@ function C:submit(id,tool,args,original)
   if not p.request.cancelled and not p.request.done then live[#live+1]=p end
  end
  self.pending=live
+ if tool=='session_execute' and self.manager.admission then
+  -- Pending validation consumes ordinary capacity but has no manager handle or
+  -- session side effects. Control slots remain independent. IDs are reserved
+  -- here until atomic handoff to the manager or cancellation/disconnection.
+  if self.preparation_count+self.manager.slots.ordinary>=self.manager.admission.ordinary then
+   local errors=require('lua_repl_mcp.errors')
+   local text=protocol.encode_result(id,{error=errors.new('limit_exceeded','limit_exceeded','execution','not_started')},
+    {max_bytes=self.response_bytes,max_depth=self.encode_depth},tool)
+   if not text then return self:close('response bound') end
+   return self:enqueue(text)
+  end
+  local p={id=id,turn=0}
+  p.co=coroutine.create(function()
+   return self.manager:accept(tool,args,id,original,coroutine.yield,true)
+  end)
+  self.preparing[id]=p; self.preparation_count=self.preparation_count+1
+  self:prepare(p)
+  return
+ end
  local r=self.manager:accept(tool,args,id,original)
+ self:accepted(id,r)
+end
+function C:outstanding(id)
+ return self.preparing[id]~=nil or self.manager.requests[id]~=nil
+end
+function C:prepare(p)
+ local ok,r=coroutine.resume(p.co)
+ if not ok then return self:close('request preparation failure') end
+ if coroutine.status(p.co)=='dead' then
+  self.preparing[p.id]=nil; self.preparation_count=self.preparation_count-1
+  self:accepted(p.id,r)
+ end
+end
+function C:accepted(id,r)
  if r.admission_rejected then
   -- No slot means no pending-handle ownership. Charge the rejection to encoded
   -- output immediately; a stopped reader eventually trips the output bound.
@@ -69,12 +102,29 @@ function C:submit(id,tool,args,original)
  end
  self.pending[#self.pending+1]={id=id,request=r}
 end
-function C:cancel(id) return self.manager:cancel(id) end
+function C:cancel(id)
+ if self.preparing[id] then
+  self.preparing[id]=nil; self.preparation_count=self.preparation_count-1
+  return true
+ end
+ return self.manager:cancel(id)
+end
 function C:step(on_frame)
  if self.closed then return false end
  -- Each direction is bounded per tick, independently of request saturation.
  -- Always advance worker timers before processing more client traffic.
  self.manager:step(0)
+ -- Resume one pending acceptance per tick, rotating insertion order without
+ -- an unbounded queue of cancelled handles.
+ local chosen
+ for _,p in pairs(self.preparing) do
+  if not chosen or p.turn<chosen.turn then chosen=p end
+ end
+ if chosen then
+  self.preparation_turn=(self.preparation_turn or 0)+1
+  chosen.turn=self.preparation_turn; self:prepare(chosen)
+  if self.closed then return false end
+ end
  local chunk,err
  -- Drain buffered complete frames before asking the adapter for more. Otherwise
  -- a flood of short frames could grow a backlog faster than the tick quota.

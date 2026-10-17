@@ -93,13 +93,14 @@ function C:admit(r,tool)
  elseif self.slots.ordinary>=self.admission.ordinary then return false end
  self.slots[slot]=self.slots[slot]+1; r.slot=slot; return true
 end
-function C:accept(tool,input,request_id,original,checkpoint)
+function C:accept(tool,input,request_id,original,checkpoint,validation_only)
  assert(not self.committing,'response commit must not reenter manager')
  self:refresh()
  local a,err=contracts.validate(tool,input,{max_depth=self.limits.max_depth,max_bytes=not original and self.limits.input_bytes or math.huge,checkpoint=checkpoint})
  -- Validation may relinquish control in a native adapter. Refresh again before
  -- admission/dispatch; no ID, slot or execution was reserved while suspended.
  if checkpoint then self:refresh() end
+ if validation_only then checkpoint=nil end
  local r={tool=tool,accepted_at=self.clock(),original=original,checkpoint=checkpoint}
  if not self:admit(r,tool) then
   r.admission_rejected=true; r.response=failure('limit_exceeded'); return r

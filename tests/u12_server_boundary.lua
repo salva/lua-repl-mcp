@@ -5,7 +5,7 @@ local transport=require('lua_repl_mcp.client_transport')
 local mn,tn=manager.new,transport.new
 for _,point in ipairs{'transport_init','loop','cleanup'} do
  local cleaned=0
- manager.new=function() return {disconnect=function() cleaned=cleaned+1; error('secondary cleanup') end} end
+ manager.new=function() return {limits={max_depth=128,input_bytes=16777216},disconnect=function() cleaned=cleaned+1; error('secondary cleanup') end} end
  transport.new=function(m)
   if point=='transport_init' then error('original transport construction') end
   return {step=function() if point=='loop' then error('original loop') end; return false end,

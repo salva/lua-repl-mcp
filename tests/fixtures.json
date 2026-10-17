@@ -959,5 +959,13 @@
     "deadline": 90,
     "run": true,
     "expected_status": 0
+  },
+  {
+    "path": "u13_transport_preparation.lua",
+    "kind": "process",
+    "wrapper": "u9_suite.py",
+    "deadline": 90,
+    "run": true,
+    "expected_status": 0
   }
 ]
