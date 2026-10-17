@@ -1,0 +1,1774 @@
+{
+  "toolInvocations": [
+    {
+      "tool": "mcp_server_control",
+      "params": {
+        "serverName": "lua",
+        "action": "start"
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "serverName": "lua",
+          "status": "running",
+          "toolCount": 5
+        }
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "session_create"
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "serverName": "lua",
+          "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+          "tools": [
+            {
+              "name": "session_create",
+              "description": "Create a persistent Lua interpreter. Request cancellation aborts allocation and destroys its state.",
+              "inputSchema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "allOf": [
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "cwd": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "stderr_path": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "stdin_path": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "stdout_path": {
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  }
+                ],
+                "type": "object"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "session_execute"
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "serverName": "lua",
+          "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+          "tools": [
+            {
+              "name": "session_execute",
+              "description": "Execute a complete Lua chunk; explicit return is required. Omitted/null session_id creates an interpreter. Globals persist; locals do not. No automatic output capture. Accepted execution discards unread prior results. Terminal replies consume results. wait_timeout_ms defaults to 600000; null waits indefinitely, zero returns pending. Wait expiry leaves execution running. execution_timeout_ms is a separate hard deadline that kills the session. Request cancellation also kills the session and destroys state. Execution is not read-only or idempotent.",
+              "inputSchema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "additionalProperties": false,
+                "allOf": [
+                  {
+                    "if": {
+                      "required": [
+                        "create_options"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "session_id": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  }
+                ],
+                "properties": {
+                  "args": {
+                    "default": [],
+                    "type": "array"
+                  },
+                  "code": {
+                    "type": "string"
+                  },
+                  "create_options": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "cwd": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "stderr_path": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "stdin_path": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "stdout_path": {
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "execution_timeout_ms": {
+                    "default": null,
+                    "maximum": 2147483647,
+                    "minimum": 1,
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "session_id": {
+                    "default": null,
+                    "minLength": 1,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "wait_timeout_ms": {
+                    "default": 600000,
+                    "maximum": 2147483647,
+                    "minimum": 0,
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "code"
+                ],
+                "type": "object"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "session_wait"
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "serverName": "lua",
+          "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+          "tools": [
+            {
+              "name": "session_wait",
+              "description": "Retrieve the current execution without rerunning it. Zero polls; null waits indefinitely; default 600000 ms. Terminal retrieval consumes the result; pending replies do not. Request cancellation kills the session and destroys state, unlike a wait deadline.",
+              "inputSchema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "additionalProperties": false,
+                "properties": {
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "wait_timeout_ms": {
+                    "default": 600000,
+                    "maximum": 2147483647,
+                    "minimum": 0,
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "session_id"
+                ],
+                "type": "object"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "session_list"
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "serverName": "lua",
+          "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+          "tools": [
+            {
+              "name": "session_list",
+              "description": "List existing sessions, not history. An unknown session after asynchronous work does not imply code never ran or that retrying side effects is safe.",
+              "inputSchema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "additionalProperties": false,
+                "type": "object"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "session_kill"
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "serverName": "lua",
+          "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+          "tools": [
+            {
+              "name": "session_kill",
+              "description": "Destroy session state with synchronous best-effort disposal; retain no history. Unconfirmed OS exit is reported without failing the kill operation.",
+              "inputSchema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "additionalProperties": false,
+                "properties": {
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "session_id"
+                ],
+                "type": "object"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+        "toolName": "session_create",
+        "args": {}
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "result": {
+            "structuredContent": {
+              "session_id": "session-1-1",
+              "session_status": "idle"
+            },
+            "isError": false
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"session_id\":\"session-1-1\",\"session_status\":\"idle\"}"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+        "toolName": "session_execute",
+        "args": {
+          "session_id": "session-1-1",
+          "code": "n=40; function add(x) return n+x end"
+        }
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "result": {
+            "structuredContent": {
+              "session_id": "session-1-1",
+              "session_status": "idle",
+              "session_usable": true,
+              "status": "completed",
+              "values": []
+            },
+            "isError": false
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"session_id\":\"session-1-1\",\"session_status\":\"idle\",\"session_usable\":true,\"status\":\"completed\",\"values\":[]}"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+        "toolName": "session_execute",
+        "args": {
+          "session_id": "session-1-1",
+          "code": "local a=...; assert(add(2)==42); assert(a.tag=='json' and a.count==2); assert(select('#',add(2),nil,a)==3); return add(2), nil, a",
+          "args": [
+            {
+              "tag": "json",
+              "count": 2
+            }
+          ]
+        }
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "result": {
+            "structuredContent": {
+              "session_id": "session-1-1",
+              "session_status": "idle",
+              "session_usable": true,
+              "status": "completed",
+              "values": [
+                42,
+                null,
+                {
+                  "count": 2,
+                  "tag": "json"
+                }
+              ]
+            },
+            "isError": false
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"session_id\":\"session-1-1\",\"session_status\":\"idle\",\"session_usable\":true,\"status\":\"completed\",\"values\":[42,null,{\"count\":2,\"tag\":\"json\"}]}"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+        "toolName": "session_create",
+        "args": {}
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "result": {
+            "structuredContent": {
+              "session_id": "session-1-2",
+              "session_status": "idle"
+            },
+            "isError": false
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"session_id\":\"session-1-2\",\"session_status\":\"idle\"}"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+        "toolName": "session_execute",
+        "args": {
+          "session_id": "session-1-2",
+          "code": "assert(n==nil and add==nil); return n==nil, add==nil"
+        }
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "result": {
+            "structuredContent": {
+              "session_id": "session-1-2",
+              "session_status": "idle",
+              "session_usable": true,
+              "status": "completed",
+              "values": [
+                true,
+                true
+              ]
+            },
+            "isError": false
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"session_id\":\"session-1-2\",\"session_status\":\"idle\",\"session_usable\":true,\"status\":\"completed\",\"values\":[true,true]}"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+        "toolName": "session_execute",
+        "args": {
+          "code": "return {kind='implicit', ok=true}"
+        }
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "result": {
+            "structuredContent": {
+              "session_id": "session-1-3",
+              "session_status": "idle",
+              "session_usable": true,
+              "status": "completed",
+              "values": [
+                {
+                  "kind": "implicit",
+                  "ok": true
+                }
+              ]
+            },
+            "isError": false
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"session_id\":\"session-1-3\",\"session_status\":\"idle\",\"session_usable\":true,\"status\":\"completed\",\"values\":[{\"kind\":\"implicit\",\"ok\":true}]}"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+        "toolName": "session_execute",
+        "args": {
+          "session_id": "session-1-3",
+          "code": "os.execute('sleep 1'); return 73",
+          "wait_timeout_ms": 0
+        }
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "result": {
+            "structuredContent": {
+              "session_id": "session-1-3",
+              "session_status": "running",
+              "session_usable": true,
+              "status": "running"
+            },
+            "isError": false
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"session_id\":\"session-1-3\",\"session_status\":\"running\",\"session_usable\":true,\"status\":\"running\"}"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+        "toolName": "session_list",
+        "args": {}
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "result": {
+            "structuredContent": {
+              "sessions": [
+                {
+                  "cwd": "/work/lua-repl-mcp/.saivage/work/cards/card-c-e-a/u10-refresh/u10-diagnosis/project",
+                  "execution_status": "completed",
+                  "result_available": false,
+                  "session_id": "session-1-1",
+                  "session_status": "idle"
+                },
+                {
+                  "cwd": "/work/lua-repl-mcp/.saivage/work/cards/card-c-e-a/u10-refresh/u10-diagnosis/project",
+                  "execution_status": "completed",
+                  "result_available": false,
+                  "session_id": "session-1-2",
+                  "session_status": "idle"
+                },
+                {
+                  "cwd": "/work/lua-repl-mcp/.saivage/work/cards/card-c-e-a/u10-refresh/u10-diagnosis/project",
+                  "execution_status": "completed",
+                  "result_available": true,
+                  "session_id": "session-1-3",
+                  "session_status": "idle"
+                }
+              ]
+            },
+            "isError": false
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"sessions\":[{\"cwd\":\"/work/lua-repl-mcp/.saivage/work/cards/card-c-e-a/u10-refresh/u10-diagnosis/project\",\"execution_status\":\"completed\",\"result_available\":false,\"session_id\":\"session-1-1\",\"session_status\":\"idle\"},{\"cwd\":\"/work/lua-repl-mcp/.saivage/work/cards/card-c-e-a/u10-refresh/u10-diagnosis/project\",\"execution_status\":\"completed\",\"result_available\":false,\"session_id\":\"session-1-2\",\"session_status\":\"idle\"},{\"cwd\":\"/work/lua-repl-mcp/.saivage/work/cards/card-c-e-a/u10-refresh/u10-diagnosis/project\",\"execution_status\":\"completed\",\"result_available\":true,\"session_id\":\"session-1-3\",\"session_status\":\"idle\"}]}"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+        "toolName": "session_wait",
+        "args": {
+          "session_id": "session-1-3",
+          "wait_timeout_ms": 1
+        }
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "result": {
+            "structuredContent": {
+              "session_id": "session-1-3",
+              "session_status": "idle",
+              "session_usable": true,
+              "status": "completed",
+              "values": [
+                73
+              ]
+            },
+            "isError": false
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"session_id\":\"session-1-3\",\"session_status\":\"idle\",\"session_usable\":true,\"status\":\"completed\",\"values\":[73]}"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+        "toolName": "session_wait",
+        "args": {
+          "session_id": "session-1-3",
+          "wait_timeout_ms": null
+        }
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool reported an error; effects may have occurred.",
+        "data": {
+          "result": {
+            "structuredContent": {
+              "error": {
+                "code": "result_unavailable",
+                "execution_state": "completed",
+                "message": "result_unavailable",
+                "stage": "validation"
+              },
+              "session_id": "session-1-3",
+              "session_status": "idle",
+              "session_usable": true,
+              "status": "completed"
+            },
+            "isError": true
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ],
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"error\":{\"code\":\"result_unavailable\",\"execution_state\":\"completed\",\"message\":\"result_unavailable\",\"stage\":\"validation\"},\"session_id\":\"session-1-3\",\"session_status\":\"idle\",\"session_usable\":true,\"status\":\"completed\"}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+        "toolName": "session_wait",
+        "args": {
+          "session_id": "session-1-3",
+          "wait_timeout_ms": null
+        }
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool reported an error; effects may have occurred.",
+        "data": {
+          "result": {
+            "structuredContent": {
+              "error": {
+                "code": "result_unavailable",
+                "execution_state": "completed",
+                "message": "result_unavailable",
+                "stage": "validation"
+              },
+              "session_id": "session-1-3",
+              "session_status": "idle",
+              "session_usable": true,
+              "status": "completed"
+            },
+            "isError": true
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ],
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"error\":{\"code\":\"result_unavailable\",\"execution_state\":\"completed\",\"message\":\"result_unavailable\",\"stage\":\"validation\"},\"session_id\":\"session-1-3\",\"session_status\":\"idle\",\"session_usable\":true,\"status\":\"completed\"}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+        "toolName": "session_execute",
+        "args": {
+          "session_id": "session-1-3",
+          "code": "return 74"
+        }
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "result": {
+            "structuredContent": {
+              "session_id": "session-1-3",
+              "session_status": "idle",
+              "session_usable": true,
+              "status": "completed",
+              "values": [
+                74
+              ]
+            },
+            "isError": false
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"session_id\":\"session-1-3\",\"session_status\":\"idle\",\"session_usable\":true,\"status\":\"completed\",\"values\":[74]}"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+        "toolName": "session_execute",
+        "args": {
+          "session_id": "session-1-1",
+          "code": "syntax_side=1; local = "
+        }
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool reported an error; effects may have occurred.",
+        "data": {
+          "result": {
+            "structuredContent": {
+              "error": {
+                "code": "lua_syntax_error",
+                "execution_state": "not_started",
+                "message": "(repl):1: <name> expected near '='",
+                "stage": "execution"
+              },
+              "session_id": "session-1-1",
+              "session_status": "idle",
+              "session_usable": true,
+              "status": "failed"
+            },
+            "isError": true
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ],
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"error\":{\"code\":\"lua_syntax_error\",\"execution_state\":\"not_started\",\"message\":\"(repl):1: <name> expected near '='\",\"stage\":\"execution\"},\"session_id\":\"session-1-1\",\"session_status\":\"idle\",\"session_usable\":true,\"status\":\"failed\"}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+        "toolName": "session_execute",
+        "args": {
+          "session_id": "session-1-1",
+          "code": "runtime_side=(runtime_side or 0)+1; error('intentional runtime error')"
+        }
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool reported an error; effects may have occurred.",
+        "data": {
+          "result": {
+            "structuredContent": {
+              "error": {
+                "code": "lua_runtime_error",
+                "execution_state": "started",
+                "message": "(repl):1: intentional runtime error",
+                "stage": "execution",
+                "traceback": "\nstack traceback:\n\t[C]: in function 'error'\n\t(repl):1: in main chunk\n\t[C]: in function 'xpcall'\n\t...eproducer/rocks/share/lua/5.4/lua_repl_mcp/evaluator.lua:20: in function 'lua_repl_mcp.evaluator.execute'\n\t...roducer/rocks/share/lua/5.4/lua_repl_mcp/worker_main.lua:55: in function 'lua_repl_mcp.worker_main.run'\n\t[C]: in function 'pcall'\n\t...roducer/rocks/share/lua/5.4/lua_repl_mcp/worker_main.lua:62: in function 'lua_repl_mcp.worker_main.main'\n\t(command line):1: in main chunk\n\t[C]: in ?"
+              },
+              "session_id": "session-1-1",
+              "session_status": "idle",
+              "session_usable": true,
+              "status": "failed"
+            },
+            "isError": true
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ],
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"error\":{\"code\":\"lua_runtime_error\",\"execution_state\":\"started\",\"message\":\"(repl):1: intentional runtime error\",\"stage\":\"execution\",\"traceback\":\"\\u000astack traceback:\\u000a\\u0009[C]: in function 'error'\\u000a\\u0009(repl):1: in main chunk\\u000a\\u0009[C]: in function 'xpcall'\\u000a\\u0009...eproducer/rocks/share/lua/5.4/lua_repl_mcp/evaluator.lua:20: in function 'lua_repl_mcp.evaluator.execute'\\u000a\\u0009...roducer/rocks/share/lua/5.4/lua_repl_mcp/worker_main.lua:55: in function 'lua_repl_mcp.worker_main.run'\\u000a\\u0009[C]: in function 'pcall'\\u000a\\u0009...roducer/rocks/share/lua/5.4/lua_repl_mcp/worker_main.lua:62: in function 'lua_repl_mcp.worker_main.main'\\u000a\\u0009(command line):1: in main chunk\\u000a\\u0009[C]: in ?\"},\"session_id\":\"session-1-1\",\"session_status\":\"idle\",\"session_usable\":true,\"status\":\"failed\"}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+        "toolName": "session_execute",
+        "args": {
+          "session_id": "session-1-1",
+          "code": "serialization_side=(serialization_side or 0)+1; return function() end"
+        }
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool reported an error; effects may have occurred.",
+        "data": {
+          "result": {
+            "structuredContent": {
+              "error": {
+                "code": "result_serialization_error",
+                "execution_state": "completed",
+                "message": "unsupported function; execution completed; side effects were not rolled back",
+                "path": "/values/0",
+                "stage": "serialization"
+              },
+              "session_id": "session-1-1",
+              "session_status": "idle",
+              "session_usable": true,
+              "status": "failed"
+            },
+            "isError": true
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ],
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"error\":{\"code\":\"result_serialization_error\",\"execution_state\":\"completed\",\"message\":\"unsupported function; execution completed; side effects were not rolled back\",\"path\":\"/values/0\",\"stage\":\"serialization\"},\"session_id\":\"session-1-1\",\"session_status\":\"idle\",\"session_usable\":true,\"status\":\"failed\"}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+        "toolName": "session_execute",
+        "args": {
+          "session_id": "session-1-1",
+          "code": "assert(syntax_side==nil and runtime_side==1 and serialization_side==1); assert(add(2)==42); return syntax_side==nil, runtime_side, serialization_side, add(2)"
+        }
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "result": {
+            "structuredContent": {
+              "session_id": "session-1-1",
+              "session_status": "idle",
+              "session_usable": true,
+              "status": "completed",
+              "values": [
+                true,
+                1,
+                1,
+                42
+              ]
+            },
+            "isError": false
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"session_id\":\"session-1-1\",\"session_status\":\"idle\",\"session_usable\":true,\"status\":\"completed\",\"values\":[true,1,1,42]}"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+        "toolName": "session_execute",
+        "args": {
+          "session_id": "session-1-3",
+          "code": "os.execute('sleep 2'); return 75",
+          "wait_timeout_ms": 0
+        }
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "result": {
+            "structuredContent": {
+              "session_id": "session-1-3",
+              "session_status": "running",
+              "session_usable": true,
+              "status": "running"
+            },
+            "isError": false
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"session_id\":\"session-1-3\",\"session_status\":\"running\",\"session_usable\":true,\"status\":\"running\"}"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+        "toolName": "session_wait",
+        "args": {
+          "session_id": "session-1-3",
+          "wait_timeout_ms": 1
+        }
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "result": {
+            "structuredContent": {
+              "session_id": "session-1-3",
+              "session_status": "idle",
+              "session_usable": true,
+              "status": "completed",
+              "values": [
+                75
+              ]
+            },
+            "isError": false
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"session_id\":\"session-1-3\",\"session_status\":\"idle\",\"session_usable\":true,\"status\":\"completed\",\"values\":[75]}"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+        "toolName": "session_execute",
+        "args": {
+          "session_id": "session-1-3",
+          "code": "os.execute('sleep 2'); return 76",
+          "wait_timeout_ms": 1
+        }
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "result": {
+            "structuredContent": {
+              "session_id": "session-1-3",
+              "session_status": "running",
+              "session_usable": true,
+              "status": "running"
+            },
+            "isError": false
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"session_id\":\"session-1-3\",\"session_status\":\"running\",\"session_usable\":true,\"status\":\"running\"}"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+        "toolName": "session_execute",
+        "args": {
+          "session_id": "session-1-2",
+          "code": "return 42"
+        }
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "result": {
+            "structuredContent": {
+              "session_id": "session-1-2",
+              "session_status": "idle",
+              "session_usable": true,
+              "status": "completed",
+              "values": [
+                42
+              ]
+            },
+            "isError": false
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"session_id\":\"session-1-2\",\"session_status\":\"idle\",\"session_usable\":true,\"status\":\"completed\",\"values\":[42]}"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+        "toolName": "session_kill",
+        "args": {
+          "session_id": "session-1-3"
+        }
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "result": {
+            "structuredContent": {
+              "process_exit_confirmed": true,
+              "session_id": "session-1-3",
+              "session_status": "terminated",
+              "session_usable": false,
+              "status": "killed"
+            },
+            "isError": false
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"process_exit_confirmed\":true,\"session_id\":\"session-1-3\",\"session_status\":\"terminated\",\"session_usable\":false,\"status\":\"killed\"}"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+        "toolName": "session_wait",
+        "args": {
+          "session_id": "session-1-3",
+          "wait_timeout_ms": null
+        }
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool reported an error; effects may have occurred.",
+        "data": {
+          "result": {
+            "structuredContent": {
+              "error": {
+                "code": "unknown_session",
+                "execution_state": "not_started",
+                "message": "unknown_session",
+                "stage": "validation"
+              },
+              "session_id": "session-1-3",
+              "session_usable": false
+            },
+            "isError": true
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ],
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"error\":{\"code\":\"unknown_session\",\"execution_state\":\"not_started\",\"message\":\"unknown_session\",\"stage\":\"validation\"},\"session_id\":\"session-1-3\",\"session_usable\":false}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+        "toolName": "session_kill",
+        "args": {
+          "session_id": "session-1-3"
+        }
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool reported an error; effects may have occurred.",
+        "data": {
+          "result": {
+            "structuredContent": {
+              "error": {
+                "code": "unknown_session",
+                "execution_state": "not_started",
+                "message": "unknown_session",
+                "stage": "validation"
+              },
+              "session_id": "session-1-3",
+              "session_usable": false
+            },
+            "isError": true
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ],
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"error\":{\"code\":\"unknown_session\",\"execution_state\":\"not_started\",\"message\":\"unknown_session\",\"stage\":\"validation\"},\"session_id\":\"session-1-3\",\"session_usable\":false}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+        "toolName": "session_execute",
+        "args": {
+          "code": "os.execute('sleep 2'); return 77",
+          "execution_timeout_ms": 100,
+          "wait_timeout_ms": 0
+        }
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "result": {
+            "structuredContent": {
+              "session_id": "session-1-4",
+              "session_status": "running",
+              "session_usable": true,
+              "status": "running"
+            },
+            "isError": false
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"session_id\":\"session-1-4\",\"session_status\":\"running\",\"session_usable\":true,\"status\":\"running\"}"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+        "toolName": "session_wait",
+        "args": {
+          "session_id": "session-1-4",
+          "wait_timeout_ms": null
+        }
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool reported an error; effects may have occurred.",
+        "data": {
+          "result": {
+            "structuredContent": {
+              "error": {
+                "code": "unknown_session",
+                "execution_state": "not_started",
+                "message": "unknown_session",
+                "stage": "validation"
+              },
+              "session_id": "session-1-4",
+              "session_usable": false
+            },
+            "isError": true
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ],
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"error\":{\"code\":\"unknown_session\",\"execution_state\":\"not_started\",\"message\":\"unknown_session\",\"stage\":\"validation\"},\"session_id\":\"session-1-4\",\"session_usable\":false}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+        "toolName": "session_execute",
+        "args": {
+          "code": "os.execute('sleep 2'); return 78",
+          "execution_timeout_ms": 100,
+          "wait_timeout_ms": null
+        }
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool reported an error; effects may have occurred.",
+        "data": {
+          "result": {
+            "structuredContent": {
+              "error": {
+                "code": "execution_timeout",
+                "execution_state": "started",
+                "message": "execution_timeout",
+                "stage": "execution"
+              },
+              "process_exit_confirmed": true,
+              "session_id": "session-1-5",
+              "session_status": "terminated",
+              "session_usable": false,
+              "status": "failed"
+            },
+            "isError": true
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ],
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"error\":{\"code\":\"execution_timeout\",\"execution_state\":\"started\",\"message\":\"execution_timeout\",\"stage\":\"execution\"},\"process_exit_confirmed\":true,\"session_id\":\"session-1-5\",\"session_status\":\"terminated\",\"session_usable\":false,\"status\":\"failed\"}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+        "toolName": "session_execute",
+        "args": {
+          "session_id": "session-1-2",
+          "code": "return 42"
+        }
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "result": {
+            "structuredContent": {
+              "session_id": "session-1-2",
+              "session_status": "idle",
+              "session_usable": true,
+              "status": "completed",
+              "values": [
+                42
+              ]
+            },
+            "isError": false
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"session_id\":\"session-1-2\",\"session_status\":\"idle\",\"session_usable\":true,\"status\":\"completed\",\"values\":[42]}"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+        "toolName": "session_execute",
+        "args": {
+          "code": "os.execute('sleep 65'); return 79",
+          "execution_timeout_ms": null,
+          "wait_timeout_ms": null
+        }
+      },
+      "result": {
+        "success": false,
+        "error": "Tool 'session_execute' on server 'lua' timed out after 30000ms"
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "4c5f5e5e-2056-4663-b873-6758b81939c5",
+        "toolName": "session_list",
+        "args": {}
+      },
+      "result": {
+        "success": false,
+        "error": "MCP server 'lua' is not running"
+      }
+    },
+    {
+      "tool": "mcp_server_control",
+      "params": {
+        "serverName": "lua",
+        "action": "start"
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "serverName": "lua",
+          "status": "running",
+          "toolCount": 5
+        }
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "session_list"
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "serverName": "lua",
+          "bindingId": "ace32aaf-121a-48f4-9611-df29037d5f87",
+          "tools": [
+            {
+              "name": "session_list",
+              "description": "List existing sessions, not history. An unknown session after asynchronous work does not imply code never ran or that retrying side effects is safe.",
+              "inputSchema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "additionalProperties": false,
+                "type": "object"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "ace32aaf-121a-48f4-9611-df29037d5f87",
+        "toolName": "session_list",
+        "args": {}
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "result": {
+            "structuredContent": {
+              "sessions": []
+            },
+            "isError": false
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"sessions\":[]}"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "session_execute"
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "serverName": "lua",
+          "bindingId": "ace32aaf-121a-48f4-9611-df29037d5f87",
+          "tools": [
+            {
+              "name": "session_execute",
+              "description": "Execute a complete Lua chunk; explicit return is required. Omitted/null session_id creates an interpreter. Globals persist; locals do not. No automatic output capture. Accepted execution discards unread prior results. Terminal replies consume results. wait_timeout_ms defaults to 600000; null waits indefinitely, zero returns pending. Wait expiry leaves execution running. execution_timeout_ms is a separate hard deadline that kills the session. Request cancellation also kills the session and destroys state. Execution is not read-only or idempotent.",
+              "inputSchema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "additionalProperties": false,
+                "allOf": [
+                  {
+                    "if": {
+                      "required": [
+                        "create_options"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "session_id": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  }
+                ],
+                "properties": {
+                  "args": {
+                    "default": [],
+                    "type": "array"
+                  },
+                  "code": {
+                    "type": "string"
+                  },
+                  "create_options": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "cwd": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "stderr_path": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "stdin_path": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "stdout_path": {
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "execution_timeout_ms": {
+                    "default": null,
+                    "maximum": 2147483647,
+                    "minimum": 1,
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "session_id": {
+                    "default": null,
+                    "minLength": 1,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "wait_timeout_ms": {
+                    "default": 600000,
+                    "maximum": 2147483647,
+                    "minimum": 0,
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "code"
+                ],
+                "type": "object"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "ace32aaf-121a-48f4-9611-df29037d5f87",
+        "toolName": "session_execute",
+        "args": {
+          "code": "return 42"
+        }
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "result": {
+            "structuredContent": {
+              "session_id": "session-1-1",
+              "session_status": "idle",
+              "session_usable": true,
+              "status": "completed",
+              "values": [
+                42
+              ]
+            },
+            "isError": false
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"session_id\":\"session-1-1\",\"session_status\":\"idle\",\"session_usable\":true,\"status\":\"completed\",\"values\":[42]}"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "session_kill"
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "serverName": "lua",
+          "bindingId": "ace32aaf-121a-48f4-9611-df29037d5f87",
+          "tools": [
+            {
+              "name": "session_kill",
+              "description": "Destroy session state with synchronous best-effort disposal; retain no history. Unconfirmed OS exit is reported without failing the kill operation.",
+              "inputSchema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "additionalProperties": false,
+                "properties": {
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "session_id"
+                ],
+                "type": "object"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "ace32aaf-121a-48f4-9611-df29037d5f87",
+        "toolName": "session_kill",
+        "args": {
+          "session_id": "session-1-1"
+        }
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "result": {
+            "structuredContent": {
+              "process_exit_confirmed": true,
+              "session_id": "session-1-1",
+              "session_status": "terminated",
+              "session_usable": false,
+              "status": "killed"
+            },
+            "isError": false
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"process_exit_confirmed\":true,\"session_id\":\"session-1-1\",\"session_status\":\"terminated\",\"session_usable\":false,\"status\":\"killed\"}"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "mcp_tool_call",
+      "params": {
+        "serverName": "lua",
+        "bindingId": "ace32aaf-121a-48f4-9611-df29037d5f87",
+        "toolName": "session_list",
+        "args": {}
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "result": {
+            "structuredContent": {
+              "sessions": []
+            },
+            "isError": false
+          },
+          "native_content": [
+            {
+              "content_index": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"sessions\":[]}"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "mcp_server_control",
+      "params": {
+        "serverName": "lua",
+        "action": "stop"
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "serverName": "lua",
+          "status": "stopped",
+          "toolCount": 0
+        }
+      }
+    }
+  ],
+  "restart": null
+}

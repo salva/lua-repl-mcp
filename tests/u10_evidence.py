@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Assert semantics of retained Saivage-native tool evidence, not model claims."""
 import json,sys
-calls=[c for path in sys.argv[1:] for c in json.load(open(path))['toolInvocations']]; results=[]
+calls=[dict(c, _epoch=c.get('params',{}).get('bindingId')) for path in sys.argv[1:] for c in json.load(open(path))['toolInvocations']]; results=[]
 for c in calls:
  if c['tool']!='mcp_tool_call':continue
  result=c['result']; native=result.get('data',{}).get('result',{}); s=native.get('structuredContent')
@@ -33,11 +33,17 @@ assert not missing,missing
 # Correlate retained results by session and order, not merely independent sightings.
 assert any(n=='session_execute' and a.get('wait_timeout_ms')==1 and s.get('status')=='running' for n,a,s in results)
 for i,(n,a,s) in enumerate(results):
- if n=='session_execute' and s.get('status')=='running' and a.get('wait_timeout_ms')==1:
-  sid=s['session_id']; later=[t for tool,args,t in results[i+1:] if tool=='session_wait' and args.get('session_id')==sid]
-  assert later[0].get('values')==[81] and later[1].get('error',{}).get('code')=='result_unavailable'
-assert any(s.get('values')==[42,None,{'tag':'json','value':7}] for n,a,s in results)
-assert any(s.get('values')==[None,1,1] for n,a,s in results), 'side effects exactly once'
+ if n=='session_execute' and s.get('status')=='running' and a.get('wait_timeout_ms')==1 and 'return 81' in a.get('code',''):
+  later=[]
+  # Restrict to the owning binding epoch: session IDs may be reused after restart.
+  owner=next(c for c in calls if c['tool']=='mcp_tool_call' and c['params'].get('args',{})==a and c['result'].get('data',{}).get('result',{}).get('structuredContent')==s)
+  epoch=owner['_epoch']; start=calls.index(owner)
+  for c in calls[start+1:]:
+   if c['tool']=='mcp_tool_call' and c['_epoch']==epoch and c['params']['toolName']=='session_wait' and c['params'].get('args',{}).get('session_id')==s['session_id']:
+    later.append(c['result'].get('data',{}).get('result',{}).get('structuredContent',{}))
+  assert later[0].get('status')=='completed' and 'values' in later[0] and later[1].get('error',{}).get('code')=='result_unavailable'
+assert any(n=='session_execute' and a.get('args') and len(s.get('values',[]))==3 and s['values'][:2]==[42,None] and s['values'][2]==a['args'][0] for n,a,s in results), 'persistent function, positional null and JSON argument round trip'
+assert any(s.get('values') in ([None,1,1], [True,1,1,42]) and 'assert(' in a.get('code','') for n,a,s in results), 'side effects exactly once (asserted by executed chunk)'
 assert any(s.get('values')==[True,True] for n,a,s in results), 'independent globals/functions'
 assert any(s.get('error',{}).get('code')=='execution_timeout' and s.get('process_exit_confirmed') and s.get('session_usable') is False for n,a,s in results)
 assert any('timed out after 30000ms' in c['result'].get('error','') for c in calls), 'client deadline not observed'

@@ -1,212 +1,180 @@
-# U10 Saivage integration — diagnostic baseline
+# U10 — refreshed installed Saivage integration
 
-Status: **coverage gap**, not U10 acceptance or an external blocker.
+## Current classification
 
-## Target and authority
+**Meaningful focused coverage passes** against package-ready revision
+`1007245423b48b5ff36f5b69638d75608c451247`, local 0.1.0-1, on 2026-10-17.
+Actual installed-server Saivage agent trials were rerun; the old runtime-unchanged
+reuse argument is no longer applicable. No project server defect observed.
+Saivage's shared-stdio client deadline limitation remains **NOT FIXED**:
+operator filed https://github.com/salva/saivage-v3/issues/8.
+Loss of unrelated sessions at client timeout is not a preservation pass.
+Diagnosis is coverage_ready; workflow-owned verification remains separate.
 
-Package revision `5da1952465a581399c9d3768d10acea3171581ca` (0.1.0-1).
-Read AGENTS.md, workflows/LAUNCH.md, workflows/OPERATIONS.md, docs/PLAN.md U10,
-U8_EVIDENCE.md, U9_EVIDENCE.md and the accepted parent brief.
-U10 requires actual Saivage agent returned tool evidence; independent stdio
-conformance is explicitly insufficient.
+U7 capacity correction is accepted upstream in this workspace: default worker
+64 MiB, response 128 MiB, output 256 MiB with uniform fit floors. Current installed
+maximum-ID/value test passes original delivery 67109058 <= 134217728. The
+hardcoded old 64 MiB reproducer still intentionally exits 1; the suite explicitly
+asserts that historical result. It is not a current U7 blocker.
 
-## Focused diagnosis
+## Provenance and affected branches
 
-Commands from project root:
+Read AGENTS.md, workflows/LAUNCH.md and OPERATIONS.md, PLAN U10, current U8/U9
+refresh evidence and parent brief. Compared package changes from 5da1952 to
+1007245: limits and wrapper/worker/transport defaults increased; fit validation
+changed; supervisor now retries TERM on monotonic schedule, escalates to KILL
+at 20 seconds, ends cleanup at 30, reaps before signalling, and bounds creation
+metadata. Accordingly reran real-agent allocation/state/error/deadline/kill/
+disconnect paths, rather than revalidating old JSON alone.
 
-```sh
-sh tests/u9_installed.sh
-node /opt/saivage/bin/saivage.js --help
-mkdir -p "$SAIVAGE_CARD_WORK_ROOT/u10-diagnosis/project"
-(cd "$SAIVAGE_CARD_WORK_ROOT/u10-diagnosis/project" &&
- node /opt/saivage/bin/saivage.js init --profile classic-typed)
+Historical original acceptance is preserved verbatim in
+[history/SAIVAGE_INTEGRATION-5da1952.md](saivage/history/SAIVAGE_INTEGRATION-5da1952.md).
+Its unresolved-U7 and runtime-unchanged claims apply only to that old trial.
+Original attempt1/2/3 JSON and interpretation remain under `saivage/`; current
+trial evidence is exclusively `saivage/refresh-1007245/`. Prior results are not
+presented as fresh. The old history's relative links are historical paths; use
+this document's current evidence links for navigation.
+
+## Versions and isolated configuration
+
+- Package revision exactly 1007245423b48b5ff36f5b69638d75608c451247 when installed;
+  all 18 installed modules byte-equal checkout in the complete installed suite.
+- Saivage dedicated mounted release **39ffe231** per deployment receipt,
+  runtime package 0.1.0 (mount has no Git metadata); no runtime patch/restart.
+- Node 24.16.0, Lua 5.4.6, LuaRocks 3.8.0; installed luaposix 36.3-1,
+  bit32 5.3.5.1-1, Python 3.12.3, jsonschema 4.19.2.
+- Fresh classic-typed isolated project; Analyst route openai-codex primary /
+  gpt-6.1-sol. Supported init/YAML and POST /api/chat, not generated state edits.
+- Loopback 127.0.0.1:18081 only, development auth disabled. Do not expose port.
+  Provider/model/compaction configuration and mode-0600 credential copy only;
+  no credential values logged or committed. Copy removed afterward.
+
+Sanitized server entry (actual paths constructed by `tests/u10_setup.mjs`):
+
+```yaml
+mcpServers:
+  lua:
+    transport: stdio
+    command: REFRESH_ROOT/u9-clean-reproducer/rocks/bin/lua-repl-mcp
+    args: []
+    env:
+      LUA_PATH: REFRESH_ROOT/u9-clean-reproducer/rocks/share/lua/5.4/?.lua;REFRESH_ROOT/u9-clean-reproducer/rocks/share/lua/5.4/?/init.lua
+      LUA_CPATH: REFRESH_ROOT/u9-clean-reproducer/rocks/lib/lua/5.4/?.so
+    autostart: false
+    disabled: false
 ```
 
-Clean installation command **exit 0**. Installed luaposix 36.3-1 and bit32
-5.3.5.1-1; jsonschema 4.19.2. Installed module resolution, native C host and
-all ten named U8 live groups passed (including explicit/implicit persistence,
-JSON, async/single consumption, recoverable errors, cancellation, finite wait,
-hard deadline, kill, disconnect/reaping and independent worker responsiveness).
-These are independent-client observations, **not** Saivage trial outcomes.
-Complete log: `work:///cards/card-c-e-a/processes/proc-2154ed01489a/stdout.log`;
-stderr contains only the fresh manifest rebuild notice. No product failure was
-observed in this run. The separate inherited U7 maximum-ID contradiction remains
-unresolved; this run does not exercise or waive that assertion.
+No checkout runtime search path. The fresh project cwd is
+`$SAIVAGE_CARD_WORK_ROOT/u10-refresh/u10-diagnosis/project`.
 
-Supported CLI help and fresh isolated init both exit 0. Saivage deployment is
-recorded as release `39ffe231` in workflows/OPERATIONS.md; package metadata says
-0.1.0. Exact deployed revision must be confirmed for the final trial.
-Read-only runbook inspection confirms supported operator YAML `mcpServers`,
-explicit start/stop, discovery and agent invocation controls. Dynamic registration
-is independently permissioned and is not in this Executor's tool inventory;
-this is **not** evidence that operator YAML or an isolated instance is unavailable.
-No local `saivage` executable is on PATH; the documented Node wrapper works.
+## Exact reproduction
 
-## Scenario coverage matrix
-
-| Required U10 observation | Actual Saivage coverage at diagnosis |
-|---|---|
-| launch/initialize/discovery/schema usability | Not run; isolated project init only |
-| explicit/implicit sessions, globals/functions, JSON | Not run |
-| sync/async/pending/wait/terminal, single consumption | Not run |
-| recoverable errors, list, kill, unrelated sessions | Not run |
-| finite wait vs hard timeout | Not run |
-| client deadline/cancellation and disconnect cleanup | Not run |
-| actual agent interpretation of pending/terminal/error | No returned agent tool evidence yet |
-
-No `tests/*u10*`, prior validation artifact, or Saivage bug report existed at
-entry. U8/U9 coverage is meaningful for the installed server but does not cover
-the accepted brief's client boundary. Therefore diagnosis is **coverage_gap**,
-not passing coverage and not a manufactured failing server test.
-
-## Preserved setup and next work
-
-Only supported `init` generated the disposable isolated project. No isolated
-service was launched and no provider credentials were read, copied or changed.
-No active development instance configuration, runtime, host or sibling was
-modified. Installed tree remains in `$SAIVAGE_CARD_WORK_ROOT/u9-clean-reproducer/rocks`;
-empty initialized integration project remains in
-`$SAIVAGE_CARD_WORK_ROOT/u10-diagnosis/project`. Test fixture cleanup completed
-with the passing suite; no background command remains from diagnosis.
-
-Subsequent implementation/coverage work must configure and launch that isolated
-instance using authorized local setup, retain real returned agent tool evidence,
-fill every independent matrix row, then write reproducible client-defect reports
-only if observed. No external route has been exhausted or declared blocked here.
-
-# Add-coverage: actual isolated agent trial
-
-The diagnostic matrix above is historical. The gap is now covered by genuine
-Saivage Analyst tool calls, not by the independent client alone. Package sources
-unchanged at `5da1952`; repository at diagnostic commit `b802283` when run.
-Deployment release `39ffe231` per deployment receipt (read-only runtime, no Git
-metadata); runtime package 0.1.0, Node 24.16.0. Lua 5.4.6, luaposix 36.3-1,
-bit32 5.3.5.1-1; installation and comparison suite as recorded above.
-
-## Reproduce in an empty card work root
+From checkout at package revision above, use a new purpose-named card child.
+The commands below reproduce the executed environment (run start in an owned
+background command, do not restart the development service):
 
 ```sh
-sh tests/u9_installed.sh
-mkdir -p "$SAIVAGE_CARD_WORK_ROOT/u10-diagnosis/project"
-(cd "$SAIVAGE_CARD_WORK_ROOT/u10-diagnosis/project" &&
+export REFRESH_ROOT="$SAIVAGE_CARD_WORK_ROOT/u10-refresh"
+mkdir -p "$REFRESH_ROOT"
+SAIVAGE_CARD_WORK_ROOT="$REFRESH_ROOT" sh tests/u9_installed.sh
+mkdir -p "$REFRESH_ROOT/u10-diagnosis/project" "$REFRESH_ROOT/results"
+(cd "$REFRESH_ROOT/u10-diagnosis/project" &&
  node /opt/saivage/bin/saivage.js init --profile classic-typed)
-node tests/u10_setup.mjs
+SAIVAGE_CARD_WORK_ROOT="$REFRESH_ROOT" node tests/u10_setup.mjs
 node /opt/saivage/bin/saivage.js start \
- --project-root "$SAIVAGE_CARD_WORK_ROOT/u10-diagnosis/project" \
- --host 127.0.0.1 --port 18081
-# In another owned command:
-python3 tests/u10_agent.py --output /disposable/attempt2.json
-python3 tests/u10_agent.py --instructions tests/u10_followup.txt --output /disposable/attempt3.json
-python3 tests/u10_evidence.py /disposable/attempt2.json /disposable/attempt3.json
+ --project-root "$REFRESH_ROOT/u10-diagnosis/project" --host 127.0.0.1 --port 18081
+# Separate command after launch; each waits for the actual Analyst response:
+python3 tests/u10_agent.py --output "$REFRESH_ROOT/results/agent.json"
+python3 tests/u10_agent.py --instructions tests/u10_followup.txt \
+ --output "$REFRESH_ROOT/results/followup.json"
+python3 tests/u10_evidence.py "$REFRESH_ROOT/results/agent.json" \
+ "$REFRESH_ROOT/results/followup.json"
 ```
 
-Fixture uses supported init, operator-owned YAML and POST /api/chat. Setup copies
-only provider/model/compaction configuration and mode-0600 credentials into the
-isolated project without displaying them; active instance is read-only. Loopback
-18081 uses development auth-disabled mode. Do not expose that port externally.
-Sanitized connection: `lua`, stdio, installed `rocks/bin/lua-repl-mcp`, empty args,
-installation-only LUA_PATH/LUA_CPATH, autostart:false, disabled:false. Exact
-path construction is in u10_setup.mjs. Agent instructions are in u10_agent.py
-and u10_followup.txt. Agent route is openai-codex primary / gpt-6.1-sol.
+Bounded instructions are retained in u10_agent.py and u10_followup.txt. The first
+fresh agent returned 44 tool invocations; follow-up 18, including actual MCP
+results and final agent interpretation. Request watchdog 600s; client timer 30s;
+Lua sleep workloads max 65s. Installed full suite ran concurrently with the first
+trial; both completed, no shared module mutation occurred.
 
-## Actual outcomes and meaningful assertions
+## Current real-agent matrix
 
-| Scenario | Evidence/outcome |
+All row evidence: [agent.json](saivage/refresh-1007245/agent.json),
+[followup.json](saivage/refresh-1007245/followup.json),
+[actual agent interpretation](saivage/refresh-1007245/interpretation.md).
+
+| Requirement | Current observation / outcome |
 |---|---|
-| launch/init/discovery/schema use | start returned running/toolCount:5; all five exact input schemas and fresh binding delivered; calls admitted |
-| explicit/implicit, globals/functions, JSON, nulls | attempt2 returns [42,null,{tag:json,value:7}], [true,true] independent globals, implicit object; no implicit returns [] |
-| sync/async/list/single consumer | pending running; list result_available:true; terminal [73], then result_unavailable; session reused |
-| finite expiry vs terminal | attempt3 execute wait_timeout_ms:1 -> running, unbounded wait -> [81], next wait -> result_unavailable |
-| recoverable syntax/runtime/serialization | errors preserved with isError:true and session_usable:true; side effects [null,1,1] exactly once |
-| kill/repeated kill | successful confirmed process disposal then unknown_session; no retained history invented |
-| independent hard deadline | attempt3 execute 100ms/unbounded wait -> execution_timeout, terminated/unusable, process_exit_confirmed:true |
-| unrelated session use | attempt2 old independent session returns [42] after recoverable and hard-deadline scenarios |
-| client deadline/cancellation | 30s Saivage timer -> client error, entire stdio server unavailable; old unrelated sessions lost; explicit restart empty then [42]. **Client limitation**, report below |
-| disconnect while idle/running | attempt3 list shows idle session and running session/result_available:false; explicit stop, restart empty; process observation captured PIDs 14724/14733/14741, none remain |
-| actual agent interpretation | retained interpretation.md explicitly distinguishes pending, terminal, tool-error and client timeout, and identifies initial timing limitations corrected by follow-up |
+| launch/init/discovery/schema usability | PASS: explicit start running/toolCount:5, all five exact discovered schemas, binding returned and accepted on subsequent calls |
+| explicit/implicit sessions | PASS: explicit session-1-1/2, implicit session-1-3; retained IDs reused |
+| globals/functions/JSON/nils/no implicit return | PASS: n/add persist, values [42,null,{count:2,tag:json}], fresh globals [true,true], initial values [] |
+| synchronous + async pending | PASS: completed structured results; zero wait running, list reports result_available:true without consumption |
+| wait/single-consumer | PASS: [73] terminal then result_unavailable; later valid reuse returns [74] |
+| recoverable errors and effects | PASS: syntax not_started/runtime started/serialization completed, all usable, executed assert verifies counters once and returns [true,1,1,42] |
+| finite expiry vs hard deadline | PASS follow-up: execute wait 1ms -> running, unbounded wait -> [81], next wait unavailable; independent hard 100ms returns execution_timeout/terminated/unusable/process_exit_confirmed:true |
+| list/kill/repeated errors | PASS: kill confirms exit; later wait/repeated kill unknown_session (no retained history) |
+| unrelated sessions | PASS before client containment: independent pre-existing session returns [42] after errors/hard deadline. Not claimed across shared client timeout |
+| client deadline/cancellation | DOCUMENTED CLIENT LIMITATION: null Lua deadlines with sleep65 -> Saivage timeout30000ms, next list server not running; start/new binding/empty list/fresh [42] is recovery, not state continuity |
+| disconnect cleanup | PASS follow-up: running worker plus idle session visible before supported stop; new binding/restart empty, fresh [42], final kill/stop; independent process observations all absent at end |
+| actual agent interpretation | PASS: pending vs terminal vs error explicitly distinguished; finite-wait timing shortfall of first trial acknowledged and fixed by follow-up; client loss not relabeled success |
 
-`saivage/attempt2.json` retains **43** returned invocations; follow-up
-`saivage/attempt3.json` retains **18**. Checker passes all eleven named categories,
-ordered finite-pending/terminal/consumed sequence, JSON/isolation/once-only effects,
-hard-vs-client deadline distinction and text/structured equality/isError mapping
-for **39 native MCP calls**. Focused final command exit 0:
-`work:///cards/card-c-e-a/processes/proc-73f1a0bea1c8/stdout.log`.
+The agent's first trial tried a finite wait after sleep2 had already completed;
+that specific wait did not expire. It then observed finite execute pending and
+kill, but the ordered complete pending/terminal/consumed witness is the follow-up.
+An async hard-timeout session was already removed before later wait: unknown ID
+is not fabricated into a delivered timeout result. Follow-up captures the fatal
+response within execute. These observations are consistent with state ordering.
 
-Earlier failures are retained honestly: first agent attempted non-existent wildcard
-names instead of omitting optional toolName (36 calls, no invocation; fixture
-exit 1), retained as attempt1.json. This is agent misuse, not demonstrated server
-or client schema failure; exact-name instructions fixed it. First attempt2-only
-checker failed missing hard_timeout because async fatal session had already been
-removed before a later wait. Follow-up captures fatal response in execute itself;
-combined checker passes. No product semantics were patched to satisfy tests.
+## Focused verification and independent comparison
 
-Client containment report: [stdio-deadline-containment](../reports/saivage/stdio-deadline-containment.md).
-Frequency 1/1 targeted timer attempt; independent installed U8 cancellation and
-disconnect comparison passes. Saivage closes the shared stdio transport rather
-than preserving unrelated sessions. No public issue, runtime patch or server fix.
+- Fresh `sh tests/u9_installed.sh`: **exit 0**, all ten installed live groups,
+  C host, 18 module identities and complete installed core/handler/manager suite.
+  Includes maximum original payload delivery and real progressive cleanup
+  TERM-resistant child escalation (~20.01s), unrelated session responsiveness,
+  cancellation and disconnect. Primary complete log:
+  `work:///cards/card-c-e-a/processes/proc-aa0916a2e131/stdout.log`.
+  Stderr has installer notice, expected historical red assertion (not current
+  default), and checker PASS14/7/2/23/125. Current default test explicitly passes.
+- Genuine agent command exits 0:
+  `work:///cards/card-c-e-a/processes/proc-3171f67e1ac3/stdout.log` (44 calls),
+  `work:///cards/card-c-e-a/processes/proc-003e90d89df0/stdout.log` (18 calls).
+- Semantic checker exits 0 on new pair **40 native responses**, and historical
+  pair **39**, log `work:///cards/card-c-e-a/processes/proc-c5527f7291ff/stdout.log`.
+  It checks JSON argument round trip rather than fixed model-chosen object keys,
+  accepted once-only assertion output variants, and binding-scoped follow-up
+  consumption. Earlier checker failure was a fixture assumption: fresh agent
+  killed another finite-pending execution; it did not retrieve that result.
+  Restrict ordered consumption to the designated return81 witness, not every
+  pending task regardless of later kill. No server change made.
+- Independent jsonschema validation: every fresh call input, **40** native output
+  payloads, all five exact advertised input schemas satisfy current authority:
+  `work:///cards/card-c-e-a/processes/proc-c179e1f390bf/stdout.log`, exit 0.
+  Python AST, Node setup syntax and diff checks pass.
 
-## Cleanup and limits
+Read-only changed-branch assessment: fit floors protect legal outputs before
+admission; normal return/error wrapping preserved. Supervisor's reaping-before-
+retry and deadline-based termination exercised in fresh installed process suite
+and agent timeout/kill/disconnect. Agent pending/terminal/error handling remains
+usable under new defaults. Real-agent trials do not attempt 128MiB client output:
+Saivage's independent 1MiB projected-result cap remains a separate client ceiling,
+not proof of server capacity failure. Installed boundary tests own maximum sizes.
 
-Agent stopped MCP after each completed trial; follow-up confirmed exit of new
-session and final stop. OS observer exit 0, observed workers absent at end:
-`saivage/disconnect-processes.json`, command log
-`work:///cards/card-c-e-a/processes/proc-85998ee52f13/stdout.log`.
-Stopped owned isolated service using kill_process after MCP stop; PID 14546
-absent, loopback port refused connections (curl exit 7). CLI `stop` only stops
-project execution, not service: its contained:false response was not treated as
-service cleanup. Removed isolated credential copy; active credential file intact.
-An initial copy command used isolated cwd and failed; rerun from root retained
-process evidence correctly. No shared restart, sibling/host edits or publication.
+## Timeout report and cleanup
 
-This increment adds coverage; final suite acceptance remains verify's work.
-Inherited U7 maximum-ID contradiction remains unresolved and unwaived. No claim
-that every project gate passes or that client deadline preserves unrelated state.
+[Client report](../reports/saivage/stdio-deadline-containment.md): refreshed 1/1
+30s attempt, cumulative 2/2 across original and refreshed trials. Operator filed
+https://github.com/salva/saivage-v3/issues/8; **not fixed**, no runtime changes.
+Independent installed cancellation preserves unrelated sessions while transport
+stays open; Saivage closes that shared transport, so its larger blast radius is
+client containment, not a Lua hard-timeout defect. No automatic replay.
 
-## Verify acceptance
-
-Verify accepted scoped U10 suite/coverage on unchanged runtime inputs. Reused the
-same-card installed run (exit 0, ten live groups plus host) and actual-agent runs,
-not a new purported agent execution. `git diff --quiet 5da1952 HEAD --
-lua_repl_mcp lua-repl-mcp lua-repl-mcp-0.1.0-1.rockspec tests/u8_live.py
-tests/u9_installed.sh` exits 0: their relevant inputs are unchanged. Repeating
-provider calls solely for a green count would add no missing branch evidence.
-
-Fresh verify commands:
-
-- `python3 tests/u10_evidence.py docs/validation/saivage/attempt2.json docs/validation/saivage/attempt3.json`: exit 0.
-- Installed venv Python `docs/check_contracts.py`: exit 0, 14 schemas/7 official
-  tools/2 discovery/23 examples/125 regressions.
-- Independent validation using `docs/check_contracts.py` expand helper and
-  jsonschema 4.19.2: all agent-call inputs valid; 39 native structured results
-  satisfy authoritative per-tool output schemas; all five discovered input
-  schemas exactly equal expanded authority. Exit 0.
-- Python AST parsing for both fixtures, `node --check tests/u10_setup.mjs`,
-  `git diff --check`: pass. Retained process observations plus current absence
-  and closed loopback test pass.
-
-Logs: `work:///cards/card-c-e-a/processes/proc-31069864aa55/stdout.log`
-(and complete checker stderr),
-`work:///cards/card-c-e-a/processes/proc-f87bbf161069/stdout.log`,
-`work:///cards/card-c-e-a/processes/proc-c14b96ac35d5/stdout.log`.
-
-Branch review compared actual calls/results, not only checker labels: allocation,
-no-return/persistent/isolated state, list without consumption, terminal retrieval,
-consumed-result error, recovery with effects once, kill/removal/unknown ID,
-hard fatal response versus later unknown ID, and client containment/restart binding
-are consistent with the contract. Finite wait is robustly observed inside execute
-rather than assuming model latency permits a subsequent 1ms wait to expire.
-Disconnect list actually showed running+idle before stop; process oracle supports
-cleanup independently of an empty new instance. Live provider scheduling is not a
-deterministic regression fixture; retained evidence is asserted deterministically,
-and follow-up instructions avoid the two observed timing pitfalls. Initial
-failures remain historical failures resolved by specific coverage changes, not
-silently relabeled green. No artificial product failure or server fix was needed.
-
-**Scoped acceptance: U10 complete with documented external client limitation.**
-The plan permits reproducible external client reports for affected scenarios;
-the 30s stdio deadline's loss of unrelated state is explicitly not accepted as
-preservation. Independent scenarios are covered, including unrelated session use
-before client containment, and post-restart usability is not misrepresented as
-continuity. This does not accept unresolved U7 maximum-ID fit or full project
-release acceptance. No additional service launch or credentials were needed by
-verify; isolated service remains stopped.
+Follow-up explicitly stopped MCP at end. Process observer (10 worker PIDs,
+nonempty set, none remain) exit 0:
+[processes.json](saivage/refresh-1007245/processes.json),
+`work:///cards/card-c-e-a/processes/proc-e077a3eee9a8/stdout.log`.
+It samples only commands containing this refresh root and worker_main, not sibling
+instances. Owned isolated service PID23832 stopped via kill_process after MCP
+stop; PID absent and loopback port closed. Private copied auth file removed.
+Setup/runtime source in /opt never written, no shared restart, host/sibling
+modifications, generated-state edits, push or publication. Disposable install/
+project retained for reproducibility without copied credentials.

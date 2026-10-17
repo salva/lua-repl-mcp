@@ -48,3 +48,21 @@ Upstream issue filed with operator authorization:
 https://github.com/salva/saivage-v3/issues/8 — request a 15-minute invocation
 default, configurable overrides, and explicit documentation of stdio containment.
 Filing does not mean the upstream timeout has changed or the limitation is fixed.
+
+## Refreshed package trial (current)
+
+Rerun against clean-installed package
+`1007245423b48b5ff36f5b69638d75608c451247`, same Saivage release39ffe231,
+2026-10-17. Fresh real-agent result again: sleep65 with null server deadlines
+returned client timeout30000ms; next list server-not-running; new binding restart
+lists empty and fresh [42] works. Frequency refreshed1/1, cumulative2/2 targeted
+attempts. Exact returned evidence and agent interpretation:
+[refresh agent](../../validation/saivage/refresh-1007245/agent.json),
+[interpretation](../../validation/saivage/refresh-1007245/interpretation.md),
+[current matrix](../../validation/SAIVAGE_INTEGRATION.md).
+Current independent installed complete suite passes cancellation/isolation and
+disconnect cleanup, log
+`work:///cards/card-c-e-a/processes/proc-aa0916a2e131/stdout.log`.
+The increased package limits/progressive worker termination do not repair Saivage
+shared-stdio containment. Issue8 is filed, **NOT FIXED**; unrelated-session
+preservation across this timeout remains a limitation, never a pass.
