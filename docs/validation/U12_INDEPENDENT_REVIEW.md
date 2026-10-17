@@ -158,3 +158,92 @@ Required decision/input is explicit authorization to edit owning product arbitra
 here, or delivery of the original implementation owner's correction. This node
 does not assume either and does not wait for another node. Independent verdict
 remains reject pending correction; no claim of engineering impossibility is made.
+
+## Resumed independent audit — fixes af80aa9 and 9f82e55
+
+**Current verdict: accept checkout ownership/outcome coverage for focused workflow
+verification; not full U12/release acceptance.** This supersedes the earlier
+checkout rejection and scope blocker only: the original implementation owner has
+now supplied the product repairs. Input HEAD
+`9f82e5502157116db3a2a8f256e162ae0994110f`, initially clean. Read current owner
+status v47 and inspected both source diffs and primary fixtures independently.
+No product source or preserved relay reproducer was changed by this audit.
+
+Relay review: manager still assigns the absolute dispatch deadline and retains
+public generation, accepted-kill and consumption policy. The guardian's native
+supervisor is now the sole receipt/deadline arbiter for this backend; a stale
+running mirror cannot create a second timeout. Native receive checks the deadline
+before accepting completion; equality/late completion is rejected. Manager still
+rejects a late timestamp defensively, while nondelegated backends keep their prior
+clock arbitration. Active accepted kill still freezes the manager outcome; killing
+an already completed execution retains it. Private relay partial reads therefore
+do not reset deadlines or become evidence of ongoing execution. Guardian stepping
+and deadline enforcement continue while report output is blocked. Guardian loss
+still fails closed without an unsafe worker PID fallback. This delegation does
+not transfer public result consumption or create a new execution grace period.
+
+EOF review: actual empty read marks control_eof, suppressing further pending
+writes; EBADF/local channel failure remains transport_failed. Bounded drain and
+valid result processing still precede exit classification. Same-turn or later
+wait gives the same logical worker_exited for remote endpoint loss, but only wait
+provides confirmation/status/reason. Startup remains handshake_failed. Existing
+accepted timeout/kill/corrupt causes cannot be rewritten, and complete results
+remain available on subsequent idle loss. Reap precedes retry; the new flag does
+not change TERM/KILL schedule, original handoff origin or abandonment deadline.
+
+### Fresh independent commands and observations
+
+Use the LUA_PATH/LUA_CPATH environment at the top of this report. All following
+checks completed exit0; commands within each sequence were fail-fast.
+
+1. `python3 tests/u12_audit_relay.py` — preserved regression now PASS; completion
+   879901.43570921 < deadline879903.20711001, response completed with payload intact.
+   `python3 tests/u12_relay_order.py` — six real cases PASS: tiny, partial backend,
+   accepted kill, completed kill, hard timeout, guardian loss.
+   `lua5.4 tests/u12_relay_policy.lua` —12 deterministic boundary/order cases PASS.
+   `lua5.4 tests/u6_eof_wait_red.lua` —6 empty/partial/complete × same/next-turn
+   cases PASS. `python3 tests/u12_matrix.py` —28 barrier/watchdog cases PASS;
+   TERM-ignore disposal20.025s/20.017s. Complete output read from
+   `work:///cards/card-d-b/processes/proc-024623e2fb5a/stdout.log`.
+2. `python3 tests/u6_process.py` **five consecutive times** — all PASS, including
+   native os.exit/signal vs local-channel closure and 21 schema-checked committed
+   responses per run. Then Lua u6_progressive_policy, u12_rare_policy,
+   u12_partial_acquisition, u12_server_boundary, u12_channel_stream,
+   u12_large_frame, u12_aggregate_reports_red; `python3 tests/u8_live.py`;
+   `python3 docs/check_contracts.py` —all PASS. Simulated unconfirmed-disposal
+   diagnostics are expected and retained, not actual leaked-process evidence.
+   Complete stdout read from
+   `work:///cards/card-d-b/processes/proc-6ed4744ab5b2/stdout.log`; stderr confirms
+   contracts14 schemas/7 tools/2 discovery results/23 examples/125 regressions.
+3. Real u12_real_faults, u12_identity_races and u12_aggregate_process fixtures in
+   isolated process groups with external25/45/50s watchdogs —all PASS.
+   `work:///cards/card-d-b/processes/proc-23c48b6f0cfc/stdout.log` and stderr
+   (expected stale/reused allocation fail-closed diagnostics).
+4. New independent `lua5.4 tests/u12_audit_eof_policy.lua` —three PASS. A real pipe
+   EOF with mocked wait0 remains unconfirmed through TERM/KILL/30s abandonment;
+   local EBADF stays transport_failed; preaccepted timeout stays timeout. No exit
+   reason/status invented, original failure retained, eventual bookkeeping never
+   signals an abandoned PID. Fake PID never reaches native wait/signal.
+   `work:///cards/card-d-b/processes/proc-5b2c277f7b0e/stdout.log`.
+
+### Remaining gates / explicit limits
+
+No new checkout correction required by this audit. Earlier ownership review plus
+fresh full matrix, real fault/identity/aggregate and deterministic escalation
+coverage support pre-readiness ownership, partial construction, descriptor
+inheritance, safe signals, fail-closed loss, bounded channels and progressive
+cleanup across cancellation/deadline/disconnect/shutdown. New source diffs do not
+change these primitives except EOF classification; they were nonetheless rerun.
+Embedded handler remains untouched. Safe identity is child-owned until wait or
+explicit ownership loss; no PID kill fallback was added. Exceptional unconfirmed
+exit still releases session capacity and reports uncertainty rather than claiming
+termination. Simultaneous owner death, trusted interference, arbitrary descendants
+and kernel inability to terminate remain outside the guarantee.
+
+The design/PLAN also require **clean-installed lifecycle/packaging evidence and
+refreshed affected U10 integration**. Those remain separate owner gates, not
+executed or accepted here; therefore this is not a claim that every original U12
+release prerequisite is complete. Parent should retain these concrete outstanding
+gates. No docs/SPEC15 takeover, requirement weakening, host/shared-runtime change,
+restart, push or publication. Passing diagnosis proceeds to verification-owned
+acceptance, not an inferred global approval.
