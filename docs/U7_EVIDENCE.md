@@ -255,3 +255,31 @@ explicit worker-buffer high-water instrumentation and generated frame boundaries
 then maximum-depth real-manager response coverage. Any universal-fit coupling
 must expose the 194-byte contract conflict rather than silently reject defaults
 or narrow legal IDs. No new normative limit is authorized here.
+
+## Worker-buffer instrumentation and default frame/depth closure
+
+Added scalar supervisor `buffer_high_water` / `pending_high_water` counters,
+updated only when storing a bounded incoming frame / execution command. Counters
+retain no payloads. `tests/u7_frame_budgets.lua` exercises actual supervisor drain
+with injected OS reads and decoder to isolate admission BEFORE decoding at the
+full default 20971520-byte worker bound: retained peaks 20971519, 20971520,
+20971520 for below/at/above frames; above never reaches decoder. It separately
+checks actual codec public input frames at 16777215/16777216/16777217 bytes.
+This injection test establishes storage admission, not OS throughput; real
+fragmented-worker coverage remains in U4 and the U7 maximum fixture.
+
+Extended real maximum fixture executes nested tables at depths127/128/129:
+127/128 survive worker/manager/text duplication;129 returns serialization_error
+without values. Full `python3 tests/u7_process.py` passes under its process-group
+watchdog: worker buffer high-water **16777347/20971520**, command high-water166;
+maximum client response/output high-water50331991/134217728; unrelated session
+still usable. Saturated fairness rerun passes,417 ping ticks before deadline
+reply. Frame test and process suite both exit0.
+
+Additional fail-fast regression: pending-flood, ownership, exact boundary tests,
+U4 fifteen real groups, U6 twenty-one validated responses, contracts and diff
+checks all pass. Existing earlier independent results remain relevant where
+inputs unchanged. Universal default coupled-fit reproducer remains deliberately
+failing; no default or ID size changed. Central configuration propagation to
+workers and full configured-value/frame/response coupling remain unimplemented,
+so this is continued progress, not exhaustive original U7 acceptance.

@@ -44,7 +44,19 @@ assert(duplicate.values[1]==v.values[1])
 -- Unrelated session stays live and usable after maximum response transport.
 t:submit('other','session_execute',{session_id=b,code='return 42',wait_timeout_ms=require('lua_repl_mcp').null})
 assert(collect('other').values[1]==42)
+for _,depth in ipairs({127,128,129}) do
+ t:submit('depth'..depth,'session_execute',{session_id=b,
+  code='local v=0; for i=1,'..depth..' do v={v} end; return v',
+  wait_timeout_ms=require('lua_repl_mcp').null})
+ local result=collect('depth'..depth)
+ if depth<=128 then
+  assert(result.status=='completed'); local v=result.values[1]
+  for _=1,depth do v=v[1] end; assert(v==0)
+ else assert(result.error.code=='result_serialization_error' and not result.values) end
+end
 assert(not t.closed)
+print('MEASURE worker_buffer_high_water='..m.backend.buffer_high_water..
+ ' worker_bound=20971520 command_high_water='..m.backend.pending_high_water)
 print('MEASURE default_quote_values=16777216 response_with_newline='..n..
  ' output_high_water='..t.high_water..' bound='..t.output_bytes)
 t:close('complete'); x.u.close(rd); x.u.close(wr)

@@ -9,6 +9,7 @@ function M.new(options)
  assert(type(timeout)=='number' and timeout==timeout and timeout>=1 and timeout<=2147483647 and timeout%1==0,'startup_timeout_ms must be an integer in [1,2147483647]')
  x.s.signal(x.s.SIGPIPE,x.s.SIG_IGN)
  return setmetatable({workers={},reaping={},generation=0,timeout=timeout/1000,clock=options.clock or x.now,
+  buffer_high_water=0,pending_high_water=0,
   interpreter=options.interpreter or 'lua5.4',launch=options.launch},S)
 end
 local function close(w)
@@ -68,6 +69,7 @@ function S:execute(w,input,deadline)
  local text,err=p.encode(p.record('execute',w.allocation_generation,{execution_generation=generation,input=input}))
  if not text then return nil,err end
  w.execution_generation=generation; w.result=nil; w.result_at=nil; w.execution_deadline=deadline; w.state='running'; w.pending=text; w.offset=1
+ self.pending_high_water=math.max(self.pending_high_water,#text)
  return generation
 end
 function S:graceful_close(w)
@@ -105,6 +107,7 @@ function S:drain(w)
    local part=nl and rest:sub(1,nl-1) or rest
    if #w.buffer+#part>p.max_frame then return self:abort(w,'corrupt_worker') end
    w.buffer=w.buffer..part
+   self.buffer_high_water=math.max(self.buffer_high_water,#w.buffer)
    if not nl then break end
    local v=p.decode(w.buffer); w.buffer=''
    if not v then return self:abort(w,'corrupt_worker') end
