@@ -11,7 +11,7 @@ end
 function m:preview(r) if not r.done then return r.response end end
 function m:release() end
 function m:commit(r,send)
- if send(r.response) then r.done=true; self.requests[r.request_id]=nil end
+ if send(r.response) then r.done=true; self.requests[r.request_id]=nil; return r.response end
 end
 local emitted=''
 local reads=0
