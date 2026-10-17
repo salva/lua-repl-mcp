@@ -81,6 +81,9 @@ end
 function M.new(options)
  options=options or {}
  local b=native.new(options)
+ -- Native receive/deadline arbitration occurs in the guardian, before relay.
+ -- A manager mirror can remain running while a validated result is in flight.
+ b.owns_execution_deadlines=true
  setmetatable(b,B); b.commands={}; b.by_id={}; b.inflight=false
  local owned={}
  local function keep(fd) owned[#owned+1]=fd; return fd end
@@ -164,7 +167,6 @@ function B:step(delay)
   local live={}; for _,w in ipairs(self.workers) do
    if w.state~='dead' then
     live[#live+1]=w
-    if w.state=='running' and w.execution_deadline and self.clock()>=w.execution_deadline then self:abort(w,'execution_timeout') end
    end
   end; self.workers=live
   if not self.inflight and not wire.busy(self.channel) then

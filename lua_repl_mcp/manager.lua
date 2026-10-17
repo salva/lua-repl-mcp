@@ -187,10 +187,13 @@ function C:refresh()
     local received=w.result_at or self.clock()
     if not e.deadline or received<e.deadline then
      e.payload=w.result; e.status=w.result.status; e.completed_at=received; e.deadline=nil
-    end
+    else self:terminate(s,'execution_timeout') end
     w.result=nil
    end
-   if e and e.status=='running' and e.deadline and self.clock()>=e.deadline then self:terminate(s,'execution_timeout') end
+   -- The guardian validates worker records and enforces the dispatch deadline
+   -- independently. A running mirror is not evidence of a still-active worker.
+   -- Other backends retain the original manager clock arbitration.
+   if not self.backend.owns_execution_deadlines and e and e.status=='running' and e.deadline and self.clock()>=e.deadline then self:terminate(s,'execution_timeout') end
    if e and e.status=='running' and (w.state=='terminating' or w.state=='dead') then
     self:freeze(s,w.failure=='execution_timeout' and 'execution_timeout' or (w.failure=='worker_exited' and 'worker_exited' or 'transport_error'))
    end
@@ -221,7 +224,7 @@ function C:step(ms)
  self:refresh()
  for _,s in ipairs(self.order) do
   local e=s.execution
-  if e and e.deadline then delay=math.min(delay,math.max(0,math.ceil((e.deadline-self.clock())*1000))) end
+  if not self.backend.owns_execution_deadlines and e and e.deadline then delay=math.min(delay,math.max(0,math.ceil((e.deadline-self.clock())*1000))) end
  end
  self.backend:step(delay); self:refresh()
 end

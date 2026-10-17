@@ -293,3 +293,62 @@ contracts + diff-check completed0 after correction. Nine-real-worker aggregate
 snapshot fixture reran under50s watchdog and completed0. Prior lifecycle/ownership
 results apply unchanged: only decoder capacity argument changed, not native
 ownership, command transitions, signal handling or cleanup policy.
+
+## Relay deadline arbitration repair (independent audit follow-up)
+
+The independent audit's original protected regression is preserved unchanged.
+It exposed two competing timeout owners: manager refresh (including admission)
+and guardian-backend mirror step could both freeze timeout before consuming a
+pre-deadline guardian-validated result. A tiny result also failed, excluding a
+large-frame-only explanation. Merely receiving before refresh would not fix
+partial reports; draining without a budget or extending deadlines is not valid.
+
+The guardian backend now declares `owns_execution_deadlines`: its native child
+supervisor is the receive/validation and hard-deadline arbiter. The manager still
+assigns the original absolute deadline at dispatch and validates received result
+ timestamps against it, but never infers timeout from a stale guardian mirror.
+Non-guardian backends retain existing manager-clock behavior. Native guardian
+stepping continues independent of relay backpressure: infinite executions still
+time out at the original deadline, even if no client/manager can consume reports.
+Late/equal timestamped results are explicitly rejected by manager refresh too.
+No receive budget, signal policy, cleanup deadline or queue bound is relaxed.
+
+Accepted active kill/cancellation still freeze immediately in manager policy and
+mark mirror transitions dirty; subsequent completion cannot rewrite that cause.
+Once the manager has accepted completion, killing its idle worker changes session
+lifecycle only. Guardian loss remains fail-closed with no PID fallback; a result
+not yet relayed is not falsely claimed delivered. This is original U12 correction,
+not independent acceptance or clean-install/U10 refresh.
+
+New regressions: `tests/u12_relay_policy.lua` deterministically exercises12
+before/exact/after timestamp cases across refresh/admission/step/accepted kill,
+plus completed-result kill retention. `tests/u12_relay_order.py` bounds real
+`u12_relay_order.lua` in an isolated process group under55s: tiny delayed result,
+partial backend report after deadline, queued active kill, completed-idle kill,
+actual infinite hard timeout and guardian loss. Partial report uses an observed
+nonempty input buffer barrier, not an assumption that one poll turn receives
+bytes. Earlier exploratory one-turn assertion failed because an empty prior
+snapshot could be consumed first; corrected harness observes actual partial data.
+Product correction was not changed to mask that fixture issue.
+
+Repair verification (Lua5.4.6, luaposix36.3, Python3.12.3, recorded local paths):
+- Unchanged `python3 tests/u12_audit_relay.py`:0, completion879214.34998583
+  < deadline879216.0951133, completed public payload.
+- New relay policy/order tests:12 deterministic boundary cases and six real
+  guardian scenarios PASS under55s external process-group watchdog.
+- Existing28-case lifecycle matrix and full U8 PASS; native U6 ordering15
+  validation/EOF/exit permutations, deadlines, policy and U5 deterministic groups
+  PASS. Contracts14 schemas/7 tools/2 discovery/23 examples/125 cases PASS.
+- Real identity40 races/stale commands and nine-worker aggregate snapshot tests
+  PASS under45s/50s watchdogs. Expected stale allocation diagnostics retained.
+
+Verification anomalies are not erased: initial combined command named nonexistent
+`tests/u5_policy.lua` after all preceding tests passed; corrected to `tests/u5.lua`
+and reran contracts/diff and the focused fail-fast sequence. A U6 native process
+run failed with `transport_error` instead of `worker_exited`; isolated rerun and
+three repeats passed. A disposable archive of unchanged pre-repair2d6f8d1 reproduced
+that same exit-classification race once in10 runs (`exit:transport_error`). Thus
+this is a pre-existing native EOF-vs-wait classification issue, not proven repaired
+or waived by passing reruns, and is outside this relay-only correction. Native
+supervisor and that fixture are unchanged. Initial baseline extraction named an
+absent root module and failed before running; corrected archive excludes it.
