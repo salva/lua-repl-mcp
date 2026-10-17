@@ -208,20 +208,27 @@ Fabricated percentages must not be used as keep-alives.
 
 ## 9. Lua version support
 
-PUC-Rio Lua 5.4 is the required initial baseline for standalone and embedded use.
-Use a maintained patch release within that series. This matches `dosbox-y`:
+Target **PUC-Rio Lua 5.4 and newer (5.4+)** for standalone and embedded use.
+Lua 5.4 is the minimum supported version and the initial integration test target.
+This matches `dosbox-y`:
 its `configure.ac` enables the embedded debugger with Lua 5.4 and explicitly
 checks `LUA_VERSION_NUM == 504`.
 
-The core handler must be tested with Lua 5.4, including execution inside an
-existing host-owned interpreter. Dependencies must support that baseline.
-Any native components must be built for the host's Lua version and ABI; the
-integration must not introduce a second, incompatible Lua runtime into the host.
+The session handler must be implemented in Lua, without requiring a native
+component supplied by this project. It must work inside the host's existing
+interpreter without introducing a second Lua runtime. Native APIs already
+exposed by the host remain accessible, as do native modules available to
+full-access user code; neither implies a native implementation of the handler.
 
-Newer Lua release series may be added after explicit compatibility testing.
-Support must name the validated series rather than claim compatibility with all
-future versions. Lua 5.1, 5.2, 5.3, and LuaJIT are outside the initial support
-scope; compatibility shims for those runtimes are not required.
+The core handler must be tested with Lua 5.4, including execution inside an
+existing host-owned interpreter. Dependencies must support that baseline and
+must not unnecessarily restrict newer Lua versions. Maintain compatibility with
+newer stable releases and document the versions actually tested, along with any
+known incompatibilities. Untested future releases are a compatibility target,
+not a guarantee against upstream breaking changes.
+
+Lua 5.1, 5.2, 5.3, and LuaJIT are outside the initial support scope;
+compatibility shims for those runtimes are not required.
 
 ## 10. Open implementation decisions
 
