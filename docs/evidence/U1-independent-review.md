@@ -118,3 +118,55 @@ supplemental (not pinned U8 validation). No failed repair attempts or alternate
 hypotheses were needed: the established invalid-path propagation diagnosis
 converged at the shared pointer primitive. This is focused repair evidence,
 not final acceptance or independent approval of the repair; verify owns that gate.
+
+## Verification disposition at e1168a4
+
+**U1 suite and scoped coverage accepted; ready for U2 work.** The independent
+review's R1 is resolved. This closes this card's bounded U1 implementation-review
+gate, not host, handler, manager, packaging or final runtime acceptance. The
+reviewer made the narrowly requested R1 repair in this workflow; it is not being
+represented as a separate third-party review of that repair.
+
+Verification inspected the changed pointer branch and regression assertions:
+invalid strings return their valid parent path, while valid strings keep exact
+RFC 6901 escaping and numeric indices keep zero-based caller semantics. The
+key is still rejected, no partial payload is exposed, and failure responses now
+encode. Tests assert literal expected pointers, error stages/codes, side-effect
+warning and exactly-once counts, not just snapshots of implementation output.
+The original failure was observed before repair; passing now is evidence of a
+fixed defect, not merely a previously green test. The pre-existing full U1 matrix
+above remains applicable to unchanged evaluator/contracts/diagnostic code, and
+its entire runtime suite was nevertheless rerun against the repaired codec.
+
+On Lua 5.4.6, verification ran this fail-fast sequence, all exit 0:
+
+```sh
+set -e
+lua5.4 -v
+lua5.4 tests/u1_public_entrypoint.lua
+lua5.4 tests/u1.lua
+lua5.4 tests/u1_diagnostic_notice.lua
+lua5.4 tests/u1_review_invalid_key.lua
+lua5.4 tests/u1_review_invalid_key.lua
+git diff --check
+git status --short
+```
+
+Complete output was read from
+`work:///cards/card-b/processes/proc-7e6ab9bb6686/stdout.log`. All 14 main groups,
+notice boundaries and four review groups pass; the review regression also passes
+in a second fresh interpreter, with no retained-global/order dependency. Tests
+are deterministic, native-independent, require no external services or sleeps,
+and include real Lua evaluation and default-size/depth boundaries. Small configured
+limits supplement rather than replace the actual default-limit checks. Existing
+hostile metamethod, invalid-value, numeric/Unicode and recovery coverage is
+meaningful for U1; no remaining concrete U1 coverage gap or verified failure was
+identified. No claim is made that these pure tests establish later POSIX or host
+integration behavior.
+
+Reused supplemental schema evidence is the immediately preceding repair-node
+`python3 docs/check_contracts.py` run on Python 3.12.3 / jsonschema 4.10.3,
+exit 0 (14/7/2/23/125 totals). Its inputs and checker are unchanged; only runtime
+pointer behavior changed and was rerun above. This is not pinned U8 acceptance.
+The old diagnosis and repair-stage statements in this document are historical;
+this verification disposition supersedes their pending-acceptance status.
