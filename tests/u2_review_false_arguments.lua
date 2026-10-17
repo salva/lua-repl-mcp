@@ -1,6 +1,6 @@
 -- Independent U2 review: explicit non-object arguments must not close the host
 -- attachment. SPEC 14.1/14.2; schemas/api.json repl_close requires object.
-package.path='./?.lua;./?/init.lua'
+package.path=os.getenv('U9_INSTALLED_LUA_PATH') or './?.lua;./?/init.lua'
 package.cpath=''
 package.searchers={package.searchers[1],package.searchers[2]}
 local handler=require('lua_repl_mcp.handler')

@@ -6,22 +6,25 @@ import select
 import subprocess
 import time
 import jsonschema
+import os
+root = pathlib.Path(__file__).resolve().parents[1]
 
-spec = importlib.util.spec_from_file_location('contracts', 'docs/check_contracts.py')
+spec = importlib.util.spec_from_file_location('contracts', root / 'docs/check_contracts.py')
 contracts = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(contracts)
-doc = json.loads(pathlib.Path('docs/schemas/api.json').read_text())
+doc = json.loads((root / 'docs/schemas/api.json').read_text())
 expanded = {n: {'$schema': doc['$schema'], **contracts.expand(v, doc['$defs'])}
             for n, v in doc['$defs'].items()}
 # Verify generated runtime discovery stays byte-for-byte semantically in sync.
-source = pathlib.Path('lua_repl_mcp/direct_schemas.lua').read_text()
+module_dir = pathlib.Path(os.environ['U9_INSTALLED_MODULES']) if os.environ.get('U9_INSTALLED_MODULES') else root / 'lua_repl_mcp'
+source = (module_dir / 'direct_schemas.lua').read_text()
 tools = json.loads(source.split('[====[', 1)[1].split(']====]', 1)[0])
 for tool in tools:
     for field, suffix in [('inputSchema', ''), ('outputSchema', '_output')]:
         assert tool[field] == expanded[tool['name'] + suffix]
         jsonschema.Draft202012Validator.check_schema(tool[field])
 
-p = subprocess.Popen(['lua5.4', 'tests/u2_host.lua'], stdin=subprocess.PIPE,
+p = subprocess.Popen(['lua5.4', str(root / 'tests/u2_host.lua')], stdin=subprocess.PIPE,
                      stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
 def send(id, method, params=None):
     r = dict(jsonrpc='2.0', method=method)

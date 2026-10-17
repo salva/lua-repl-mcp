@@ -1,3 +1,17 @@
+# Current installed refresh provenance
+
+Original U8 development evidence below is historical. Fresh external manager and
+direct conformance on production546ccf2 / accepted01a1552 is now executed by the
+U9 empty-tree runner, including all ten named live groups and the dedicated
+pipe-FD direct host fixture. See [U9 installed qualification](U9_EVIDENCE.md)
+for exact command, versions, log and final revision. The obsolete hardcoded64MiB
+red at the end of this original report is **not** a current runtime blocker;
+production public capacity is128MiB and `u7_default_maximum.lua` requires original
+maximum delivery. U12 guardian ownership is separate and will require affected
+client/cleanup revalidation. No U8 runtime change is made by this refresh.
+
+---
+
 # U8 — live MCP integration evidence
 
 ## Implementation and scope

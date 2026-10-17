@@ -5,8 +5,8 @@ from pathlib import Path
 import signal
 import subprocess
 root = Path(__file__).resolve().parents[1]
-proc = subprocess.Popen(['lua5.4', 'tests/u6_progressive_process.lua'],
-                        cwd=root, start_new_session=True)
+proc = subprocess.Popen(['lua5.4', str(root / 'tests/u6_progressive_process.lua')],
+                        cwd=os.environ.get('U9_INSTALLED_CWD', root), start_new_session=True)
 try:
     result = proc.wait(timeout=28)
 except subprocess.TimeoutExpired:

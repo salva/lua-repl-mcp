@@ -1,6 +1,6 @@
 -- Independent U1 acceptance regression: rejecting binary keys must still produce
 -- a JSON-encodable failure. SPEC 13.4, 13.5, 14.3; PLAN U1 invalid-byte coverage.
-package.path='./?.lua;./?/init.lua'
+package.path=os.getenv('U9_INSTALLED_LUA_PATH') or './?.lua;./?/init.lua'
 package.cpath=''
 package.searchers={package.searchers[1],package.searchers[2]}
 local evaluator=require('lua_repl_mcp.evaluator')

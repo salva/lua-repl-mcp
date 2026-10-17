@@ -65,7 +65,12 @@ nonblocking adapter uses `client_transport.lua`. CLI uses standard defaults,
 not undocumented command-line switches. Tool arguments configure cwd, output
 paths, execution/wait timeouts and session selection per advertised schemas.
 Do not lower response bounds assuming all legal payloads will still fit: the
-unresolved default maximum-fit contradiction is recorded in U9 evidence.
+historical 64MiB contradiction is preserved in U9 evidence, but current authorized
+worker/public/output defaults are 64/128/256MiB and production maximum delivery
+passes. Uniform checked capacity floors reject incompatible configurations before
+backend construction. The supervisor uses bounded TERM20s then KILL10s progressive
+termination; cleanup reports exit confirmation honestly. U12 guardian ownership
+and U11 website work remain separate scope and require affected revalidation.
 
 ## Lifecycle, state, errors and outputs
 

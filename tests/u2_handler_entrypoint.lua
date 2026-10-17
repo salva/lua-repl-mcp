@@ -1,7 +1,7 @@
 -- U2 prerequisite regression: the documented embedding entry point must load
 -- without a manager, installed Lua modules, or native loaders (SPEC 14.5).
 -- Run from repository root: lua5.4 tests/u2_handler_entrypoint.lua
-package.path = './?.lua;./?/init.lua'
+package.path = os.getenv('U9_INSTALLED_LUA_PATH') or './?.lua;./?/init.lua'
 package.cpath = ''
 package.searchers = { package.searchers[1], package.searchers[2] }
 

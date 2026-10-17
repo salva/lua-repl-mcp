@@ -1,5 +1,5 @@
 -- Pure Lua runtime tests. No installed Lua modules or native loaders available.
-package.path='./?.lua;./?/init.lua'
+package.path=os.getenv('U9_INSTALLED_LUA_PATH') or './?.lua;./?/init.lua'
 package.cpath=''
 package.searchers={package.searchers[1],package.searchers[2]}
 local codec=require('lua_repl_mcp.codec')

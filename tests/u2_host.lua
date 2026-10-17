@@ -1,5 +1,5 @@
 -- Real supplied control channel: stdin/stdout belong to this parent fixture.
-package.path='./?.lua;./?/init.lua'
+package.path=os.getenv('U9_INSTALLED_LUA_PATH') or './?.lua;./?/init.lua'
 local handler=require('lua_repl_mcp.handler')
 local codec=require('lua_repl_mcp.codec')
 local control_in,control_out=io.stdin,io.stdout

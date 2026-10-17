@@ -1,5 +1,5 @@
 -- Shared-protocol boundary matrix supplements the unchanged wire reproducer.
-package.path='./?.lua;./?/init.lua'
+package.path=os.getenv('U9_INSTALLED_LUA_PATH') or './?.lua;./?/init.lua'
 local codec=require('lua_repl_mcp.codec')
 local protocol=require('lua_repl_mcp.protocol')
 local null=require('lua_repl_mcp').null

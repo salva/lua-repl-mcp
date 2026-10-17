@@ -10,7 +10,8 @@ root = Path(__file__).resolve().parents[1]
 work = Path(os.environ['SAIVAGE_CARD_WORK_ROOT']) / 'u7-process-verification'
 work.mkdir(parents=True, exist_ok=True)
 env = os.environ.copy()
-env['LUA_PATH'] = f'{root}/?.lua;{root}/?/init.lua;' + env.get('LUA_PATH', ';')
+if not os.environ.get('U9_INSTALLED_CWD'):
+    env['LUA_PATH'] = f'{root}/?.lua;{root}/?/init.lua;' + env.get('LUA_PATH', ';')
 for fixture, timeout in [('u7_large_configuration_process.lua', 150),
                          ('u7_configuration_process.lua', 25),
                          ('u7_fairness_process.lua', 25),
@@ -19,7 +20,7 @@ for fixture, timeout in [('u7_large_configuration_process.lua', 150),
     with tempfile.TemporaryDirectory(dir=work) as directory:
         env['U7_DIR'] = directory
         proc = subprocess.Popen(['lua5.4', str(root / 'tests' / fixture)],
-                                cwd=root, env=env, start_new_session=True,
+                                cwd=os.environ.get('U9_INSTALLED_CWD', root), env=env, start_new_session=True,
                                 preexec_fn=lambda: resource.setrlimit(resource.RLIMIT_NOFILE, (256, 256)))
         try:
             result = proc.wait(timeout=timeout)

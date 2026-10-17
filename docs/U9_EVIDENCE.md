@@ -1,3 +1,58 @@
+# Current release qualification refresh at production 546ccf2 / acceptance 01a1552
+
+The refresh below supersedes current-applicability claims in the original U9
+history. Earlier greens are retained with provenance, not reused across runtime
+changes. See [U3–U7 scoped acceptance](evidence/U3-U7-suite-acceptance.md).
+
+`sh tests/u9_installed.sh` now installs an empty tree and runs the **complete**
+core/handler/manager suite via `tests/u9_suite.py`, (36 standalone Lua tests, seven external driver programs) plus all ten U8 external
+manager/direct groups, actual C host, schemas and exact 18-module byte identity.
+All runtime paths are installation-only, versioned inherited paths are unset,
+and cwd stays outside checkout. Python adapters accept `U9_INSTALLED_CWD` to
+retain those paths and use absolute test fixture paths; default development mode
+is unchanged. Entrypoint isolation tests accept `U9_INSTALLED_LUA_PATH` while
+still disabling native loaders. No product runtime changes.
+
+The driver discovers every U1–U7 Lua test, excluding externally driven fixtures
+and running those through their existing isolated watchdogs. The historical
+hardcoded64MiB assertion is explicitly expected nonzero; **every other** test
+must exit0. Current maximum-fit and progressive-policy tests run normally.
+Post-change native suite includes the actual TERM-resistant child, TERM for20s,
+KILL phase up to10s, original cause/origin preservation, reap-before-retry,
+no catch-up burst and total cleanup cutoff. New uniform floors check all sums
+and multiplication before backend construction, with no default-only exception.
+
+Reproduce in a new purpose-named work root:
+
+```sh
+mkdir -p "$SAIVAGE_CARD_WORK_ROOT/u9-refresh-green"
+SAIVAGE_CARD_WORK_ROOT="$SAIVAGE_CARD_WORK_ROOT/u9-refresh-green" sh tests/u9_installed.sh
+```
+
+The exhaustive 24 SPEC8 and ten SPEC14.8 rows below remain the coverage map;
+row14.8.5 now uses the production maximum-success test, not the old hardcoded red.
+U11/U12 are not part of this installed release acceptance; after guardian changes,
+rerun affected lifecycle/resource/client/install suites. No U10 setup, publication
+or push. Exact final output and outcome are recorded below after completion.
+
+Current versions: Lua5.4.6, Lua5.5.0, luaposix36.3 (rock36.3-1), bit32
+5.3.5.1-1, LuaRocks3.8.0, Python3.12.3, jsonschema4.19.2, GCC13.3.0.
+Fresh installed Lua5.5.0 core/direct tests (all U1 tests, U2, both argument
+regressions, handler entrypoint) and statically linked actual C host pass:
+`work:///cards/card-c-d-b/processes/proc-b4ca605e64c1/stdout.log`, exit0.
+No 5.4 native modules were loaded into5.5 (LUA_CPATH empty). The documented
+luaposix<5.5 and LuaRocks3.8 header-detection limitations are unchanged; no
+5.5 manager install/support is claimed.
+
+Initial refreshed complete-suite attempt exposed test-owned checkout path
+reset in U1 (`module lua_repl_mcp.codec not found` outside checkout), not a
+product import failure. All pure isolation fixtures now select the explicitly
+supplied installation path while still excluding native searchers. Original
+failure: `work:///cards/card-c-d-b/processes/proc-4a332030f8a3/stderr.log`.
+No default test semantics/expectations were weakened and no runtime files changed.
+
+---
+
 # U9 installed release evidence
 
 Baseline: `1877675` (U8). Local candidate **0.1.0-1**, no publication or push.
@@ -47,7 +102,7 @@ error: the **test's** partial JSON continuation omitted the `"2.0"` value.
 Diagnostic xpcall exposed `expected comma at byte 17`; corrected continuation
 passes. No product lifecycle semantics changed to accommodate it.
 
-## Regression commands
+## Historical original-delivery regression commands
 
 After selecting the installed 5.4 tree with `luarocks path`, ran every standalone
 Lua test except adapter entrypoints, externally driven `*process.lua` fixtures
@@ -108,7 +163,7 @@ prior U8 results are not substituted for installed evidence.
 | 10 protocol/stdio isolation | u8 normative capture/output isolation and output file group |
 | 11 multiplex/correlation | u8 async out-of-order fast/slow session group |
 | 12 os.exit | u8 cancellation/hard deadline/worker exit group; u6_process.py |
-| 13 hard/stale deadlines | u6_policy.lua, u6_ordering.lua, u6_process.py; u8 deadline group |
+| 13 hard/stale deadlines | u6_policy.lua, u6_ordering.lua, u6_process.py; u6_progressive_policy.lua/u6_progressive_process.py TERM20/KILL10 and total cutoff; u8 deadline group |
 | 14 null/zero/positive wait | u5.lua/u5_process.py; u8 finite_wait group |
 | 15 async retention | u8 normative async/poll/single consumer group |
 | 16 one terminal consumer | u5.lua/u5_process.py; u8 success/error two waiters |
@@ -127,21 +182,24 @@ prior U8 results are not substituted for installed evidence.
 | 2 exit/result/deadline ordering | u4_error_drain.lua; u6_ordering.lua, u6_process.py |
 | 3 successful/failed waiter race | u5.lua/u5_process.py; u8 async single consumer |
 | 4 saturated reserved control | u7_admission.lua/u7_pending_ownership.lua; u8 external_256_wait_saturation_limit_ping_list_reserved_kill |
-| 5 escaping/duplicate maximum | u7_encoding_red.lua/u7_frame_budgets.lua/u7_max_id.lua pass bounded cases; **u7_coupled_defaults_red.lua FAIL, unresolved owner decision** |
+| 5 escaping/duplicate maximum | u7_encoding_red.lua/u7_frame_budgets.lua/u7_max_id.lua pass bounded cases; u7_default_maximum.lua current production original success; u7_coupled_defaults_red.lua historical hardcoded64MiB failure only |
 | 6 atomic conversion/pointers | u1.lua `rfc6901_pointers`, `hostile_metamethods_and_arbitrary_thrown_values`, `unsupported_returns_and_shapes_no_partial_values` |
 | 7 disconnect all phases | u7_transport_process.lua via u7_process.py; u8 disconnect output group |
 | 8 unreapable cleanup honesty | u6_policy.lua/u6_process.py unconfirmed-exit branch |
 | 9 exclusive/cwd/shared files | u3_posix.py; u8 explicit_relative_shared_output_exclusive_creation... |
 | 10 no implicit capture | u1.lua/u2.lua; u8 normative capture/output isolation |
 
-**Unresolved, never waived:** legal request/value each 16777216 requires
-67109058 response bytes, bound 67108864, **194-byte contradiction**. Preserved
-`lua5.4 tests/u7_coupled_defaults_red.lua` fails. A small limit_exceeded response
-is not successful delivery. Full project/U9 acceptance is not claimed while this
-row is red. Independent packaging/embedding release work remains useful for a
-parent-coordinated U10 trial; this change makes no U10 configuration changes.
+**Historical failure, resolved by authorized capacity correction:** legal request/value
+16777216 requires 67109058 response bytes. The original hardcoded 67108864 bound
+was 194 bytes short. `tests/u7_coupled_defaults_red.lua` is preserved and still
+fails that historical assertion; it is not the current production default test.
+Current authorized worker/public/output defaults are 64/128/256MiB with uniform
+checked floors. `u7_default_maximum.lua` requires original successful delivery,
+echoed legal ID and compatibility equality within 134217728 public bytes.
+No current maximum-fit blocker is asserted. U11 website/U12 guardian ownership
+remain separate root scope, not certified or implemented by this release evidence.
 
-## Completed outcomes and durable logs
+## Historical original-delivery outcomes and durable logs (5da1952)
 
 - Clean installation reproducer `sh tests/u9_installed.sh`: **exit 0**; all ten
   external live groups pass, native host passes and installed modules load.
@@ -189,3 +247,33 @@ Compiler: **Ubuntu cc/GCC 13.3.0**. Lua 5.5.0 archive SHA256:
 Final preserved U7 measurement still fails internally with exit **1**:
 `work:///cards/card-c-d-b/processes/proc-9f882cfd3928/stdout.log` and stderr.log;
 the diagnostic wrapper exits 0 only because it asserts that known exit 1.
+
+## Current refresh completed outcomes (01a1552 runtime inputs)
+
+Final fresh empty-tree command above, with work child `u9-refresh-final`:
+**exit0**. All36 standalone cases satisfy their expected exit (only the explicitly
+historical hardcoded64MiB reproducer exits1), seven watchdog drivers pass,
+all ten external U8 manager/direct groups pass, C host and module byte identity
+pass. Primary full log:
+`work:///cards/card-c-d-b/processes/proc-e313a5276c29/stdout.log`;
+complete stderr includes only installer notice, expected historical assertion,
+and checker PASS14 schemas/7 tools/2 discovery/23 examples/125 regressions.
+Independent installed complete-suite rerun also exits0:
+`work:///cards/card-c-d-b/processes/proc-882b0cdbac32/stdout.log`.
+
+Installed production legal ID/value each16777216 delivered original response
+67109058 within134217728, compatibility equality intact. Uniform-floor exact/
+minus-one/overflow tests pass. Private predecode retention tested below/at/above
+67108864. Real progressive child confirmed reaped at20.0106s with1977 responsive
+turns. U4 fifteen groups, U5 twenty-eight schema-validated responses, U6 twenty-one,
+U7 all five watchdog groups (configured20MiB result and default16MiB result,
+unrelated session,256 wait saturation, stopped pipe/short write/EPIPE cleanup)
+pass. Default real output50331991 fits268435456; original success, not fallback.
+
+Original external initialization probe plus resolved installed module paths:
+`work:///cards/card-c-d-b/processes/proc-9602db6d6b8a/stdout.log`, exit0.
+Default checkout entrypoint isolation, Python/shell syntax, manifest lint and
+diff checks pass after fixture changes. No product runtime/rockspec pin or
+historical maximum-fit test modified. Package ready for parent-coordinated U10
+local trial at the commit delivering this refresh; not public publication,
+not U11/U12 acceptance. Future guardian ownership changes need fresh evidence.

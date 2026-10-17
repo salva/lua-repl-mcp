@@ -19,3 +19,7 @@ LUA_CPATH='' "$W/host" "$ROOT/tests/u9_host.lua"
 python3 -m venv "$W/venv"
 "$W/venv/bin/pip" install jsonschema==4.19.2
 U8_WORK_DIR="$W/live" "$W/venv/bin/python" "$ROOT/tests/u8_live.py" "$W/rocks/bin/lua-repl-mcp"
+
+export U9_INSTALLED_CWD="$W/outside"
+export U9_INSTALLED_MODULES="$W/rocks/share/lua/5.4/lua_repl_mcp"
+"$W/venv/bin/python" "$ROOT/tests/u9_suite.py"

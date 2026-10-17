@@ -1,6 +1,6 @@
 -- U1 public entry-point baseline; run from the repository root with Lua 5.4.
 -- Deliberately exclude installed Lua modules and all native loaders.
-package.path = './?.lua;./?/init.lua'
+package.path = os.getenv('U9_INSTALLED_LUA_PATH') or './?.lua;./?/init.lua'
 package.cpath = ''
 package.searchers = { package.searchers[1], package.searchers[2] }
 

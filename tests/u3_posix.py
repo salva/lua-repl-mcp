@@ -13,10 +13,11 @@ if not lua:
     sys.exit('lua5.4 required')
 env = os.environ.copy()
 # Explicit checkout path survives exec; installed paths remain supplied by LuaRocks.
-env['LUA_PATH'] = str(root / '?.lua') + ';' + str(root / '?/init.lua') + ';' + env.get('LUA_PATH', ';')
+if not os.environ.get('U9_INSTALLED_CWD'):
+    env['LUA_PATH'] = str(root / '?.lua') + ';' + str(root / '?/init.lua') + ';' + env.get('LUA_PATH', ';')
 env['U3_LUA'] = lua
 env['U3_SCRIPT'] = str(root / 'tests/u3_posix.lua')
-proc = subprocess.Popen([lua, env['U3_SCRIPT']], cwd=root, env=env,
+proc = subprocess.Popen([lua, env['U3_SCRIPT']], cwd=os.environ.get('U9_INSTALLED_CWD', root), env=env,
                         start_new_session=True)
 try:
     result = proc.wait(timeout=20)

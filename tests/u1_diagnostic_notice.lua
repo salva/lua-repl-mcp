@@ -1,5 +1,5 @@
 -- Regression: reserving the loss notice may itself truncate diagnostics.
-package.path='./?.lua;./?/init.lua'
+package.path=os.getenv('U9_INSTALLED_LUA_PATH') or './?.lua;./?/init.lua'
 package.cpath=''
 package.searchers={package.searchers[1],package.searchers[2]}
 local errors=require('lua_repl_mcp.errors')

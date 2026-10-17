@@ -9,13 +9,14 @@ import sys
 import tempfile
 root = Path(__file__).resolve().parents[1]
 env = os.environ.copy()
-env['LUA_PATH'] = f'{root}/?.lua;{root}/?/init.lua;' + env.get('LUA_PATH', ';')
+if not os.environ.get('U9_INSTALLED_CWD'):
+    env['LUA_PATH'] = f'{root}/?.lua;{root}/?/init.lua;' + env.get('LUA_PATH', ';')
 work = Path(os.environ['SAIVAGE_CARD_WORK_ROOT']) / 'u5-process-tests'
 work.mkdir(parents=True, exist_ok=True)
 with tempfile.TemporaryDirectory(dir=work) as directory:
     env['U5_DIR'] = directory
     env['U5_RESPONSES'] = str(Path(directory) / 'responses.jsonl')
-    proc = subprocess.Popen(['lua5.4', 'tests/u5_process.lua'], cwd=root, env=env,
+    proc = subprocess.Popen(['lua5.4', str(root / 'tests/u5_process.lua')], cwd=os.environ.get('U9_INSTALLED_CWD', root), env=env,
                             start_new_session=True,
                             preexec_fn=lambda: resource.setrlimit(resource.RLIMIT_NOFILE, (256, 256)))
     try:
