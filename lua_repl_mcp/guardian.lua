@@ -8,7 +8,7 @@ local fields={'state','failure','files_complete','created_paths','cwd','result',
  'execution_generation','execution_deadline','termination_started','cleanup_deadline',
  'process_exit_confirmed','exit_reason','exit_status','startup_message','reaped'}
 local function guardian(fd,live,options)
- local backend=native.new(options); local allocations={}; local lost=false
+ local backend=native.new(options); local allocations={}; local lost=false; local last_id=0
  local ch=wire.new(fd,backend.limits.response_bytes)
  local commands={}
  x.nonblock(live)
@@ -34,7 +34,7 @@ local function guardian(fd,live,options)
       local id=cmd.id
       assert(math.type(id)=='integer' and id>0,'invalid allocation identity')
       if cmd.op=='allocate' then
-       assert(not allocations[id],'reused allocation')
+       assert(id>last_id and not allocations[id],'reused allocation'); last_id=id
        local count=0; for _ in pairs(allocations) do count=count+1 end
        assert(count<require('lua_repl_mcp.limits').admission(options.admission).sessions,'guardian capacity')
        local w=backend:allocate(cmd.options); allocations[id]=w
@@ -45,9 +45,7 @@ local function guardian(fd,live,options)
         -- Commands carry the manager's original monotonic origin. Never reset
         -- an already running disposal when the liveness channel is lost.
         if w.state~='terminating' and w.state~='dead' then
-         backend:abort(w,cmd.reason)
-         w.termination_started=math.min(w.termination_started,cmd.started)
-         w.cleanup_deadline=w.termination_started+30
+         backend:abort(w,cmd.reason,cmd.started)
         end
        elseif cmd.op=='close' then backend:graceful_close(w)
        elseif cmd.op=='release' then assert(w.state=='dead'); allocations[id]=nil

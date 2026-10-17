@@ -29,10 +29,10 @@ function S:termination_signal(w)
   w.termination_phase=phase; w.next_signal_at=now+1
  end
 end
-function S:abort(w,reason)
+function S:abort(w,reason,started)
  if w.state=='terminating' or w.state=='dead' then return end
  w.failure=reason; w.state='terminating'; w.files_complete=false
- w.termination_started=self.clock(); w.cleanup_deadline=w.termination_started+30
+ w.termination_started=math.min(self.clock(),started or self.clock()); w.cleanup_deadline=w.termination_started+30
  w.execution_deadline=nil
  close(w); self:termination_signal(w)
 end
@@ -188,13 +188,17 @@ function S:step(timeout_ms)
     if not w.failure and w.state~='closing' then w.failure=w.state=='starting' and 'handshake_failed' or 'worker_exited' end
     if w.state=='starting' then w.files_complete=false end
     close(w); w.state='dead'
-   elseif not pid then self:abort(w,'wait_failed') end
+   elseif not pid then
+    -- Ownership is no longer confirmable. Never signal a possibly reused PID.
+    w.pid=nil; self:abort(w,'wait_failed')
+   end
   end
   -- Reap before retrying: never signal again after confirmed child exit.
   if w.state=='terminating' then self:termination_signal(w) end
   if w.state=='terminating' and self.clock()>=w.cleanup_deadline then
    close(w); w.state='dead'; w.process_exit_confirmed=false
    if w.pid and not w.reaped then self.reaping[#self.reaping+1]=w.pid end
+   x.u.write(2,'worker exit unconfirmed after bounded disposal; external side effects may continue\n')
   end
   if w.eof and w.state~='dead' and w.state~='closing' then self:abort(w,w.state=='starting' and 'handshake_failed' or 'transport_failed') end
  end

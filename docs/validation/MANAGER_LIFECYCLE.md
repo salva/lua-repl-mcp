@@ -184,3 +184,37 @@ are deterministic supplements, not real fork-failure or unowned-child process
 proof. Remaining child-side readiness/result-delivery injections and full matrix
 are still required. After this change the six lifecycle cases, U8, progressive
 policy, unchanged aggregate reproducer, streaming regression and contracts passed.
+
+## Extended process matrix and rare disposal states
+
+Using the same environment, `python3 tests/u12_matrix.py` passed 20 real-process
+cases: SIGINT/SIGTERM/manager-only SIGKILL/abrupt `_exit(77)` each during idle,
+FIFO-open startup, infinite Lua and native FIFO-open execution; plus abrupt exit
+with a live shell-created sleep descendant, guardian loss, repeated TERM during
+native blocking and EOF during infinite Lua. Successful create, worker execution
+file and Linux `/proc/<worker>/syscall` open-state observations establish barriers;
+manager wait is bounded at 34s and worker/guardian observation at 32s. Only test
+process groups are force-contained. Guardian loss asserts nonzero fail-closed
+manager status/diagnostic, NOT worker disposal: safe worker identity is unavailable
+after guardian death, and the test contains that documented limitation.
+
+`lua5.4 tests/u12_rare_policy.lua` passed original-origin handoff at 19.5s, KILL
+transition at20, abandonment at30 despite repeated requests, bounded unconfirmed
+stderr notice, PID-only eventual reaping without further signals, already-expired
+handoff with no late signal, and wait-ownership loss with no stale-PID signal.
+The native abort primitive now accepts original origin before sending its first
+signal (previously guardian adjusted origin only after that signal, allowing a
+late TERM after original deadline). Wait failure drops unsafe PID ownership.
+Guardian allocation high-water identity rejects reuse even after release.
+
+Fail-fast command (all exit0): rare policy, partial acquisition, progressive
+policy, 20-case matrix, full U8, unchanged aggregate reproducer, streaming test,
+contracts and diff check. Simulated progressive abandonment writes two expected
+unconfirmed diagnostics; those are not test failures. Versions unchanged.
+
+Remaining: explicit real spawn-before-readiness death barrier, stronger live
+subprocess-inheritance barrier (current shell spawn is only commanded, not
+independently acknowledged), child-side readiness/result delivery fault injection,
+real post-fork setup injection, deterministic guardian stale-command/reused-ID
+coverage and repeated completion/kill ordering stress. Full U12 remains incomplete;
+these additions do not claim clean-install/audit/U10 or release acceptance.
