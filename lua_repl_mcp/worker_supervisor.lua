@@ -36,15 +36,24 @@ function S:abort(w,reason,started)
  w.execution_deadline=nil
  close(w); self:termination_signal(w)
 end
-function S:allocate(options)
- options=options or {}
- for k,v in pairs(options) do
-  assert((k=='cwd' or k=='stdin_path' or k=='stdout_path' or k=='stderr_path') and type(v)=='string' and not v:find('\0',1,true),'invalid creation option')
- end
+function S:allocate(options,started)
+ -- Complete raw validation and detachment precedes descriptors/fork. Direct
+ -- callers receive the same creation contract as manager-originated calls.
+ local validated,problem=require('lua_repl_mcp.contracts').validate('session_create',options==nil and {} or options,
+  {max_bytes=self.limits.input_bytes,max_depth=self.limits.max_depth})
+ assert(validated,problem and problem.message)
+ options=validated
+ local now=self.clock()
+ started=started or now
+ assert(type(started)=='number' and started==started and started<=now and started>-math.huge,'invalid startup origin')
  self.generation=self.generation+1
  local w={allocation_generation=self.generation,state='starting',created_paths={},files_complete=false,
-  deadline=self.clock()+self.timeout,buffer='',pending='',execution_generation=0}
+  deadline=started+self.timeout,buffer='',pending='',execution_generation=0}
  self.workers[#self.workers+1]=w
+ if now>=w.deadline then
+  w.state='dead'; w.failure='startup_timeout'; w.process_exit_confirmed=true
+  return w -- no OS child or file side effect was created
+ end
  local owned={}
  local function own(fd) if fd then owned[fd]=true end; return fd end
  local function release(fd) if owned[fd] then x.u.close(fd); owned[fd]=nil end end

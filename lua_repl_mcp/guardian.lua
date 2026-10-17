@@ -70,7 +70,7 @@ local function guardian(fd,control,live,options)
        assert(id>last_id and not allocations[id],'reused allocation'); last_id=id
        local count=0; for _ in pairs(allocations) do count=count+1 end
        assert(count<require('lua_repl_mcp.limits').admission(options.admission).sessions,'guardian capacity')
-       local w=backend:allocate(cmd.options); allocations[id]=w
+       local w=backend:allocate(cmd.options,cmd.started); allocations[id]=w
        if pending_aborts[id] then abort(pending_aborts[id]); pending_aborts[id]=nil end
       else
        local w=assert(allocations[id],'stale allocation')
@@ -178,11 +178,15 @@ function B:queue(v)
  self.commands[#self.commands+1]=v
 end
 function B:allocate(options)
+ local validated,problem=require('lua_repl_mcp.contracts').validate('session_create',options==nil and {} or options,
+  {max_bytes=self.limits.input_bytes,max_depth=self.limits.max_depth})
+ assert(validated,problem and problem.message)
+ local started=self.clock()
  self.generation=self.generation+1
  local w={allocation_generation=self.generation,state='starting',created_paths={},files_complete=false,
-  pending='',buffer='',execution_generation=0,deadline=self.clock()+self.timeout}
+  pending='',buffer='',execution_generation=0,deadline=started+self.timeout}
  self.workers[#self.workers+1]=w; self.by_id[self.generation]=w
- self:queue{op='allocate',id=self.generation,options=options or {}}
+ self:queue{op='allocate',id=self.generation,options=validated,started=started}
  return w
 end
 function B:execute(w,input,deadline)
