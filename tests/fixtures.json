@@ -703,5 +703,13 @@
     "deadline": 90,
     "run": true,
     "expected_status": 0
+  },
+  {
+    "path": "u13_once_result.lua",
+    "kind": "process",
+    "wrapper": "u9_suite.py",
+    "deadline": 60,
+    "run": true,
+    "expected_status": 0
   }
 ]

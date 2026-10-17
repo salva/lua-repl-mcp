@@ -41,8 +41,15 @@ local function guardian(fd,control,live,options)
    if not lost then
     local open=wire.receive(ctl,function(items)
      for _,cmd in ipairs(items) do
-      assert(cmd.op=='abort' and math.type(cmd.id)=='integer' and cmd.id>0,'invalid guardian control')
-      abort(cmd)
+      assert(math.type(cmd.id)=='integer' and cmd.id>0,'invalid guardian control')
+      if cmd.op=='abort' then abort(cmd)
+      elseif cmd.op=='ack' then
+       local w=allocations[cmd.id]
+       -- An ack may arrive after replacement or release on the bulk stream.
+       -- It releases only the matching transferred generation, never new work.
+       if w and cmd.generation==w.execution_generation and
+        w.result_sent_generation==cmd.generation then w.result=nil end
+      else error('unknown guardian control') end
      end
     end)
     if open==false then dispose() end
@@ -68,6 +75,7 @@ local function guardian(fd,control,live,options)
       else
        local w=assert(allocations[id],'stale allocation')
        if cmd.op=='execute' then
+        assert(cmd.generation==w.execution_generation+1,'stale execution generation')
         if w.state~='terminating' and w.state~='dead' then assert(backend:execute(w,cmd.input,cmd.deadline)) end
        elseif cmd.op=='abort' then
         -- Commands carry the manager's original monotonic origin. Never reset
@@ -84,7 +92,15 @@ local function guardian(fd,control,live,options)
       backend:step(0)
       local report={}
       for id,w in pairs(allocations) do
-       local v={id=id}; for _,key in ipairs(fields) do v[key]=w[key] end
+       local v={id=id}; for _,key in ipairs(fields) do
+        if key~='result' then v[key]=w[key] end
+       end
+       -- Retain the guardian payload until manager ownership/discard is
+       -- acknowledged, but enqueue it exactly once for this generation.
+       if w.result and w.result_sent_generation~=w.execution_generation then
+        v.result=w.result; v.result_transfer=true
+        w.result_sent_generation=w.execution_generation
+       end
        report[#report+1]=v
       end
       wire.enqueue(ch,report)
@@ -173,13 +189,13 @@ function B:execute(w,input,deadline)
  local ok,err=native.methods.execute(self,w,input,deadline)
  if not ok then return nil,err end
  w.pending=''
- self:queue{op='execute',id=w.allocation_generation,input=input,deadline=deadline}
+ self:queue{op='execute',id=w.allocation_generation,input=input,deadline=deadline,generation=w.execution_generation}
  return ok
 end
 function B:abort(w,reason)
  if w.state=='terminating' or w.state=='dead' then return end
  native.methods.abort(self,w,reason)
- assert(#self.control_commands<self.control_capacity,
+ assert(#self.control_commands<2*self.control_capacity,
   'guardian abort capacity')
  self.control_commands[#self.control_commands+1]={op='abort',id=w.allocation_generation,reason=reason,started=w.termination_started}
 end
@@ -212,10 +228,24 @@ function B:step(delay)
    for _,v in ipairs(report) do
     local w=assert(self.by_id[v.id],'unknown guardian allocation')
     -- An accepted kill/deadline freezes the outcome before its command is sent.
-    if not w.dirty and (w.state~='dead' or v.state=='dead') and (w.state~='terminating' or v.state=='dead') then
+    if not w.dirty and (v.execution_generation==w.execution_generation or v.state=='dead') and (w.state~='dead' or v.state=='dead') and (w.state~='terminating' or v.state=='dead') then
      local failure=w.state=='terminating' and w.failure
-     for _,key in ipairs(fields) do w[key]=v[key] end
+     for _,key in ipairs(fields) do
+      -- Omitted once-transferred result means no update, not deletion of the
+      -- manager-owned outcome. execute owns replacement; public commit owns use.
+      if key=='result' then
+       if v.result_transfer and v.execution_generation==w.execution_generation then w.result=v.result end
+      elseif key~='execution_generation' or v.execution_generation==w.execution_generation then w[key]=v[key] end
+     end
      w.failure=failure or w.failure
+    end
+    if v.result_transfer then
+     assert(v.result and math.type(v.execution_generation)=='integer','invalid result transfer')
+     self.result_transfers=(self.result_transfers or 0)+1
+     -- Safe ownership and intentional stale/active-abort discard both release
+     -- the guardian copy. A late ack cannot release a replacement generation.
+     assert(#self.control_commands<2*self.control_capacity,'guardian acknowledgement capacity')
+     self.control_commands[#self.control_commands+1]={op='ack',id=v.id,generation=v.execution_generation}
     end
     if v.state=='dead' and w.state=='dead' then
      self:queue{op='release',id=v.id}; self.by_id[v.id]=nil
