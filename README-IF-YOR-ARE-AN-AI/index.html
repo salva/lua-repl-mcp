@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        <link rel="canonical" href="https://salva.github.io/lua-repl-mcp/README-IF-YOR-ARE-AN-AI/">
+        <link rel="shortcut icon" href="../img/favicon.ico">
+        <title>LLM guide - Lua REPL MCP</title>
+        <link href="../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../css/brands.min.css" rel="stylesheet">
+        <link href="../css/solid.min.css" rel="stylesheet">
+        <link href="../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../css/base.css" rel="stylesheet"> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="..">Lua REPL MCP</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href=".." class="nav-link">Home</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../getting-started/" class="nav-link">Getting started</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../manager/" class="nav-link">Manager tasks</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../embedding/" class="nav-link">Embedding</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../data-errors/" class="nav-link">Data and errors</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../operations/" class="nav-link">Operations</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../reference/" class="nav-link">Reference</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="./" class="nav-link active" aria-current="page">LLM guide</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../docs/MCP_EXAMPLES/" class="nav-link">Wire examples</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                            <li class="nav-item">
+                                <a rel="prev" href="../reference/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../docs/MCP_EXAMPLES/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-light">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#lua-repl-mcp-installation-and-use-for-ai-clients" class="nav-link">Lua REPL MCP: installation and use for AI clients</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#purpose-and-mode-selection" class="nav-link">Purpose and mode selection</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#install-the-standalone-manager-from-a-checkout" class="nav-link">Install the standalone manager from a checkout</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#discover-execute-reuse-and-dispose" class="nav-link">Discover, execute, reuse and dispose</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#long-running-work-and-results" class="nav-link">Long-running work and results</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#data-side-effects-and-recovery" class="nav-link">Data, side effects and recovery</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#embedded-host-use" class="nav-link">Embedded-host use</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#detailed-public-contracts" class="nav-link">Detailed public contracts</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="lua-repl-mcp-installation-and-use-for-ai-clients">Lua REPL MCP: installation and use for AI clients</h1>
+<h2 id="purpose-and-mode-selection">Purpose and mode selection</h2>
+<p>Use this module to execute Lua through MCP while preserving globals between
+calls. Always use explicit <code>return</code> for results; expressions are not implicitly
+returned, and printed output is not captured.</p>
+<ul>
+<li><strong>Standalone manager:</strong> launch <code>lua-repl-mcp</code> over MCP stdio. Each session has
+  an independent persistent Lua process. Choose this for normal MCP-client use.</li>
+<li><strong>Embedded handler:</strong> a Lua host attaches the handler to dedicated protocol
+  I/O. Code runs synchronously in that host's existing globals, with access to its
+  APIs. This is not a separate worker and cannot preempt blocking host code.</li>
+</ul>
+<p>Both modes execute trusted code with full process privileges, <strong>not in a
+sandbox</strong>. Obtain authorization for filesystem/network access and destructive
+operations; do not expose the connection to untrusted users.</p>
+<h2 id="install-the-standalone-manager-from-a-checkout">Install the standalone manager from a checkout</h2>
+<p>Use a POSIX system with <code>lua5.4</code>, Lua 5.4 development headers, LuaRocks and a C
+compiler. The package pins luaposix 36.3-1; do not assume manager support for Lua
+5.5 or reuse Lua 5.4 native modules in another interpreter version.</p>
+<p>From the repository root, choose an absolute writable installation directory:</p>
+<pre><code class="language-sh">export ROCKS_TREE=&quot;$PWD/.local/rocks&quot;
+luarocks --lua-version=5.4 --tree=&quot;$ROCKS_TREE&quot; make lua-repl-mcp-0.1.0-1.rockspec
+eval &quot;$(luarocks --lua-version=5.4 --tree=&quot;$ROCKS_TREE&quot; path)&quot;
+&quot;$ROCKS_TREE/bin/lua-repl-mcp&quot;
+</code></pre>
+<p>This is local-source installation, not a claim that a public LuaRocks release
+exists. Dependency installation may require network access. The final command
+starts a protocol server waiting for MCP input, not an interactive terminal REPL.
+Normally let your MCP client launch it instead of running it manually.</p>
+<p>Configure your client's <strong>stdio</strong> server entry with the absolute installed
+executable path, no CLI arguments, and the LuaRocks environment from above.
+Client configuration formats differ; use its actual documentation. Preserve
+<code>PATH</code>, <code>LUA_PATH</code> and <code>LUA_CPATH</code> for worker processes as well as the manager.
+Do not write diagnostic text to protocol stdout.</p>
+<h2 id="discover-execute-reuse-and-dispose">Discover, execute, reuse and dispose</h2>
+<p>Complete the MCP initialization handshake, then call <code>tools/list</code>. Use the
+advertised names and schemas; client UI names may be prefixed. The manager
+provides <code>session_create</code>, <code>session_list</code>, <code>session_execute</code>, <code>session_wait</code> and
+<code>session_kill</code>. There is no public task ID, reset tool or separate session-close
+tool. The JSON below is <strong>tool arguments</strong>, not full JSON-RPC envelopes.</p>
+<ol>
+<li>Call <code>session_execute</code> to allocate a session implicitly:</li>
+</ol>
+<p><code>json
+   {"code":"local n = ...; counter = (counter or 0) + n; return counter","args":[2],"wait_timeout_ms":1000}</code></p>
+<p>Retain the returned <code>session_id</code>. On completion, expect <code>values: [2]</code>.
+   If the reply is pending, use <code>session_wait</code>; do not submit the code again.</p>
+<ol>
+<li>Call <code>session_execute</code> with that actual ID (replace the placeholder):</li>
+</ol>
+<p><code>json
+   {"session_id":"&lt;returned session_id&gt;","code":"return counter","wait_timeout_ms":1000}</code></p>
+<p>Expect <code>[2]</code> again because globals persist. Top-level locals do not persist.</p>
+<ol>
+<li>When finished, call <code>session_kill</code>:</li>
+</ol>
+<p><code>json
+   {"session_id":"&lt;returned session_id&gt;"}</code></p>
+<p>This destroys session state. Inspect <code>process_exit_confirmed</code> and warnings;
+   successful best-effort cleanup does not always establish OS process exit.</p>
+<p>Read MCP <code>structuredContent</code> when available, rather than parsing both it and the
+compatibility text as separate results. Check operation errors and execution
+status before using <code>values</code>; an accepted call need not be a successful execution.</p>
+<h2 id="long-running-work-and-results">Long-running work and results</h2>
+<ul>
+<li>Set <code>wait_timeout_ms: 0</code> on execute to return asynchronously. Poll with
+  <code>session_wait</code> using the same session ID and a bounded <code>wait_timeout_ms</code>, such
+  as 1000. Wait expiry leaves execution running; polling never reexecutes code.</li>
+<li><code>wait_timeout_ms: null</code> waits indefinitely; omission defaults to ten minutes.
+  A client's own shorter deadline may interrupt either choice and close the
+  connection, losing all sessions. Prefer bounded polling when uncertain.</li>
+<li><code>execution_timeout_ms</code> is a separate hard deadline that destroys the session.
+  Omission means no hard deadline. Request cancellation also destroys the
+  associated session; it is not a harmless way to stop waiting.</li>
+<li>A terminal payload is consumed exactly once through execute or wait. Save it
+  when received. Later wait can return <code>result_unavailable</code>. An accepted new
+  execution replaces any unread prior result; do not execute into a busy session.</li>
+</ul>
+<h2 id="data-side-effects-and-recovery">Data, side effects and recovery</h2>
+<p>JSON <code>args</code> become Lua varargs (<code>...</code>). In Lua, JSON null is
+<code>require('lua_repl_mcp').null</code>; nil return slots are preserved as JSON null.
+Return JSON-compatible values, not functions, threads, userdata, cyclic tables,
+or sparse/mixed tables. Conversion failure discards the entire return payload,
+but does not roll back code already executed.</p>
+<p>Syntax/runtime errors normally leave the session usable, and earlier side
+effects may remain. Inspect <code>session_usable</code> and the returned status. Worker
+exit, cancellation, hard timeout or kill can make the session unavailable.
+Use <code>session_list</code> to inspect current sessions; do not blindly replay a
+state-changing operation after a timeout or lost response.</p>
+<p>Use <code>session_create</code> or execute's <code>create_options</code> to select <code>cwd</code> and explicit
+stdout/stderr paths. Output files must not already exist; defaults discard worker
+output to <code>/dev/null</code>. There is no automatic print capture. Manager connection
+loss disposes of its sessions; persistence is not durable across reconnection.</p>
+<h2 id="embedded-host-use">Embedded-host use</h2>
+<p>The embedded handler needs a host running Lua 5.4 or newer supported PUC-Rio Lua,
+with the standard libraries available and dedicated protocol I/O. It does not
+need LuaRocks, luaposix, a compiler or the standalone executable. From a checkout,
+copy only the pure-Lua dependency set into a directory you control:</p>
+<pre><code class="language-sh">export LUA_REPL_MODULES=&quot;$PWD/.local/embedded-lua&quot;
+mkdir -p &quot;$LUA_REPL_MODULES/lua_repl_mcp&quot;
+for module in init handler codec framing protocol evaluator limits errors contracts direct_schemas; do
+  cp &quot;lua_repl_mcp/$module.lua&quot; &quot;$LUA_REPL_MODULES/lua_repl_mcp/$module.lua&quot;
+done
+</code></pre>
+<p>In the existing host interpreter, add that directory to its module search path
+(replace the absolute path with the actual value of <code>LUA_REPL_MODULES</code>):</p>
+<pre><code class="language-lua">local modules = '/absolute/path/to/.local/embedded-lua'
+package.path = modules .. '/?.lua;' .. modules .. '/?/init.lua;' .. package.path
+local handler = require('lua_repl_mcp.handler')
+</code></pre>
+<p>Provide the adapter using the host's dedicated stream/socket APIs. For example,
+if the host supplies Lua file handles named <code>protocol_input</code> and
+<code>protocol_output</code> on the invoking thread, wrap them as follows (do not substitute
+ordinary application stdout):</p>
+<pre><code class="language-lua">local adapter = {
+  read = function(n)
+    -- File read(n) may wait to fill n bytes. One byte guarantees progress
+    -- for short MCP frames without waiting for EOF or another request.
+    local bytes, err = protocol_input:read(1)
+    if bytes == nil then return nil, err or 'eof' end
+    return bytes
+  end,
+  write = function(bytes)
+    local ok, err = protocol_output:write(bytes)
+    if not ok then return nil, err end
+    return #bytes
+  end,
+  flush = function()
+    return protocol_output:flush()
+  end,
+}
+local attachment = handler.serve(adapter)
+-- The host now handles attachment.reason and the buffered handoff below.
+</code></pre>
+<p>This call blocks until close, EOF or failure. Host I/O must satisfy the progress
+contract below; adapt non-file handles using their real APIs, not these file
+methods. The one-byte file adapter prioritizes correctness over throughput;
+prefer a bounded read-some API when the host offers one. A successful require
+alone does not establish a working MCP transport.</p>
+<p>The host calls <code>require('lua_repl_mcp.handler').serve(adapter, options)</code> in its
+existing interpreter, without importing manager/native modules. Supply ordinary
+functions <code>read(n)</code>, <code>write(bytes)</code>, <code>flush()</code> on dedicated protocol handles:
+read returns bytes or <code>nil, 'eof'</code>/error; write returns positive byte progress or
+<code>nil, error</code>; flush returns <code>true</code> or <code>nil, error</code>.</p>
+<p>Discover <code>repl_execute</code> and <code>repl_close</code> instead of session tools. Close returns
+control to the host without resetting globals or closing transport. The host
+must inspect the returned reason, acknowledgement and buffered messages/bytes
+before continuing; managed kill/deadline semantics do not apply to this mode.</p>
+<h2 id="detailed-public-contracts">Detailed public contracts</h2>
+<ul>
+<li><a href="../docs/MCP_EXAMPLES/">Wire examples and initialization</a></li>
+<li><a href="../docs/schemas/api.json">Tool input/output schemas</a></li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../js/base.js"></script>
+
+        <div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

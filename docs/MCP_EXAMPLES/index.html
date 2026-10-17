@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        <link rel="canonical" href="https://salva.github.io/lua-repl-mcp/docs/MCP_EXAMPLES/">
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>Wire examples - Lua REPL MCP</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet"> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">Lua REPL MCP</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href="../.." class="nav-link">Home</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../getting-started/" class="nav-link">Getting started</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../manager/" class="nav-link">Manager tasks</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../embedding/" class="nav-link">Embedding</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../data-errors/" class="nav-link">Data and errors</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../operations/" class="nav-link">Operations</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../reference/" class="nav-link">Reference</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../README-IF-YOR-ARE-AN-AI/" class="nav-link">LLM guide</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="./" class="nav-link active" aria-current="page">Wire examples</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                            <li class="nav-item">
+                                <a rel="prev" href="../../README-IF-YOR-ARE-AN-AI/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" class="nav-link disabled">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-light">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#mcp-usage-examples" class="nav-link">MCP usage examples</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#initialize" class="nav-link">Initialize</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#reproducible-discovery-and-schema-check" class="nav-link">Reproducible discovery and schema check</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#allocate-and-execute-synchronously" class="nav-link">Allocate and execute synchronously</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#implicit-creation-and-asynchronous-wait" class="nav-link">Implicit creation and asynchronous wait</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#operation-error-versus-execution-outcome" class="nav-link">Operation error versus execution outcome</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#kill-and-cancellation" class="nav-link">Kill and cancellation</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#list" class="nav-link">List</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#direct-embedded-handler" class="nav-link">Direct embedded handler</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#explicit-client-controlled-capture-and-null" class="nav-link">Explicit client-controlled capture and null</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="mcp-usage-examples">MCP usage examples</h1>
+<p>These examples illustrate the public MCP protocol. JSON is pretty-printed
+for readability; actual stdio/control frames occupy one line. Session IDs are
+illustrative. Error diagnostic wording is not fixed; codes and fields are.</p>
+<h2 id="initialize">Initialize</h2>
+<p>Client:</p>
+<pre><code class="language-json">{&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;id&quot;:1,&quot;method&quot;:&quot;initialize&quot;,&quot;params&quot;:{&quot;protocolVersion&quot;:&quot;2025-11-25&quot;,&quot;capabilities&quot;:{},&quot;clientInfo&quot;:{&quot;name&quot;:&quot;example-client&quot;,&quot;version&quot;:&quot;1.0&quot;}}}
+</code></pre>
+<p>Server:</p>
+<pre><code class="language-json">{&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;id&quot;:1,&quot;result&quot;:{&quot;protocolVersion&quot;:&quot;2025-11-25&quot;,&quot;capabilities&quot;:{&quot;tools&quot;:{}},&quot;serverInfo&quot;:{&quot;name&quot;:&quot;lua-repl-mcp&quot;,&quot;version&quot;:&quot;0.1.0&quot;},&quot;instructions&quot;:&quot;Lua globals persist per session. Use explicit return for values. Results are consumed when returned. Request cancellation kills the associated managed session; wait-timeout expiry does not.&quot;}}
+</code></pre>
+<p>Client:</p>
+<pre><code class="language-json">{&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;method&quot;:&quot;notifications/initialized&quot;}
+</code></pre>
+<p>The client can now call <code>tools/list</code> to obtain names, descriptions and schemas.
+The version string is illustrative, not a release commitment. A direct handler
+advertises <code>repl_execute</code> and <code>repl_close</code>, with instructions appropriate to its
+host rather than managed-session lifecycle instructions.</p>
+<h3 id="reproducible-discovery-and-schema-check">Reproducible discovery and schema check</h3>
+<p>From the repository root, with Python 3 and <code>jsonschema==4.19.2</code> installed:</p>
+<pre><code class="language-sh">python3 docs/check_contracts.py
+</code></pre>
+<p>This expands all fourteen input/output schemas without external references,
+validates manager and direct-handler <code>tools/list</code> results against the official
+MCP 2025-11-25 <code>Tool</code> and <code>ListToolsResult</code> schemas, checks the JSON examples
+below, and runs positive/negative regression fixtures. The official schema is
+downloaded from a pinned upstream commit and SHA-256 checked. For offline use,
+pass <code>--mcp-schema PATH</code> with that exact downloaded file. Use <code>--discovery</code> to
+print the two validated discovery result objects. This is a documentation
+contract check, not a live-server test. Defaults remain runtime responsibilities.</p>
+<h2 id="allocate-and-execute-synchronously">Allocate and execute synchronously</h2>
+<pre><code class="language-json">{&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;id&quot;:2,&quot;method&quot;:&quot;tools/call&quot;,&quot;params&quot;:{&quot;name&quot;:&quot;session_create&quot;,&quot;arguments&quot;:{&quot;cwd&quot;:&quot;/example/project&quot;,&quot;stdout_path&quot;:&quot;run.stdout&quot;,&quot;stderr_path&quot;:&quot;run.stderr&quot;}}}
+</code></pre>
+<pre><code class="language-json">{&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;id&quot;:2,&quot;result&quot;:{&quot;isError&quot;:false,&quot;structuredContent&quot;:{&quot;session_id&quot;:&quot;s1&quot;,&quot;session_status&quot;:&quot;idle&quot;},&quot;content&quot;:[{&quot;type&quot;:&quot;text&quot;,&quot;text&quot;:&quot;{\&quot;session_id\&quot;:\&quot;s1\&quot;,\&quot;session_status\&quot;:\&quot;idle\&quot;}&quot;}]}}
+</code></pre>
+<p>The files must not already exist. Input defaults to <code>/dev/null</code>.</p>
+<pre><code class="language-json">{&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;id&quot;:3,&quot;method&quot;:&quot;tools/call&quot;,&quot;params&quot;:{&quot;name&quot;:&quot;session_execute&quot;,&quot;arguments&quot;:{&quot;session_id&quot;:&quot;s1&quot;,&quot;code&quot;:&quot;local n = ...; counter = (counter or 0) + n; return counter, nil&quot;,&quot;args&quot;:[2],&quot;wait_timeout_ms&quot;:null}}}
+</code></pre>
+<pre><code class="language-json">{&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;id&quot;:3,&quot;result&quot;:{&quot;isError&quot;:false,&quot;structuredContent&quot;:{&quot;session_id&quot;:&quot;s1&quot;,&quot;session_status&quot;:&quot;idle&quot;,&quot;session_usable&quot;:true,&quot;status&quot;:&quot;completed&quot;,&quot;values&quot;:[2,null]},&quot;content&quot;:[{&quot;type&quot;:&quot;text&quot;,&quot;text&quot;:&quot;{\&quot;session_id\&quot;:\&quot;s1\&quot;,\&quot;session_status\&quot;:\&quot;idle\&quot;,\&quot;session_usable\&quot;:true,\&quot;status\&quot;:\&quot;completed\&quot;,\&quot;values\&quot;:[2,null]}&quot;}]}}
+</code></pre>
+<p>The result has been consumed; <code>counter</code> remains 2. A later <code>session_wait</code> fails
+with <code>result_unavailable</code>, not with a repeated copy of <code>[2,null]</code>.</p>
+<h2 id="implicit-creation-and-asynchronous-wait">Implicit creation and asynchronous wait</h2>
+<pre><code class="language-json">{&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;id&quot;:4,&quot;method&quot;:&quot;tools/call&quot;,&quot;params&quot;:{&quot;name&quot;:&quot;session_execute&quot;,&quot;arguments&quot;:{&quot;session_id&quot;:null,&quot;create_options&quot;:{&quot;cwd&quot;:&quot;/example/project&quot;},&quot;code&quot;:&quot;answer = 42; return answer&quot;,&quot;wait_timeout_ms&quot;:0,&quot;execution_timeout_ms&quot;:600000}}}
+</code></pre>
+<pre><code class="language-json">{&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;id&quot;:4,&quot;result&quot;:{&quot;isError&quot;:false,&quot;structuredContent&quot;:{&quot;session_id&quot;:&quot;s2&quot;,&quot;session_status&quot;:&quot;running&quot;,&quot;session_usable&quot;:true,&quot;status&quot;:&quot;running&quot;},&quot;content&quot;:[{&quot;type&quot;:&quot;text&quot;,&quot;text&quot;:&quot;{\&quot;session_id\&quot;:\&quot;s2\&quot;,\&quot;session_status\&quot;:\&quot;running\&quot;,\&quot;session_usable\&quot;:true,\&quot;status\&quot;:\&quot;running\&quot;}&quot;}]}}
+</code></pre>
+<p>The pending response records acceptance; it is not a promise that the worker
+will still be running when the client receives it. Use the returned session ID:</p>
+<pre><code class="language-json">{&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;id&quot;:5,&quot;method&quot;:&quot;tools/call&quot;,&quot;params&quot;:{&quot;name&quot;:&quot;session_wait&quot;,&quot;arguments&quot;:{&quot;session_id&quot;:&quot;s2&quot;,&quot;wait_timeout_ms&quot;:1000}}}
+</code></pre>
+<pre><code class="language-json">{&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;id&quot;:5,&quot;result&quot;:{&quot;isError&quot;:false,&quot;structuredContent&quot;:{&quot;session_id&quot;:&quot;s2&quot;,&quot;session_status&quot;:&quot;idle&quot;,&quot;session_usable&quot;:true,&quot;status&quot;:&quot;completed&quot;,&quot;values&quot;:[42]},&quot;content&quot;:[{&quot;type&quot;:&quot;text&quot;,&quot;text&quot;:&quot;{\&quot;session_id\&quot;:\&quot;s2\&quot;,\&quot;session_status\&quot;:\&quot;idle\&quot;,\&quot;session_usable\&quot;:true,\&quot;status\&quot;:\&quot;completed\&quot;,\&quot;values\&quot;:[42]}&quot;}]}}
+</code></pre>
+<p>If still running after 1000 ms, the reply instead has pending status and no
+values; the client may wait again. It must not resubmit the code to poll it.
+Omitted wait time is 600000 ms. A hard deadline is separate and kills the session.</p>
+<h2 id="operation-error-versus-execution-outcome">Operation error versus execution outcome</h2>
+<p>For brevity, the following blocks show <code>structuredContent</code>; wrap each in the
+same MCP result form above with a text copy and the stated <code>isError</code> value.</p>
+<p>A second wait after consumption has <code>isError: true</code> even though execution succeeded:</p>
+<!-- schema: session_wait_output -->
+
+<pre><code class="language-json">{&quot;session_id&quot;:&quot;s2&quot;,&quot;session_status&quot;:&quot;idle&quot;,&quot;session_usable&quot;:true,&quot;status&quot;:&quot;completed&quot;,&quot;error&quot;:{&quot;code&quot;:&quot;result_unavailable&quot;,&quot;message&quot;:&quot;The result was already returned and consumed.&quot;,&quot;stage&quot;:&quot;validation&quot;,&quot;execution_state&quot;:&quot;completed&quot;}}
+</code></pre>
+<p>A second execution while busy has <code>isError: true</code>; the new code did not run:</p>
+<!-- schema: session_execute_output -->
+
+<pre><code class="language-json">{&quot;session_id&quot;:&quot;s2&quot;,&quot;session_status&quot;:&quot;running&quot;,&quot;session_usable&quot;:true,&quot;status&quot;:&quot;running&quot;,&quot;error&quot;:{&quot;code&quot;:&quot;session_busy&quot;,&quot;message&quot;:&quot;Wait for this session or use another session.&quot;,&quot;stage&quot;:&quot;validation&quot;,&quot;execution_state&quot;:&quot;not_started&quot;}}
+</code></pre>
+<p>Returning a function after updating state fails serialization (<code>isError: true</code>):</p>
+<pre><code class="language-lua">counter = (counter or 0) + 1
+return function() end
+</code></pre>
+<!-- schema: session_execute_output -->
+
+<pre><code class="language-json">{&quot;session_id&quot;:&quot;s1&quot;,&quot;session_status&quot;:&quot;idle&quot;,&quot;session_usable&quot;:true,&quot;status&quot;:&quot;failed&quot;,&quot;error&quot;:{&quot;code&quot;:&quot;result_serialization_error&quot;,&quot;message&quot;:&quot;Execution completed and its effects remain. A function cannot be returned as JSON. Do not rerun automatically.&quot;,&quot;stage&quot;:&quot;serialization&quot;,&quot;execution_state&quot;:&quot;completed&quot;,&quot;path&quot;:&quot;/values/0&quot;}}
+</code></pre>
+<h2 id="kill-and-cancellation">Kill and cancellation</h2>
+<pre><code class="language-json">{&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;id&quot;:6,&quot;method&quot;:&quot;tools/call&quot;,&quot;params&quot;:{&quot;name&quot;:&quot;session_kill&quot;,&quot;arguments&quot;:{&quot;session_id&quot;:&quot;s2&quot;}}}
+</code></pre>
+<p>Successful structured content (<code>isError: false</code>):</p>
+<!-- schema: session_kill_output -->
+
+<pre><code class="language-json">{&quot;session_id&quot;:&quot;s2&quot;,&quot;status&quot;:&quot;killed&quot;,&quot;session_usable&quot;:false,&quot;process_exit_confirmed&quot;:true}
+</code></pre>
+<p>Exceptional best-effort cleanup is also successful:</p>
+<!-- schema: session_kill_output -->
+
+<pre><code class="language-json">{&quot;session_id&quot;:&quot;s2&quot;,&quot;status&quot;:&quot;killed&quot;,&quot;session_usable&quot;:false,&quot;process_exit_confirmed&quot;:false,&quot;notice&quot;:&quot;The managed session was removed, but OS process exit was not confirmed; the process may remain alive.&quot;}
+</code></pre>
+<p>Later use of the removed ID fails with <code>unknown_session</code>. A fatal async failure
+can likewise leave only an unknown session; this does not imply its code never ran.</p>
+<p>To cancel an outstanding wait with JSON-RPC ID 7:</p>
+<pre><code class="language-json">{&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;method&quot;:&quot;notifications/cancelled&quot;,&quot;params&quot;:{&quot;requestId&quot;:7,&quot;reason&quot;:&quot;Stop this execution&quot;}}
+</code></pre>
+<p>This kills its managed session. The notification has no response and the cancelled
+request need not receive one. Cancelling an already-answered async request does
+nothing; use <code>session_kill</code>. A normal wait deadline is not cancellation.</p>
+<h2 id="list">List</h2>
+<p><code>session_list</code> with <code>{}</code> returns (<code>isError: false</code>):</p>
+<!-- schema: session_list_output -->
+
+<pre><code class="language-json">{&quot;sessions&quot;:[{&quot;session_id&quot;:&quot;s1&quot;,&quot;session_status&quot;:&quot;idle&quot;,&quot;execution_status&quot;:&quot;failed&quot;,&quot;result_available&quot;:false,&quot;cwd&quot;:&quot;/example/project&quot;}]}
+</code></pre>
+<p>Consumed results and closed sessions are not history. Empty managers return
+<code>{"sessions":[]}</code>.</p>
+<h2 id="direct-embedded-handler">Direct embedded handler</h2>
+<pre><code class="language-json">{&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;id&quot;:8,&quot;method&quot;:&quot;tools/call&quot;,&quot;params&quot;:{&quot;name&quot;:&quot;repl_execute&quot;,&quot;arguments&quot;:{&quot;code&quot;:&quot;local x = ...; host_value = x; return host_value&quot;,&quot;args&quot;:[7]}}}
+</code></pre>
+<p>Successful structured content:</p>
+<!-- schema: repl_execute_output -->
+
+<pre><code class="language-json">{&quot;status&quot;:&quot;completed&quot;,&quot;values&quot;:[7]}
+</code></pre>
+<p>There is no session ID or asynchronous mode. No output is captured automatically.</p>
+<pre><code class="language-json">{&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;id&quot;:9,&quot;method&quot;:&quot;tools/call&quot;,&quot;params&quot;:{&quot;name&quot;:&quot;repl_close&quot;,&quot;arguments&quot;:{}}}
+</code></pre>
+<pre><code class="language-json">{&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;id&quot;:9,&quot;result&quot;:{&quot;isError&quot;:false,&quot;structuredContent&quot;:{&quot;status&quot;:&quot;closing&quot;},&quot;content&quot;:[{&quot;type&quot;:&quot;text&quot;,&quot;text&quot;:&quot;{\&quot;status\&quot;:\&quot;closing\&quot;}&quot;}]}}
+</code></pre>
+<p>After flushing this acknowledgement, the handler returns to its parent with
+close reason, request ID 9, acknowledgement status, and any buffered trailing
+messages/partial bytes. It does not close transport handles or reset Lua globals.</p>
+<h2 id="explicit-client-controlled-capture-and-null">Explicit client-controlled capture and null</h2>
+<p>Clients may submit Lua that accumulates messages as data without replacing host
+output functions:</p>
+<pre><code class="language-lua">local messages = {}
+local function emit(text) messages[#messages + 1] = text end
+emit(&quot;started&quot;)
+emit(&quot;finished&quot;)
+return messages
+</code></pre>
+<p>For null input: <code>local value = ...; return value == require('lua_repl_mcp').null</code>
+with <code>args: [null]</code> returns <code>[true]</code>. Empty Lua tables return JSON objects;
+nonempty consecutive integer-keyed tables return arrays. Unsupported values
+fail the entire result; they are never replaced by descriptive strings.</p></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js"></script>
+
+        <div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>
