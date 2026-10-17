@@ -359,3 +359,107 @@ unbounded metadata. Large configured values >16MiB are constructor-tested but no
 yet a separate exec-scale test. Exhaustive all-limit Cartesian combinations and
 all slow-reader schedules are not claimed. U8 external complete MCP conformance
 remains separate. No universal full-U7 acceptance follows from focused green.
+
+## Metadata snapshot repair and final scoped acceptance inventory
+
+The preserved `u7_metadata_budget_red.lua` now passes unchanged: 64 individually
+admitted 2000-byte cwd inputs produce a135301-byte list payload versus74240
+response budget; transport stays open and sends the existing small fallback.
+Owning correction: manager snapshots copy validated JSON table structure directly
+instead of round-tripping through a *wire-budgeted* codec and asserting. Immutable
+strings are shared, null identity and array/object shapes preserved. Public
+serialization/preflight remains in protocol/transport BEFORE result consumption.
+This applies to response snapshots and retained execution payloads, not just list.
+`u7_snapshot.lua` checks null/shapes, table isolation, failed send retry and overflow
+replacement retaining the original result until a later successful consumption.
+No default limits, IDs or deliberately red194-byte fit expectation changed.
+
+### Explicit bound / equivalence argument (not arbitrary metadata headroom)
+
+Let I=input bytes, V=encoded values bytes, D=combined diagnostic UTF-8 bytes,
+W=worker frame bytes, S=admitted live sessions, R=complete response bound and
+O=output bound. A legal encoded ID is a subrepresentation of its request, so
+its encoded bytes <=I (escaping it again is NOT required for a JSON-RPC ID).
+For any encoded JSON payload P, JSON string quoting costs <=2P+2: only quote
+and backslash add one byte, and control bytes are already escaped in JSON.
+Therefore structured payload plus compatibility text cost <=3P+2. Fixed tool
+and RPC wrappers cost <256 bytes (actual static keys in protocol.lua). This
+also covers arrays of empty strings, nested keys, controls and UTF-8: none can
+exceed this bytewise re-escape inequality. A diagnostic source byte costs <=6
+encoded bytes; the loss notice is already included within D by errors.new.
+Manager-generated session IDs contain two bounded Lua integer decimal strings
+plus fixed punctuation (<64 bytes); fixed status, booleans, notice and envelope
+keys total <2048 encoded bytes even after duplication. Thus a completed values
+response (no cwd/artifacts in its envelope) is bounded by **I+3V+2048**; ordinary
+bounded diagnostic responses by **I+18D+8192**. Existing non-default validation
+I+3*max(V,6D)+65536 safely dominates those specific branches. This does NOT prove
+fit of aggregated list or startup-path metadata, and is not offered as doing so.
+
+For normal owned workers, each stored cwd/path string originates either in an
+admitted request (<=I encoded bytes) or a validated worker record (<=W encoded
+bytes). Session list has at most S entries. Using a deliberately loose512 bytes
+per entry for fixed status/ID/key structure gives the finite payload bound
+**32+S*(max(I,W)+512)**. Re-emitting original strings with canonical JSON does
+not expand beyond their admitted encoded representation. Relative artifact paths
+may join cwd and path, bounded by2*max(I,W)+1 per path; worker_main reports at
+most two created output paths. This explains why a fixed64KiB allowance was not
+a universal list-fit proof: S multiplies admitted metadata. Parent cwd supplied
+by the OS is bounded by its successfully encoded worker ready frame before
+startup completes. Tests using injected backend data are isolation tests, not
+permission to accept arbitrary unvalidated backend tables as public input.
+
+Rather than reject otherwise useful configurations because a non-consuming list
+could be large, list/startup metadata uses the SPEC14.4 complete-response fallback.
+Snapshotting no longer allocates an oversized encoded string just to clone data;
+structure is bounded by the already-owned validated payload/finite S. Protocol
+encoder stops at R, no partial frame is enqueued, O counts retained complete
+frames, and replacement is marked non-original so retained results are untouched.
+This is a bounded-fallback guarantee for aggregate metadata, NOT a guarantee of
+successful original-list delivery. A universal requirement that *all* such legal
+metadata responses deliver originals would need a different admission/session-
+count-dependent response policy. No such requirement change is silently made.
+
+The remaining universal-default successful-max-values contradiction is still the
+unchanged194-byte counterexample. The completed-values bound above cannot make
+I+3V+positive envelope fit4V when I=V; only an owner-authorized budget/ID/guarantee
+change can reconcile that normative demand. Keep it red independently of tests
+which intentionally require permitted non-consuming limit_exceeded replacement.
+
+### New representative adversarial/real-process evidence
+
+- `u7_large_configuration_process.lua`, included in external process-group
+ watchdog suite: actual exec worker returns exact **20971520** encoded quote-heavy
+ value bytes (>16MiB), with input8192, worker25165824, response83886080 and
+ output134217728. Actual private peak20971651, complete response/newline and
+ output high-water62914903. Duplicate text equality, unrelated worker42 and
+ depth127/128/129 branches pass. This is no longer constructor-only evidence.
+- `u7_max_id.lua`: actual legal request framing derives maximum ID, not raw-size
+ guess. Input4096 has ASCII ID4001/request4096 and backslash ID2000/request4095;
+ default input16777216 has ASCII ID16777121/request16777216. Each exercises six
+ representatives: quoted diagnostic, NUL diagnostic, backslash/truncated error,
+ exit-unconfirmed notice, artifact metadata and aggregated list fallback. IDs
+ echoed exactly, complete bound and duplicate text equality verified. Large
+ aggregate list intentionally uses fallback; no original-delivery claim.
+- `u7_snapshot.lua`, preserved metadata reproducer, config/ownership/transport,
+ U5/U6 real suites (28/21 validated responses), contracts and diff check pass.
+ Full `python3 tests/u7_process.py` passes both default and20MiB configurations,
+ fairness, stopped readers and cleanup. Boundary equivalence plus representative
+ real tests is used, not an unbounded Cartesian enumeration of every schedule.
+
+Attempt qualifications: first snapshot test enlarged cwd, which is not included
+in execution-result envelopes, so it did not trigger overflow and failed its
+error assertion. Corrected to oversized retained notice metadata. First max-ID
+list fixture was too small to require fallback at4096; doubled aggregated
+metadata to exercise that branch. Both corrected tests reran successfully;
+these were fixture hypotheses, not ignored product failures.
+
+### Final inventory for this increment
+
+PASS: preserved metadata reproducer; snapshot non-consumption/isolation; actual
+>16MiB configured exec; max-ID representative errors/notices/metadata; bounded
+aggregate fallback and finite S/input/worker-derived metadata argument; previous
+admission/fairness/short-output/default-value/depth/config propagation checks.
+UNRESOLVED OWNER DECISION: unchanged194-byte normative default successful maximum
+fit conflict only. No claim of full original U7 green while this remains red.
+U8 complete external MCP lifecycle conformance is separate. Default values are
+unchanged; no push/publication authorized or performed.

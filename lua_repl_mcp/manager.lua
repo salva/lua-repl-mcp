@@ -11,10 +11,17 @@ local function failure(code,state)
   code=='no_execution' or code=='result_unavailable') and 'validation' or 'execution'
  return {error=errors.new(code,code,stage,state or 'not_started')}
 end
--- Manager results are private-frame sized, not public-input sized. Preserve
--- legal values plus metadata and nesting through snapshots before preflight.
-local function copy(t,limits)
- return assert(codec.clone(t,{max_bytes=limits and limits.response_bytes or 64*1048576,max_depth=limits and limits.max_depth+32 or 160}))
+-- Snapshots isolate manager-owned, already validated JSON data. They are not
+-- serialization: applying the public wire budget here would raise before the
+-- transport can preflight a complete response and preserve an overflowing result.
+-- Strings are immutable/shared; only bounded owned table structure is copied.
+local function copy(t)
+ if type(t)~='table' or t==null then return t end
+ local v={}
+ for k,value in pairs(t) do v[k]=copy(value) end
+ if codec.kind(t)=='array' then codec.array(v)
+ elseif codec.kind(t)=='object' then codec.object(v) end
+ return v
 end
 function M.new(o)
  o=o or {}; serial=serial+1
@@ -39,7 +46,7 @@ function C:allocate(options)
  return s
 end
 local function envelope(s,r)
- local v=copy(r,s.limits); v.session_id=s.id
+ local v=copy(r); v.session_id=s.id
  v.session_status=s.worker.state=='dead' and 'terminated' or s.worker.state
  v.session_usable=s.worker.state=='idle' or s.worker.state=='running'
  return v
@@ -241,7 +248,7 @@ function C:preview(r)
   elseif r.input then self:dispatch(s,r.input,r)
   else r.response={session_id=s.id,session_status='idle'} end
  end
- if r.response then return copy(r.response,self.limits) end
+ if r.response then return copy(r.response) end
  local e=r.execution
  if not e then return nil end
  if e.cleanup then return nil end
