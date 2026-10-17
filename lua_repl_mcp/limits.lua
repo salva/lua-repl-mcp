@@ -18,11 +18,17 @@ function M.admission(options)
   local result={sessions=64,ordinary=256,control=32,kill_reserve=8}
   for k,v in pairs(options or {}) do
     assert(result[k]~=nil,'unknown admission limit')
-    assert(math.type(v)=='integer' and v>0,'admission limits must be positive integers')
+    assert(math.type(v)=='integer' and v>0 and v<=2147483647,'admission limits must be positive integers')
     result[k]=v
   end
   assert(result.kill_reserve>=8 and result.control>=result.kill_reserve,
     'control capacity must include at least eight kill-only slots')
+  -- Validate aggregate queue/disposal arithmetic before backend construction.
+  -- An allocation owns allocate/execute/close/release, plus abort and ack.
+  local ceiling=2147483647
+  assert(result.sessions<=ceiling//6,'admission queue capacity overflow')
+  assert(result.ordinary<=ceiling-result.control,'admission request capacity overflow')
+  assert(result.ordinary+result.control<=ceiling-result.kill_reserve,'admission request capacity overflow')
   return result
 end
 -- A configured budget is shared by the manager, exec worker and transport.

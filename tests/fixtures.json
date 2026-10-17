@@ -759,5 +759,21 @@
     "deadline": 240,
     "run": true,
     "expected_status": 0
+  },
+  {
+    "path": "u13_aggregate_turn.lua",
+    "kind": "process",
+    "wrapper": "u9_suite.py",
+    "deadline": 30,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u13_admission_arithmetic.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 30,
+    "run": true,
+    "expected_status": 0
   }
 ]

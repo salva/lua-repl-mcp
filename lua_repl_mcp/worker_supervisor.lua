@@ -142,7 +142,7 @@ function S:receive(w,v)
  else self:abort(w,'corrupt_worker') end
 end
 function S:drain(w)
- local budget=self.limits.worker_bytes+1
+ local budget=math.min(self.limits.worker_bytes+1,self.turn_read_remaining or 65536)
  while w.read_fd and budget>0 do
   local text,_,err=x.u.read(w.read_fd,math.min(65536,budget))
   if not text then if x.retryable(err) then return end; return self:abort(w,'transport_failed') end
@@ -153,6 +153,7 @@ function S:drain(w)
    w.eof=true; w.control_eof=true; return
   end
   budget=budget-#text
+  if self.turn_read_remaining then self.turn_read_remaining=self.turn_read_remaining-#text end
   -- Check length before adding an unbounded incomplete frame.
   local rest=text
   while w.read_fd do
@@ -170,8 +171,16 @@ function S:drain(w)
  end
 end
 function S:step(timeout_ms)
+ -- Share existing IO units across admitted workers. A frame's maximum size
+ -- is a retention bound, not a per-worker loop quota. Rotate ownership so
+ -- continuously readable peers cannot monopolize later turns.
+ self.turn_read_remaining=65536; self.turn_write_remaining=65536
+ local workers={}; local n=#self.workers
+ local start=(self.turn_cursor or 0)%math.max(n,1)+1
+ for i=0,n-1 do workers[#workers+1]=self.workers[(start+i-1)%n+1] end
+ self.turn_cursor=start
  local poll={}; local now=self.clock(); local delay=timeout_ms or 0
- for _,w in ipairs(self.workers) do
+ for _,w in ipairs(workers) do
   if w.state=='running' and w.execution_deadline then
    if now>=w.execution_deadline then self:abort(w,'execution_timeout')
    else delay=math.min(delay,math.max(0,math.ceil((w.execution_deadline-now)*1000))) end
@@ -191,13 +200,13 @@ function S:step(timeout_ms)
   if w.write_fd and #w.pending>0 then poll[w.write_fd]={events={OUT=true}} end
  end
  x.p.poll(poll,delay)
- for _,w in ipairs(self.workers) do
+ for _,w in ipairs(workers) do
   if w.state=='running' and w.execution_deadline and self.clock()>=w.execution_deadline then self:abort(w,'execution_timeout') end
   if w.state=='starting' and self.clock()>=w.deadline then self:abort(w,'startup_timeout') end
   if w.read_fd then self:drain(w) end
-  if not w.control_eof and w.write_fd and #w.pending>0 then
-   local n,_,err=x.u.write(w.write_fd,w.pending:sub(w.offset,w.offset+65535))
-   if n and n>0 then w.offset=w.offset+n; if w.offset>#w.pending then w.pending=''; w.offset=1 end
+  if not w.control_eof and w.write_fd and #w.pending>0 and self.turn_write_remaining>0 then
+   local n,_,err=x.u.write(w.write_fd,w.pending:sub(w.offset,w.offset+self.turn_write_remaining-1))
+   if n and n>0 then self.turn_write_remaining=self.turn_write_remaining-n; w.offset=w.offset+n; if w.offset>#w.pending then w.pending=''; w.offset=1 end
    elseif not x.retryable(err) then self:abort(w,'transport_failed') end
   end
   if w.pid and not w.reaped then

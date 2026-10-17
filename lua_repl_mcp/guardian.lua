@@ -163,6 +163,7 @@ function M.new(options)
  -- A manager mirror can remain running while a validated result is in flight.
  b.owns_execution_deadlines=true
  b.control_capacity=require('lua_repl_mcp.limits').admission(options.admission).sessions
+ b.command_capacity=4*b.control_capacity
  setmetatable(b,B); b.commands={}; b.by_id={}; b.control_commands={}
  local owned={}
  local function keep(fd) owned[#owned+1]=fd; return fd end
@@ -193,7 +194,7 @@ function M.new(options)
  return b
 end
 function B:queue(v)
- assert(not self.closed and #self.commands<1024,'guardian command queue bound')
+ assert(not self.closed and #self.commands<self.command_capacity,'guardian command queue bound')
  if v.id and self.by_id[v.id] then self.by_id[v.id].dirty=true end
  self.commands[#self.commands+1]=v
 end
