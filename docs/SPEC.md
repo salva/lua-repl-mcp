@@ -1074,9 +1074,9 @@ Configurable defaults:
 | JSON/table nesting | 128 levels |
 | Outstanding ordinary client requests | 256 |
 | Reserved control requests | 32 |
-| Complete worker frame | 20 MiB |
-| Complete encoded MCP response | 64 MiB |
-| Buffered client output | 128 MiB |
+| Complete worker frame | 64 MiB |
+| Complete encoded MCP response | 128 MiB |
+| Buffered client output | 256 MiB |
 
 Validate operator-configured bounds. Do not impose worker CPU or memory quotas
 by default. Diagnostic truncation is flagged; oversized returned values
@@ -1096,6 +1096,37 @@ partial frame; if value serialization itself exceeds its bound, use
 limits; do not reject a legal result using the smaller input-frame limit.
 Validate configured limits together and reject configurations where one legal
 maximum result cannot fit in a complete response and client output budget.
+
+Apply the same checks to defaults and explicit overrides; no default-only
+exception or unresolved-fit flag is permitted. Use checked arithmetic and
+these conservative minimum capacities, where I is the input-frame limit, V
+the encoded-values limit, D the diagnostic-text limit, and H = 1 MiB of fixed
+envelope/generated-metadata headroom:
+
+```
+B = I + V + 6*D + H
+worker_frame_bytes >= B
+complete_response_bytes >= I + 3*B + H
+client_output_bytes >= complete_response_bytes + 1
+```
+
+I in the public-response bound reserves space for a maximum legal encoded
+request ID. The factor 3 covers structured content plus its JSON-escaped text
+copy; 6*D conservatively covers JSON escaping of diagnostic text. Adding input
+and values together deliberately overestimates mutually exclusive payload
+cases and leaves room for input-derived error paths and creation metadata.
+The output bound includes the newline. Retain exact encoded-size checks and
+bounded metadata production; these admission floors do not authorize unbounded
+generated fields or replace end-to-end worst-case encoding tests.
+
+At defaults, B is 33.375 MiB and the conservative public-response floor is
+117.125 MiB, both below the new 64/128 MiB capacities. The 256 MiB output
+buffer holds one maximum permitted public frame with substantial remaining
+headroom. Keep the 16 MiB input/value allowances; do not restrict legal IDs or
+silently reduce values to make a response fit. Oversized or mutually incompatible
+custom limits fail configuration before workers are created. This replaces the
+former 20/64/128 MiB worker/response/output defaults and resolves the documented
+U7 legal-max request-ID/result conflict without weakening its acceptance test.
 
 Ordinary requests cannot occupy reserved control slots. Kill, list, and ping
 may use those slots; cancellation notifications are parsed and handled without

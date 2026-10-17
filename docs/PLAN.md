@@ -214,8 +214,14 @@ without claiming EOF identifies a crash cause.
 
 Implement and validate all section 14.4 defaults together: 64 sessions including
 starting/terminating, 16 MiB input and serialized values, 64 KiB diagnostics,
-depth 128, 256 ordinary requests, 32 control slots (at least 8 kill-only), 20 MiB
-worker frames, 64 MiB complete responses and 128 MiB buffered client output.
+depth 128, 256 ordinary requests, 32 control slots (at least 8 kill-only), 64 MiB
+worker frames, 128 MiB complete responses and 256 MiB buffered client output.
+Apply SPEC section 14.4's conservative budget floors to defaults and overrides
+uniformly. Remove any default-fit exception or unresolved-fit flag from the
+implementation. Preserve the historical 64 MiB counterexample as regression
+evidence, and add a green default-bound check using the updated production
+configuration, maximum legal request ID, and escape-heavy values. An old
+hardcoded 64 MiB bound is not the current acceptance target.
 Preserve the specified timeout defaults/ranges. Cancellation notifications require
 no request slot. Read fairly at admission capacity, reject excess work without
 dispatch, bound control floods, and service timers despite sustained traffic.
