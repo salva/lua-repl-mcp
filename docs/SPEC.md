@@ -126,17 +126,12 @@ the REPL session.
 
 ## 4. Persistent REPL behaviour
 
-The handler accepts Lua statements and expression input. First try compiling
-the input prefixed with `return `; if that fails to compile, compile the original
-input as a normal Lua chunk. Execute only the successfully compiled form, once.
-A runtime error must never cause fallback execution of the other form. If both
-compilation attempts fail, report a syntax error with diagnostics referring to
-the submitted code rather than exposing confusing synthetic-prefix locations.
-
-Expression input returns all values produced by that expression list. Normal
-multi-statement chunks use explicit `return` to produce results; otherwise they
-return no values. Automatic return of a trailing expression in a multi-statement
-chunk is not part of the initial syntax contract.
+The handler accepts complete Lua chunks, compiled and executed without source
+rewriting or expression-detection fallback. Returned values always require an
+explicit Lua `return` statement, including for single expressions: use
+`return x * 2`, not bare `x * 2`. Chunks without `return` may execute normally
+but produce no returned values; captured output is still reported. Compilation
+and runtime errors must never trigger a second execution attempt.
 
 Globals and globally reachable functions and objects persist between requests.
 Ordinary chunk-local variables follow Lua's normal scoping rules; the REPL does
@@ -645,9 +640,9 @@ than separate synchronous and asynchronous tools. A directly embedded handler ex
 execution and only those lifecycle operations the host supports; it does not
 pretend to create or manage independent host interpreters.
 
-Execution accepts expression input with automatic return, or a complete Lua
-chunk with explicit `return` for results, as specified in section 4. For example,
-`x = 7` sets a persistent global and a later `x * 2` returns its computed value.
+Execution accepts complete Lua chunks with explicit `return` for results,
+as specified in section 4. For example, `x = 7` sets a persistent global and
+a later `return x * 2` returns its computed value. No automatic return is added.
 Chunk-local variables follow ordinary Lua scope and do not become globals.
 
 ### 11.2 Busy sessions and lifecycle operations
