@@ -1,0 +1,30 @@
+#!/usr/bin/env python3
+"""Real U4 processes under an external group watchdog; fixture files are disposable."""
+import os
+from pathlib import Path
+import signal
+import resource
+import subprocess
+import sys
+import tempfile
+root = Path(__file__).resolve().parents[1]
+env = os.environ.copy()
+env['LUA_PATH'] = f'{root}/?.lua;{root}/?/init.lua;' + env.get('LUA_PATH', ';')
+work = Path(os.environ['SAIVAGE_CARD_WORK_ROOT']) / 'u4-process-tests'
+work.mkdir(parents=True, exist_ok=True)
+with tempfile.TemporaryDirectory(dir=work) as directory:
+    env['U4_DIR'] = directory
+    proc = subprocess.Popen(['lua5.4', 'tests/u4_process.lua'], cwd=root, env=env,
+                            start_new_session=True,
+                            preexec_fn=lambda: resource.setrlimit(resource.RLIMIT_NOFILE, (256, 256)))
+    try:
+        result = proc.wait(timeout=45)
+    except subprocess.TimeoutExpired:
+        print('FAIL U4 external 45s watchdog', file=sys.stderr)
+        result = 124
+    finally:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+    sys.exit(result)
