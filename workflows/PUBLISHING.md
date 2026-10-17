@@ -38,3 +38,26 @@ Initial source/identity scan: 117 commits, all author/committer identities match
 files or selected token/private-key patterns found. Recheck before pushing final
 changes. Deployment completion and immutable deployed source are recorded below
 only after actual verification.
+
+## Initial publication receipt
+
+- Source publication: `f862576`, pushed to `origin/master` without force.
+- Artifact commit: `c72db9a` on `gh-pages`, author/committer explicitly set to the
+  requested owner. Only 34 audited generated artifacts plus `.nojekyll` included.
+- GitHub Pages automatic branch build/deployment
+  `https://github.com/salva/lua-repl-mcp/actions/runs/39062739621` succeeded.
+  Pages API confirmed root `gh-pages` source and enforced HTTPS. Initial create
+  returned already-enabled because GitHub auto-enabled the new Pages branch;
+  existing correct settings were inspected rather than overwritten.
+- Live HTTPS verification retrieved all 34 generated files and compared their
+  bytes with the audited local artifact: PASS. This covers home, guides, assets,
+  LLM guide and exact schema download. Schema SHA-256:
+  `0329385383fde5180b78ec09057b5fd1ec2036891edd3a9db17ac246cc15a066`.
+- The strict builder passed twice with deterministic manifests, 10 HTML pages,
+  286 local links/assets/fragments and public-content boundary checks. Contract
+  checker also passed. Host Python 3.14 / MkDocs 1.6.1.
+- GitHub-managed legacy Pages workflow emitted Node20-action deprecation and
+  upcoming runner-image notices; deployment succeeded. No project deployment
+  workflow or automation publication credentials were added.
+- Public home and README explicitly identify a development candidate with known
+  correctness/lifecycle issues; publication is not a stable release announcement.
