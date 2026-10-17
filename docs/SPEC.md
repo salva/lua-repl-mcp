@@ -26,6 +26,11 @@ Each standalone session has its own persistent Lua state. Separate sessions must
 not share Lua globals by default. Full system access means they are not isolated
 from shared filesystem, process, or other operating-system resources.
 
+Each managed session runs in its own Lua interpreter process, connected to the
+manager through private pipes or a socket. The manager reuses the independent
+session handler in each worker. Embedded integrations do not require a worker
+process: they use their host's existing interpreter directly.
+
 The manager owns the lifecycle of the standalone sessions it creates and may
 dispose of their interpreters when those sessions are closed.
 
@@ -51,7 +56,8 @@ lifecycle handling without depending on the manager.
 
 ## 3. Execution model
 
-The initial implementation is **blocking and single-threaded**.
+Each session handler is **blocking and single-threaded**. The manager uses a
+single-threaded I/O event loop to multiplex independent worker processes.
 
 - The module must not create background threads.
 - A request executes synchronously on the thread invoking the handler, subject
@@ -62,8 +68,12 @@ The initial implementation is **blocking and single-threaded**.
   still available.
 - The handler does not service additional MCP requests, pings, progress updates,
   or cancellation notifications while code is executing.
-- No background worker, external bridge, or cooperative polling API is required
-  for the initial version.
+- A long-running execution in one managed session must not block the manager
+  from routing requests and responses for other sessions.
+- Requests within a session execute sequentially. Different managed session
+  processes may execute concurrently; this requires no threads in a handler or
+  embedded host.
+- No external bridge or cooperative polling API is required for embedded use.
 
 Blocking applies to an individual execution and may also apply to the hosting
 REPL loop. A returning execution must not be confused with the termination of
@@ -163,6 +173,10 @@ There is no guaranteed keep-alive or progress reporting during execution.
 A long-running Lua loop or blocking native host call can prevent the handler
 from servicing MCP for the entire duration of that operation.
 
+For managed sessions, the manager's event loop remains responsive while a worker
+executes. This does not mean the worker can report progress or process
+cancellation during execution, and does not remove client request deadlines.
+
 MCP connection health and request timeouts are separate concerns. Even where
 supported, a heartbeat does not guarantee that a client will continue waiting.
 Clients may extend request timeouts after progress notifications, but are not
@@ -205,6 +219,13 @@ Fabricated percentages must not be used as keep-alives.
    still connected; documentation clearly describes timeout and cancellation
    limitations rather than promising keep-alives.
 10. MCP protocol messages remain separate from normally captured REPL output.
+11. Multiple managed sessions share one client-facing MCP connection, with
+    responses correlated by JSON-RPC request ID and executions routed by session
+    ID. A long execution in one session does not prevent another session from
+    executing and returning its result.
+12. A managed session calling `os.exit()` ends its worker, not the manager. The
+    manager detects worker exit and resolves affected pending requests as failures
+    rather than leaving them waiting indefinitely.
 
 ## 9. Lua version support
 
@@ -268,8 +289,23 @@ session, and lifecycle operations. Creating a Lua session does not require a new
 MCP connection. MCP connection/session identity must not be conflated with the
 identity of a managed Lua REPL session.
 
-The execution model remains blocking and single-threaded. Stdio support does
-not imply responsiveness to other session requests while execution is active.
+All client-facing requests and responses are multiplexed through that single
+stdio connection. A session identifier selects the target Lua session; a
+JSON-RPC request identifier correlates each response with its request. Responses
+for different sessions may arrive out of request order.
+
+The manager uses nonblocking I/O or equivalent event-loop facilities to service
+the client connection and each worker's private transport without waiting
+synchronously for an execution result. Partial messages or a busy worker must
+not stall unrelated sessions. The worker transport is internal and does not
+require the client to establish another MCP connection.
+
+Closing a managed session terminates its worker and releases its private
+transport. Resetting replaces the worker with a fresh interpreter. The manager
+must detect worker termination, report affected request failures, and remain
+available for other sessions. Process separation protects against ordinary
+worker exit but is not a sandbox against full-access code deliberately affecting
+the manager or other processes.
 
 Streamable HTTP is a possible future standard transport for independently
 running or remote deployments, but is not required initially. Unix-domain
@@ -287,8 +323,8 @@ The following have not yet been agreed:
   identifier semantics.
 - Precise Lua embedding API and its compatibility with `dosbox-y`.
 - Result rendering, output limits, and oversized-result behaviour.
-- Whether multiple standalone sessions can be serviced concurrently using
-  separate processes; no concurrency is required inside a session handler.
+- Event-loop and process-spawning dependencies, internal worker protocol, and
+  per-session request queueing or busy-response policy.
 - Deployment authentication and authorization for any network transport.
 
 These decisions must preserve the independent handler, shared host environment,
