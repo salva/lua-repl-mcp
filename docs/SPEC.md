@@ -361,6 +361,23 @@ reported, not presented as successful cleanup. Other sessions remain available.
 Both task tools are manager facilities; they do not require an embedded handler
 to implement background execution or to kill its host.
 
+### 7.5 Listing sessions
+
+The manager must expose `session_list`, with no session ID required. It returns
+a snapshot of the sessions owned by the current manager connection, including
+both explicitly allocated and automatically created sessions.
+
+Each entry includes its concrete `session_id`, session lifecycle status, and
+current or latest execution status (or no execution yet). The response must
+distinguish idle sessions, running sessions, and retained terminated sessions,
+and indicate whether a terminal execution result is still available through
+`session_wait`. Listing must not create sessions, execute code, or consume results.
+
+The manager must answer listing requests while workers are executing. An empty
+manager returns an empty list. Terminated entries may be removed according to
+the documented metadata/result retention policy; they must not appear usable.
+Exact status names and any pagination remain schema decisions.
+
 ## 8. Initial acceptance criteria
 
 1. A client defines a global and a function, then uses both in a later request.
@@ -406,6 +423,9 @@ to implement background execution or to kill its host.
     and returns its concrete ID in synchronous, asynchronous, and wait-expired
     responses, including execution-error outcomes. A later execution can reuse
     that ID and its state. Wait and kill reject null rather than allocate sessions.
+19. `session_list` reports explicitly and automatically created sessions and
+    their statuses without blocking on a running worker or consuming results.
+    A manager without sessions returns an empty list.
 
 ## 9. Lua version support
 
@@ -500,8 +520,8 @@ these policies before implementation rather than letting them emerge accidentall
 
 ### 11.1 Public tool surface and code entry
 
-Propose manager session tools `session_create`, `session_list`, `session_execute`,
-and `session_reset`. Required execution-control and disposal tools are
+Manager tools include `session_create`, `session_list`, and `session_execute`;
+`session_reset` remains proposed. Required execution-control and disposal tools are
 `session_wait` and `session_kill`, as specified in sections 7.3 and 7.4. All
 session-scoped tools use `session_id`, not a separate task identifier.
 The single execution tool implements all waiting modes in section 7.2 rather
