@@ -10,7 +10,8 @@ import signal
 import subprocess
 import tempfile
 import time
-from u12_lifecycle_red import ROOT, identity
+from u12_lifecycle_red import identity
+from u12_environment import CWD, PRELUDE
 
 
 def run(mode, state):
@@ -44,7 +45,7 @@ x.u.execp=function()
 end
 """ % json.dumps(str(tmp/'spawned'))
             script = hook + script
-        p = subprocess.Popen(['lua5.4', '-e', script], cwd=ROOT,
+        p = subprocess.Popen(['lua5.4', '-e', PRELUDE + script], cwd=CWD,
                              stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE, bufsize=0, start_new_session=True)
         buf = b''

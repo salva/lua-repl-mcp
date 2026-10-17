@@ -13,7 +13,8 @@ assert str(root / '?.lua') not in os.environ['LUA_PATH']
 os.environ['U9_INSTALLED_LUA_PATH'] = os.environ['LUA_PATH']
 for source in sorted((root / 'lua_repl_mcp').glob('*.lua')):
     assert (modules / source.name).read_bytes() == source.read_bytes(), source
-print('PASS installed_18_module_byte_identity', flush=True)
+print('PASS installed_all_module_byte_identity', flush=True)
+os.environ['U12_INSTALLED_CLI'] = str(modules.parents[3] / 'bin/lua-repl-mcp')
 # Lua adapters/process fixtures are driven by their native or external hosts.
 external = {'u2_host.lua', 'u9_host.lua', 'u3_posix.lua'}
 for test in sorted((root / 'tests').glob('u[1-7]*.lua')):
@@ -27,7 +28,8 @@ for test in sorted((root / 'tests').glob('u[1-7]*.lua')):
     else:
         result.check_returncode()
 for name in ['u2_live.py', 'u3_posix.py', 'u4_process.py', 'u5_process.py',
-             'u6_process.py', 'u6_progressive_process.py', 'u7_process.py']:
+             'u6_process.py', 'u6_progressive_process.py', 'u7_process.py',
+             'u12_installed_environment.py', 'u12_lifecycle_red.py', 'u12_guardian_process.py', 'u12_matrix.py']:
     print('RUN installed ' + name, flush=True)
     subprocess.run([sys.executable, str(root / 'tests' / name)], check=True, timeout=420)
 subprocess.run([sys.executable, str(root / 'docs/check_contracts.py')], check=True, timeout=180)

@@ -11,7 +11,7 @@ import signal
 import subprocess
 import time
 
-ROOT = Path(__file__).resolve().parents[1]
+from u12_environment import CWD, CLI
 
 
 def identity(pid):
@@ -23,7 +23,7 @@ def identity(pid):
 
 
 def case(mode, state):
-    p = subprocess.Popen([str(ROOT / 'lua-repl-mcp')], cwd=ROOT,
+    p = subprocess.Popen([str(CLI)], cwd=CWD,
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE, start_new_session=True, bufsize=0)
     buf = b''
