@@ -160,7 +160,9 @@ request context; merely returning without a reason is insufficient to distinguis
 these policies. A custom host may intentionally treat REPL termination as the
 point at which it resets or shuts down.
 
-For standalone sessions, closing releases manager-owned session resources.
+For standalone sessions, `session_kill` releases manager-owned session resources,
+whether the session is idle or executing. No separate `session_close` tool is
+required.
 A reset operation must be available to obtain a fresh standalone REPL state;
 whether it preserves the session identifier remains an API design decision.
 
@@ -311,20 +313,23 @@ or explicit kill resolves its pending waits with the corresponding terminal
 outcome. This tool also provides polling and result retrieval; separate tools
 for those functions are not required initially.
 
-### 7.4 Explicitly terminating a task: kill
+### 7.4 Terminating a session: kill
 
-The manager must expose a `session_kill` tool taking `session_id`. If that session
-has a running execution, the manager forcibly terminates and reaps its worker, marks the execution
-as killed, and reports that its session has terminated and lost its in-memory
-state. This is an explicit destructive operation, not cooperative Lua
+The manager must expose a `session_kill` tool taking `session_id`. It terminates
+and reaps the session's worker and releases its private transport whether the
+session is executing, idle after execution, or newly allocated with no execution
+yet. Any running execution is marked killed. The response reports that the
+session has terminated and lost its in-memory state. This tool serves both
+execution interruption and ordinary session disposal; there is no separate close
+tool. This is an explicit destructive operation, not cooperative Lua
 cancellation. The cleanup and side-effect limitations of section 7.1 apply.
 
-Kill targets the execution active in the session when the kill request is
-accepted. If completion has already been recorded and no newer execution is
-active, return the existing terminal status without changing it or killing the
-idle worker. Repeated kills of a killed execution return its terminal status
-without further side effects. Unknown sessions and sessions without an execution
-produce explicit errors.
+Kill targets the session worker present when the kill request is accepted.
+If execution has already completed, its result is not rewritten as killed, but
+the idle worker is still terminated. A session need not have executed any code
+to be killed. Repeated kills of an already terminated session return its terminal
+session status without further side effects while that status is retained.
+Unknown session IDs produce an explicit error.
 
 Because selection is by session, a delayed kill received after a new execution
 starts targets that new execution. Clients must coordinate execution and kill
@@ -377,9 +382,10 @@ to implement background execution or to kill its host.
     Completed results remain retrievable across the wait-to-poll transition.
 16. A client reattaches with `session_wait`, can poll or wait with a fresh wait
     timeout, and retrieves the same result repeatedly without re-execution.
-17. `session_kill(session_id)` terminates the session's active worker and resolves
-    pending waits as killed. Repeating the kill without reset has no further
-    side effects. Accepted kill cleanup never targets a replacement worker.
+17. `session_kill(session_id)` disposes of newly allocated, idle, or running
+    sessions; pending execution waits resolve as killed. Repeating the kill
+    without reset has no further side effects. Accepted kill cleanup never
+    targets a replacement worker.
 
 ## 9. Lua version support
 
@@ -454,7 +460,7 @@ synchronously for an execution result. Partial messages or a busy worker must
 not stall unrelated sessions. The worker transport is internal and does not
 require the client to establish another MCP connection.
 
-Closing a managed session terminates its worker and releases its private
+Killing a managed session terminates its worker and releases its private
 transport. Resetting replaces the worker with a fresh interpreter. The manager
 must detect worker termination, report affected request failures, and remain
 available for other sessions. Process separation protects against ordinary
@@ -475,7 +481,7 @@ these policies before implementation rather than letting them emerge accidentall
 ### 11.1 Public tool surface and code entry
 
 Propose manager session tools `session_create`, `session_list`, `session_execute`,
-`session_reset`, and `session_close`. Required execution-control tools are
+and `session_reset`. Required execution-control and disposal tools are
 `session_wait` and `session_kill`, as specified in sections 7.3 and 7.4. All
 session-scoped tools use `session_id`, not a separate task identifier.
 The single execution tool implements all waiting modes in section 7.2 rather
@@ -492,7 +498,7 @@ a global and a later `return x * 2` returns its computed value.
 
 Propose rejecting another execution with a `session_busy` tool error while that
 session is running, rather than maintaining a request queue. Other sessions
-remain available. Close and reset must remain actionable while a worker is busy;
+remain available. Kill and reset must remain actionable while a worker is busy;
 either operation terminates the active worker and resolves its pending execution
 as interrupted. Reset preserves the logical session ID but starts fresh Lua state.
 
