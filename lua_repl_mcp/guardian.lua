@@ -242,6 +242,13 @@ function B:execute(w,input,deadline,original)
  local args,problem=require('lua_repl_mcp.contracts').validate('repl_execute',input,
   {max_depth=self.limits.max_depth,max_bytes=original and math.huge or self.limits.input_bytes})
  if not args then return nil,problem end
+ return self:execute_owned(w,args,deadline,original)
+end
+-- Internal ownership-transfer seam for the manager's detached, fully validated
+-- library request. Never used for caller-owned data or network originals.
+-- Direct execute above retains complete validation; child validation is unchanged.
+function B:execute_owned(w,args,deadline,original)
+ if w.state~='idle' then return nil,'worker not idle' end
  if deadline and self.clock()>=deadline then self:abort(w,'execution_timeout'); return nil,'execution deadline expired' end
  local generation=w.execution_generation+1
  -- Queue admission precedes the state transition: failure cannot claim work

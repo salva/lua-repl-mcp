@@ -44,7 +44,7 @@ local ok,err=pcall(function()
  local success,result=pcall(m.accept,m,'session_execute',input)
  local elapsed=x.now()-start
  contracts.validate=validate; m.step=step
- assert(success,result); assert(steps==0 and passes>=2)
+ assert(success,result); assert(steps==0 and passes==1)
  assert(elapsed>.5,'fixture did not overlap original deadline')
  -- Before ANY manager progress, at least the deadline-owned worker identity
  -- must have disappeared (zombie still present is not success).

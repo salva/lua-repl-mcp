@@ -63,8 +63,15 @@ function C:dispatch(s,a,r)
  if a.execution_timeout_ms~=null then e.deadline=e.dispatch_at+a.execution_timeout_ms/1000 end
  s.execution=e; s.generation=e.generation; r.execution=e
  if a.wait_timeout_ms~=null then r.deadline=e.dispatch_at+a.wait_timeout_ms/1000 end
- local generation,err=self.backend:execute(s.worker,{code=a.code,args=a.args},e.deadline,r.original)
- if not generation then
+ local ok,generation,err=pcall(function()
+  if not r.original and self.backend.execute_owned then
+   -- contracts.validate detached this complete request at acceptance. Transfer
+   -- its execution data, rather than traversing and copying it a second time.
+   return self.backend:execute_owned(s.worker,{code=a.code,args=a.args},e.deadline)
+  end
+  return self.backend:execute(s.worker,{code=a.code,args=a.args},e.deadline,r.original)
+ end)
+ if not ok or not generation then
   s.execution=old; s.generation=s.generation-1; r.execution=nil
   r.response=envelope(s,failure('transport_error')); return
  end

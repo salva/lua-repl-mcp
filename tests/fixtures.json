@@ -943,5 +943,13 @@
     "deadline": 180,
     "run": true,
     "expected_status": 0
+  },
+  {
+    "path": "u13_manager_owned.lua",
+    "kind": "process",
+    "wrapper": "u9_suite.py",
+    "deadline": 30,
+    "run": true,
+    "expected_status": 0
   }
 ]
