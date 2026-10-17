@@ -36,10 +36,14 @@ function M.new(code, message, stage, state, extra, limit)
   local trunc=#m+#trace>limit
   if a or b or trunc then
     local budget=limit-#notice
-    local original=m
-    m=prefix(original,budget)
+    local original_bytes=#m+#trace
+    m=prefix(m,budget)
     budget=budget-#m
     trace=prefix(trace,budget)
+    -- Reserving the loss notice can itself discard diagnostic text, even
+    -- when the escaped source fitted the original limit. Account for both
+    -- fields after UTF-8-safe clipping, before appending the notice.
+    trunc=#m+#trace<original_bytes
     -- Notice is part of the combined bounded message/traceback.
     m=m..notice
     result.data_preserved=false
