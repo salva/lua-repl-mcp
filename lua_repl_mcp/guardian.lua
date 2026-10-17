@@ -245,7 +245,7 @@ function B:execute(w,input,deadline,original,checkpoint)
  return self:execute_owned(w,args,deadline,original)
 end
 -- Internal ownership-transfer seam for the manager's detached, fully validated
--- library request. Never used for caller-owned data or network originals.
+-- request or immutable original validated before admission. Never caller-owned data.
 -- Direct execute above retains complete validation; child validation is unchanged.
 function B:execute_owned(w,args,deadline,original)
  if w.state~='idle' then return nil,'worker not idle' end

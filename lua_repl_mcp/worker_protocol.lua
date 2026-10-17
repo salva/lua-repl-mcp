@@ -43,16 +43,21 @@ local function valid_error(e)
  return true
 end
 -- The complete original body remains JSON data; public IDs never dispatch work.
-function M.execution_input(v,limits,checkpoint)
- if v.request then
-  if v.input then return nil,'conflicting execution representation' end
-  local r=c.json_value(v.request,checkpoint)
-  if not r or c.json_bytes(v.request)>(limits and limits.input_bytes or 16*1048576) or
+function M.execution_arguments(request,limits,checkpoint)
+  local r=c.json_value(request,checkpoint)
+  if not r or c.json_bytes(request)>(limits and limits.input_bytes or 16*1048576) or
    r.jsonrpc~='2.0' or r.method~='tools/call' or type(r.params)~='table' or
    r.params.name~='session_execute' then return nil,'invalid original request' end
   local a=require('lua_repl_mcp.contracts').validate('session_execute',r.params.arguments,
    {max_depth=limits and limits.max_depth or 128,max_bytes=math.huge,checkpoint=checkpoint})
   if not a then return nil,'invalid original arguments' end
+  return a
+end
+function M.execution_input(v,limits,checkpoint)
+ if v.request then
+  if v.input then return nil,'conflicting execution representation' end
+  local a,e=M.execution_arguments(v.request,limits,checkpoint)
+  if not a then return nil,e end
   return {code=a.code,args=a.args}
  end
  if not v.input then return nil,'missing execution representation' end

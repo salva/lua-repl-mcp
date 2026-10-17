@@ -64,10 +64,10 @@ function C:dispatch(s,a,r)
  s.execution=e; s.generation=e.generation; r.execution=e
  if a.wait_timeout_ms~=null then r.deadline=e.dispatch_at+a.wait_timeout_ms/1000 end
  local ok,generation,err=pcall(function()
-  if not r.original and self.backend.execute_owned then
+  if self.backend.execute_owned then
    -- contracts.validate detached this complete request at acceptance. Transfer
-   -- its execution data, rather than traversing and copying it a second time.
-   return self.backend:execute_owned(s.worker,{code=a.code,args=a.args},e.deadline)
+   -- its execution data or validated immutable original without a second pass.
+   return self.backend:execute_owned(s.worker,{code=a.code,args=a.args},e.deadline,r.original)
   end
   return self.backend:execute(s.worker,{code=a.code,args=a.args},e.deadline,r.original,r.checkpoint)
  end)
@@ -96,7 +96,15 @@ end
 function C:accept(tool,input,request_id,original,checkpoint,validation_only)
  assert(not self.committing,'response commit must not reenter manager')
  self:refresh()
- local a,err=contracts.validate(tool,input,{max_depth=self.limits.max_depth,max_bytes=not original and self.limits.input_bytes or math.huge,checkpoint=checkpoint})
+ local a,err
+ if original and tool=='session_execute' then
+  -- Resolve and validate the immutable authoritative body BEFORE admission.
+  -- The mirror may transfer it directly, including deferred startup dispatch.
+  a,err=require('lua_repl_mcp.worker_protocol').execution_arguments(original,self.limits,checkpoint)
+  if not a then err=errors.new('invalid_arguments',tostring(err),'validation','not_started') end
+ else
+  a,err=contracts.validate(tool,input,{max_depth=self.limits.max_depth,max_bytes=self.limits.input_bytes,checkpoint=checkpoint})
+ end
  -- Validation may relinquish control in a native adapter. Refresh again before
  -- admission/dispatch; no ID, slot or execution was reserved while suspended.
  if checkpoint then self:refresh() end
