@@ -1,0 +1,409 @@
+{
+  "toolInvocations": [
+    {
+      "tool": "mcp_server_control",
+      "params": {
+        "serverName": "lua",
+        "action": "start"
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "serverName": "lua",
+          "status": "running",
+          "toolCount": 5
+        }
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": " "
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/all"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/all"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/all"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/all"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/all"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "create_session"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/all"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/all"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/all"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/all"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/all"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_tools",
+      "params": {
+        "serverName": "lua",
+        "toolName": "/all"
+      },
+      "result": {
+        "success": false,
+        "error": "MCP tool not found."
+      }
+    },
+    {
+      "tool": "mcp_server_control",
+      "params": {
+        "serverName": "lua",
+        "action": "stop"
+      },
+      "result": {
+        "success": true,
+        "data": {
+          "serverName": "lua",
+          "status": "stopped",
+          "toolCount": 0
+        }
+      }
+    }
+  ],
+  "restart": null
+}
