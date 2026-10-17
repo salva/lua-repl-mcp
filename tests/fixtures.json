@@ -919,5 +919,21 @@
     "deadline": 120,
     "run": true,
     "expected_status": 0
+  },
+  {
+    "path": "u13_handler_depth.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 30,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u13_startup_handoff.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 30,
+    "run": true,
+    "expected_status": 0
   }
 ]
