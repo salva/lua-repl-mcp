@@ -10,7 +10,7 @@ end
 -- The values budget is not a payload/envelope budget. In particular metadata
 -- must not make an otherwise legal maximum values array fail wrapping.
 function M.tool_result(payload,options)
-  options=options or {max_bytes=64*1048576,max_depth=160}
+  options=options or {max_bytes=128*1048576,max_depth=160}
   local text,err=codec.encode(payload,options)
   if not text then return nil,err end
   return {structuredContent=payload,content=codec.array({{type='text',text=text}}),isError=payload.error~=nil}
@@ -18,14 +18,14 @@ end
 -- Budget the entire frame before any write or single-consumer commitment.
 -- A replacement does not claim the original result: callers must preserve it.
 function M.encode_result(id,payload,options)
-  options=options or {max_bytes=64*1048576,max_depth=160}
+  options=options or {max_bytes=128*1048576,max_depth=160}
   local result=M.tool_result(payload,options)
   local encoded=result and codec.encode({jsonrpc='2.0',id=id,result=result},options)
   if encoded then return encoded,true end
   local errors=require('lua_repl_mcp.errors')
   result=M.tool_result(errors.failure(errors.new('limit_exceeded',
     'Complete response exceeds configured bound','serialization','completed')),
-    {max_bytes=64*1048576,max_depth=160})
+    {max_bytes=128*1048576,max_depth=160})
   local fallback,err=codec.encode({jsonrpc='2.0',id=id,result=result},options)
   return fallback,false,err
 end

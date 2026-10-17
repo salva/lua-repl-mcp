@@ -17,7 +17,7 @@ local function check(I,R,escaped)
   errors.failure(errors.new('result_serialization_error',string.rep('\\',D+1),'serialization','completed',nil,D)),
   {status='killed',process_exit_confirmed=false,notice='Worker exit was not confirmed; external side effects may continue. Descendant termination is not guaranteed.'},
   {error={code='stdio_setup_failed',message='setup',created_files=c.array({'/'..string.rep('p',I//2)}),created_files_complete=false}},
-  {sessions=c.array({{session_id='session-1-1',cwd='/'..string.rep('c',2*I),session_status='idle'}})}
+  {sessions=c.array({{session_id='session-1-1',cwd='/'..string.rep('c',R//2),session_status='idle'}})}
  }
  for i,payload in ipairs(payloads) do
   local encoded,original=assert(p.encode_result(request.id,payload,{max_bytes=R,max_depth=160}))
@@ -32,5 +32,5 @@ local function check(I,R,escaped)
 end
 check(4096,16000,false); check(4096,16000,true)
 -- Default maximum ID plus diagnostics/notices: no max-values fit claim.
-check(16*1048576,64*1048576,false)
+check(16*1048576,require('lua_repl_mcp.limits').connection().response_bytes,false)
 print('PASS max_legal_ID_errors_notices_metadata_duplicate_equality_and_fallback')

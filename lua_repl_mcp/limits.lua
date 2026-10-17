@@ -26,7 +26,7 @@ function M.admission(options)
   return result
 end
 -- A configured budget is shared by the manager, exec worker and transport.
--- Defaults remain normative, including their separately documented fit conflict.
+-- SPEC14.4 floors apply uniformly before backend construction.
 function M.authored(r)
  local v={}
  for _,k in ipairs({'input_bytes','values_bytes','diagnostic_bytes','max_depth',
@@ -35,7 +35,7 @@ function M.authored(r)
 end
 function M.connection(options)
  local r={input_bytes=16*1048576,values_bytes=16*1048576,diagnostic_bytes=65536,
-  max_depth=128,worker_bytes=20*1048576,response_bytes=64*1048576,output_bytes=128*1048576}
+  max_depth=128,worker_bytes=64*1048576,response_bytes=128*1048576,output_bytes=256*1048576}
  assert(options==nil or type(options)=='table','limits must be a table')
  for k,v in pairs(options or {}) do
   assert(r[k]~=nil,'unknown connection limit')
@@ -44,20 +44,23 @@ function M.connection(options)
  end
  M.evaluator{max_bytes=r.values_bytes,max_depth=r.max_depth,diagnostic_bytes=r.diagnostic_bytes}
  assert(r.max_depth<=512,'configured depth exceeds supported encoder depth')
- -- 64 KiB headroom bounds fixed envelopes, generation numbers and notices.
- -- Diagnostic UTF-8 text costs at most 6x in JSON; public text duplication
- -- costs at most 3x encoded payload. Encoded JSON re-escape costs <=2x.
- r.worker_required=math.max(r.input_bytes,r.values_bytes,6*r.diagnostic_bytes)+65536
- r.response_required=r.input_bytes+3*math.max(r.values_bytes,6*r.diagnostic_bytes)+65536
- assert(r.worker_bytes>=r.worker_required,'worker budget cannot hold configured payload')
- assert(r.output_bytes>=r.response_bytes+1,'output must hold response plus newline')
- local defaults=r.input_bytes==16*1048576 and r.values_bytes==16*1048576 and
-  r.diagnostic_bytes==65536 and r.max_depth==128 and r.worker_bytes==20*1048576 and
-  r.response_bytes==64*1048576 and r.output_bytes==128*1048576
- if not defaults then
-  assert(r.response_bytes>=r.response_required,'response budget cannot hold configured payload and ID')
+ -- Check every intermediate against the supported capacity ceiling before
+ -- multiplying/adding; no wrapped arithmetic or default-only exceptions.
+ local ceiling=2147483647
+ local function add(a,b)
+  assert(a<=ceiling-b,'coupled capacity overflow')
+  return a+b
  end
- r.default_fit_unresolved=defaults
+ local function mul(a,b)
+  assert(a<=ceiling//b,'coupled capacity overflow')
+  return a*b
+ end
+ local H=1048576
+ r.worker_required=add(add(add(r.input_bytes,r.values_bytes),mul(r.diagnostic_bytes,6)),H)
+ r.response_required=add(add(r.input_bytes,mul(r.worker_required,3)),H)
+ assert(r.worker_bytes>=r.worker_required,'worker budget cannot hold configured payload')
+ assert(r.response_bytes>=r.response_required,'response budget cannot hold configured payload and ID')
+ assert(r.output_bytes>=add(r.response_bytes,1),'output must hold response plus newline')
  return r
 end
 return M

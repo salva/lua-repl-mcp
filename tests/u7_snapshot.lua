@@ -8,7 +8,7 @@ function b:execute(w) w.state='running'; return 1 end
 function b:step() end
 function b:shutdown() return true end
 local m=manager.new{supervisor=b,limits={input_bytes=4096,values_bytes=1024,
- diagnostic_bytes=256,max_depth=8,worker_bytes=69632,response_bytes=74240,output_bytes=74241}}
+ diagnostic_bytes=256,max_depth=8,worker_bytes=1055232,response_bytes=4218368,output_bytes=4218369}}
 local r=m:accept('session_create',{})
 local v=m:commit(r,function() return true end); local id=v.session_id
 local run=m:accept('session_execute',{session_id=id,code='',wait_timeout_ms=0})
@@ -18,7 +18,7 @@ s.worker.state='idle'; s.worker.result={status='completed',values=c.array({null,
 m:refresh()
 -- Oversized ownership metadata must not turn snapshotting into serialization,
 -- nor consuming a preflight replacement into consuming the retained result.
-s.execution.payload.notice=string.rep('c',80000)
+s.execution.payload.notice=string.rep('c',5*1048576)
 local t=transport.new(m,{read=function() return nil,'again' end,write=function() return nil,'again' end})
 t:submit('overflow','session_wait',{session_id=id,wait_timeout_ms=0})
 assert(t:step(function() end) and not t.closed)

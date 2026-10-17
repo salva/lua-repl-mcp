@@ -7,7 +7,7 @@ function M.new(manager,io,o)
  o=o or {}
  assert(type(o)=='table','transport options must be a table')
  local source=manager.limits or {}
- local bounds={input_bytes=source.input_bytes or 16*1048576,response_bytes=source.response_bytes or 64*1048576,output_bytes=source.output_bytes or 128*1048576}
+ local bounds={input_bytes=source.input_bytes or 16*1048576,response_bytes=source.response_bytes or 128*1048576,output_bytes=source.output_bytes or 256*1048576}
  for k,v in pairs(o) do
   assert(bounds[k]~=nil,'unknown transport option')
   assert(math.type(v)=='integer' and v>0 and v<=2147483647,'invalid transport bound')

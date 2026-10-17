@@ -22,7 +22,7 @@ function M.serve(adapter,options)
     end
     frames.limit=options.input_bytes or frames.limit
     local read_bytes=options.read_bytes or 65536
-    local response_bytes=options.response_bytes or 64*1048576
+    local response_bytes=options.response_bytes or 128*1048576
     local eval_options=require('lua_repl_mcp.limits').evaluator(options.evaluator)
     assert(options.instructions==nil or (type(options.instructions)=='string' and codec.valid_utf8(options.instructions)),'invalid instructions')
     assert(type(adapter)=='table','invalid adapter')

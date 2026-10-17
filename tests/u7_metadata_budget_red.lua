@@ -7,10 +7,10 @@ local b={clock=function() return 0 end,cwd='/'}
 function b:allocate(o) return {state='idle',cwd=o.cwd,created_paths={}} end
 function b:step() end
 function b:shutdown() return true end
-local limits={input_bytes=4096,values_bytes=1024,diagnostic_bytes=256,max_depth=8,
- worker_bytes=69632,response_bytes=74240,output_bytes=74241}
+local limits={input_bytes=131072,values_bytes=1024,diagnostic_bytes=256,max_depth=8,
+ worker_bytes=1182208,response_bytes=4726272,output_bytes=4726273}
 local m=manager.new{supervisor=b,limits=limits}
-local cwd='/'..string.rep('d',1999)
+local cwd='/'..string.rep('d',99999)
 for i=1,64 do
  local args={cwd=cwd}
  local input=assert(codec.encode({jsonrpc='2.0',id=i,method='tools/call',
@@ -22,7 +22,7 @@ local t=transport.new(m,{read=function() return nil,'again' end,
  write=function() return nil,'again' end})
 t:submit('list','session_list',{})
 local payload=t.pending[1].request.response
-local raw=assert(codec.encode(payload,{max_bytes=1024*1024,max_depth=40}))
+local raw=assert(codec.encode(payload,{max_bytes=8*1048576,max_depth=40}))
 assert(#raw>limits.response_bytes)
 local ok,err=pcall(t.step,t,function() end)
 print('MEASURE sessions=64 cwd_bytes='..#cwd..' list_payload='..#raw..

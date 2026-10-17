@@ -468,3 +468,134 @@ Max-ID follow-up uses full default65536-byte diagnostic source budgets (quote,
 NUL and above-bound backslash/truncation), not only the256-byte configured
 case. The same six maximum-default-ID cases pass with exact echoed ID and
 compatibility equality; configured ASCII/backslash ID cases retain D256.
+
+## Current acceptance refresh: approved a7a658b capacities (supersedes old blocker)
+
+Operator correction in SPEC14.4, PLAN U7 and workflows/LIMITS_CHANGE.md resolves
+rather than waives the historical194-byte default-fit defect. Earlier sections
+are historical, including old20/64/128MiB limits and owner-decision statements.
+Current production defaults are worker67108864, response134217728,
+output268435456; input/encoded values16777216, diagnostics65536, depth128 and
+admission64/256/32/eight kill-only unchanged. Timeouts unchanged.
+
+`limits.connection` uniformly checks H1048576, B=I+V+6D+H,
+worker>=B, response>=I+3B+H, output>=response+1. Every addition and multiplication
+checks against supported ceiling2147483647 *before* arithmetic. Impossible
+coupling fails before manager backend construction/allocation. The old default
+exemption and unresolved-fit flag are removed. At defaults B34996224 and
+response floor122814464. Input maximum legal ID is not shortened. Public/private
+protocol, transport fallback and pure-Lua handler response defaults are updated;
+no manager/native imports added to handler.
+
+### Mathematical scope and independent owning review
+
+An encoded legal ID occupies <=I bytes, without another quoting layer. JSON
+payload P quoted as compatibility text costs <=2P+2: encoded JSON contains no
+literal control bytes and only quotes/backslashes expand. Structured content
+plus equal text costs <=3P+2. Every raw diagnostic byte costs <=6 encoded bytes;
+truncation includes the loss notice. Worker/result fixed fields, finite integer
+IDs/status/booleans and static notices fit far below H. Input-derived fields
+and values plus diagnostics are deliberately summed even for mutually exclusive
+branches, so B bounds these single-call payloads with H spare; then I+3B+H
+bounds duplicated public payload/envelope and encoded ID. Default successful
+maximum result now fits, not merely a limit_exceeded replacement. Exact private,
+values, payload and complete-response encoders remain required: floors are not
+permission to create unbounded fields or skip pre-consumption checks.
+
+Aggregate session_list metadata is different: at most S admitted live entries,
+with strings bounded by admitted input/worker frames; S*(max(I,W)+512)+32 is
+finite but may exceed a configured single-response capacity. Such non-consuming
+aggregate response uses exact bounded complete-response fallback, not claimed
+original delivery. Snapshot structure shares immutable strings and copies owned
+validated JSON trees, no premature response-bound assert. This independent
+finding remains repaired. Audit found that a corrupt worker could previously
+send arbitrarily many distinct file_created notices during startup, invalidating
+the earlier 'at most two paths' assumption despite each frame being bounded.
+Supervisor now rejects the third notice at its owning receive boundary; normal
+worker emits only stdout/stderr paths. `u7_metadata_flood.lua` confirms two
+retained entries, handshake_failed on third, inert later notices. This is a
+bounded-metadata repair required by the current SPEC, not just a proof assumption.
+
+Reviewed defaults/overrides, before-allocation validation, private/public/input
+separation, accepted/rejected admission, cancellation no-slot, slot release,
+original/replacement precommit, failed send retention, output cleanup inside and
+outside commitment, malformed/flooded worker notices and timers/control under
+saturation. No narrowing of legal IDs, result allowances or handler semantics.
+
+### Current executable acceptance map
+
+| Gate | Current tests |
+| --- | --- |
+| Actual defaults, same floors, -1/at/+1, checked incompatible capacities | u7_approved_limits_red.lua (preserved unchanged), u7_configuration.lua |
+| Sessions including starting/terminating, ordinary/control/kill reserve; reject before dispatch | u7_bounds_red.lua, u7_admission.lua, u7_pending_ownership.lua, u7_fairness_process.lua |
+| Cancellation without slot; rejection/cancel churn bounded | u7_pending_flood_red.lua, u7_pending_ownership.lua, u7_fairness_process.lua |
+| Default worker/input below/at/above before decode/storage | u7_frame_budgets.lua; worker67108863/67108864/67108865 |
+| Input/response/retained-output exact boundary semantics | u7_boundaries.lua, u7_transport.lua (small explicit output scale) |
+| Default near16MiB backslash/control/quote values, diagnostics/depth +/- | u7_adversarial.lua, u7_encoding_red.lua, u7_maximum_process.lua |
+| Maximum legal ID plus maximum escape-heavy values, **production default encoder** | u7_default_maximum.lua; original success67109058, bound134217728; input/value16777216 |
+| Historical old64MiB failure retained | u7_coupled_defaults_red.lua unchanged, still intentionally exits1 with excess194; NOT current-default failure |
+| Full diagnostic expansion/notice/artifact/aggregate cases, maximum IDs, equal compatibility text | u7_max_id.lua; refreshed default response bound |
+| Metadata fallback without snapshot exception; no consumption on replacement | u7_metadata_budget_red.lua, u7_snapshot.lua |
+| Metadata production itself bounded under corrupt worker traffic | u7_metadata_flood.lua |
+| Values/input distinct, real exec configurations and >16MiB result | u7_configuration_process.lua, u7_large_configuration_process.lua (20MiB) |
+| Real256 saturated waits/control flood/kill/cancel/timer fairness | u7_fairness_process.lua |
+| Fragmented actual workers, slow/stopped actual client pipes, short writes/EPIPE, cleanup startup/execution/transmission, unrelated worker survives | u7_process.py, u4_process.py, u5_process.py, u6_process.py |
+| Pure-Lua handler isolation/short-output/parent continuation | u2.lua; handler imports unchanged; larger response default only |
+| Schemas/examples/errors preserved | docs/check_contracts.py, U5/U6 schema-validated real responses |
+
+Valid fixture floors updated rather than granting legacy configurations an
+exception. Configurations I512/V1024/D256: B1051648/R4204032/O4204033;
+I1024/V2048/D512: B1054720/R4213760/O4213761. Metadata reproducer now uses
+I131072,100000-byte cwd to keep its original *behavioral* overflow branch under
+valid floors: list6407301/R4726272; original old135301/74240 evidence remains
+historical. Snapshot overflow notice5MiB keeps precommit-retention branch live.
+Two attempted refresh sizes were insufficient to reach these overflow branches
+(60k cwd aggregate below new4.46MiB response,2MiB notice below new4.22MiB response).
+Those failed fixture checks were corrected and rerun; no production budget
+check weakened. The approved-default reproducer is unchanged.
+
+### Exact rerun recipes and downstream refresh boundary
+
+Use project-local native paths:
+
+```sh
+export LUA_PATH='./?.lua;./?/init.lua;./.luarocks/share/lua/5.4/?.lua;./.luarocks/share/lua/5.4/?/init.lua;;'
+export LUA_CPATH='./.luarocks/lib/lua/5.4/?.so;;'
+lua5.4 tests/u7_approved_limits_red.lua
+lua5.4 tests/u7_configuration.lua
+lua5.4 tests/u7_configuration_red.lua
+lua5.4 tests/u7_metadata_budget_red.lua
+lua5.4 tests/u7_snapshot.lua
+lua5.4 tests/u7_metadata_flood.lua
+lua5.4 tests/u7_default_maximum.lua
+lua5.4 tests/u7_max_id.lua
+for t in bounds_red admission pending_flood_red pending_ownership transport boundaries frame_budgets encoding_red adversarial; do lua5.4 tests/u7_$t.lua; done
+python3 tests/u7_process.py
+python3 tests/u4_process.py
+python3 tests/u5_process.py
+python3 tests/u6_process.py
+lua5.4 tests/u2.lua
+python3 docs/check_contracts.py
+git diff --check
+```
+
+Historical test must be run separately and interpreted as expected nonzero,
+never appended to a green batch and hidden by its last command. Buffer high-water
+measurements count retained buffers, not constant RSS; real schedule samples do
+not enumerate every schedule. Watchdogs clean process groups; disposable files
+remain under a purpose-named card-work child.
+
+U8 owner refresh at the committed U7 HEAD: rerun `python3 tests/u8_stdio_red.py`,
+`python3 tests/u8_live.py` and `lua5.4 tests/u8_direct_host.lua` with native paths;
+check initialized lifecycle, all tools, cancelled waits/single consumption,
+large response framing and parent handoff with corrected defaults. Previous U8
+results against older production defaults do not prove this refresh. U9 owner:
+rerun `sh tests/u9_installed.sh` from checkout with a fresh purpose-named
+SAIVAGE_CARD_WORK_ROOT child (script's u9-clean-reproducer/rocks must not exist),
+then run U8 live tests against that installed CLI. Confirm installed modules and
+worker exec use64/128/256MiB, no checkout path leakage, embedded host/thread and
+parent policy preserved. No packaging artifacts/runtime replacement done here.
+U10/actual Saivage isolated agent acceptance and sanitized defect reporting stay
+with their owning workflow; this U7 result neither substitutes for actual
+Saivage evidence nor restarts/patches shared runtime. Existing independent U8-U10
+findings must be retained and assessed against this committed source delta.

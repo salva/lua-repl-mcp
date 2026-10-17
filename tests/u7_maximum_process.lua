@@ -56,7 +56,7 @@ for _,depth in ipairs({127,128,129}) do
 end
 assert(not t.closed)
 print('MEASURE worker_buffer_high_water='..m.backend.buffer_high_water..
- ' worker_bound=20971520 command_high_water='..m.backend.pending_high_water)
+ ' worker_bound=67108864 command_high_water='..m.backend.pending_high_water)
 print('MEASURE default_quote_values=16777216 response_with_newline='..n..
  ' output_high_water='..t.high_water..' bound='..t.output_bytes)
 t:close('complete'); x.u.close(rd); x.u.close(wr)

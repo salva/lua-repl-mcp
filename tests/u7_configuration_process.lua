@@ -4,9 +4,9 @@ local transport=require('lua_repl_mcp.client_transport')
 local x=require('lua_repl_mcp.worker_posix')
 local c=require('lua_repl_mcp.codec')
 local small={input_bytes=512,values_bytes=1024,diagnostic_bytes=256,max_depth=8,
- worker_bytes=69632,response_bytes=74240,output_bytes=74241}
+ worker_bytes=1051648,response_bytes=4204032,output_bytes=4204033}
 local large={input_bytes=1024,values_bytes=2048,diagnostic_bytes=512,max_depth=16,
- worker_bytes=73728,response_bytes=82944,output_bytes=82945}
+ worker_bytes=1054720,response_bytes=4213760,output_bytes=4213761}
 local function run(config)
  local m=manager.new{limits=config}
  local rd,wr=assert(x.u.pipe()); x.nonblock(rd); x.nonblock(wr)

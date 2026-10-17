@@ -1,6 +1,6 @@
 -- Private protocol, deliberately independent of POSIX and public MCP framing.
 local c=require('lua_repl_mcp.codec')
-local M={version=1,max_frame=20*1024*1024}
+local M={version=1,max_frame=64*1024*1024}
 local fields={
  file_created={path='string'}, ready={cwd='optional_string'},
  startup_error={reason='string',message='string'},

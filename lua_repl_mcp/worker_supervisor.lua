@@ -82,6 +82,9 @@ function S:receive(w,v)
  if v.allocation_generation~=w.allocation_generation then return self:abort(w,'handshake_failed') end
  if w.state=='starting' then
   if v.type=='file_created' then
+   -- Only stdout/stderr creation notices are legal. Bound retained metadata
+   -- even if a corrupt worker sends distinct paths indefinitely.
+   if #w.created_paths>=2 then return self:abort(w,'handshake_failed') end
    if v.path:sub(1,1)~='/' then return self:abort(w,'handshake_failed') end
    for _,path in ipairs(w.created_paths) do if path==v.path then return self:abort(w,'handshake_failed') end end
    w.created_paths[#w.created_paths+1]=v.path
