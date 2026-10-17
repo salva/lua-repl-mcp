@@ -14,11 +14,13 @@ end
 local function copy(t) return assert(codec.clone(t)) end
 function M.new(o)
  o=o or {}; serial=serial+1
+ local admission=require('lua_repl_mcp.limits').admission(o.admission)
  local backend=o.supervisor or require('lua_repl_mcp.worker_supervisor').new(o)
  return setmetatable({backend=backend,clock=o.clock or backend.clock,
-  requests={},sessions={},order={},starting={},next_id=0,prefix='session-'..serial..'-',closed=false},C)
+  admission=admission,slots={ordinary=0,control=0,kill=0},requests={},sessions={},order={},starting={},next_id=0,prefix='session-'..serial..'-',closed=false},C)
 end
 function C:allocate(options)
+ if #self.order>=self.admission.sessions then return nil end
  self.next_id=self.next_id+1
  local id=self.prefix..self.next_id
  local s={id=id,worker=self.backend:allocate(options or {}),generation=0,
@@ -53,11 +55,26 @@ function C:dispatch(s,a,r)
  -- Zero execution is acceptance, even when a backend completes immediately.
  if a.wait_timeout_ms==0 then r.response=envelope(s,{status='running'}) end
 end
+-- Slots belong to opaque handles, not just JSON-RPC IDs. Release exactly once
+-- on cancellation or commitment, including commits that immediately disconnect.
+function C:release(r)
+ if r.slot and not self.closed then self.slots[r.slot]=self.slots[r.slot]-1; r.slot=nil end
+end
+function C:admit(r,tool)
+ local slot='ordinary'
+ if tool=='session_list' or tool=='session_kill' or tool=='ping' then
+  if self.slots.control<self.admission.control-self.admission.kill_reserve then slot='control'
+  elseif tool=='session_kill' and self.slots.kill<self.admission.kill_reserve then slot='kill'
+  else return false end
+ elseif self.slots.ordinary>=self.admission.ordinary then return false end
+ self.slots[slot]=self.slots[slot]+1; r.slot=slot; return true
+end
 function C:accept(tool,input,request_id)
  assert(not self.committing,'response commit must not reenter manager')
  self:refresh()
  local a,err=contracts.validate(tool,input)
  local r={tool=tool,accepted_at=self.clock()}
+ if not self:admit(r,tool) then r.response=failure('limit_exceeded'); return r end
  if request_id~=nil then self:bind(request_id,r) end
  if a and tool~='session_create' and tool~='session_execute' and tool~='session_wait' and tool~='session_list' and tool~='session_kill' then
   r.response={error=errors.new('invalid_arguments','unknown manager tool','validation','not_started')}; return r
@@ -78,6 +95,7 @@ function C:accept(tool,input,request_id)
  local s
  if tool=='session_create' or (tool=='session_execute' and a.session_id==null) then
   s=self:allocate(tool=='session_create' and a or a.create_options)
+  if not s then r.response=failure('limit_exceeded'); return r end
   r.creation=true
  else s=self.sessions[a.session_id] end
  if not s then
@@ -134,7 +152,7 @@ function C:cancel(id)
  if not r.starting and not r.killing and (e and e.status~='running') then
   self.requests[id]=nil; return false
  end
- self.requests[id]=nil; r.cancelled=true
+ self.requests[id]=nil; r.cancelled=true; self:release(r)
  if r.session and not r.killing then
   if r.starting then r.starting=nil; r.input=nil end
   self:terminate(r.session,'request_cancelled')
@@ -242,7 +260,7 @@ function C:commit(r,send)
  self.committing=false
  if not ok then return nil,accepted end
  if not accepted then return nil,'response not committed' end
- r.done=true
+ r.done=true; self:release(r)
  if r.request_id~=nil then self.requests[r.request_id]=nil end
  if e then e.payload=nil; e.consumed=true end
  return response
@@ -250,6 +268,7 @@ end
 function C:disconnect()
  assert(not self.committing,'response commit must not reenter manager')
  self.closed=true
+ self.slots={ordinary=0,control=0,kill=0}
  for _,r in pairs(self.requests) do r.cancelled=true end
  self.requests={}
  for _,s in ipairs(self.order) do

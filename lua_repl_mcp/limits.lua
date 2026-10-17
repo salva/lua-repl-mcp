@@ -13,4 +13,16 @@ function M.evaluator(options)
   assert(result.diagnostic_bytes>=minimum_diagnostics,'diagnostic limit cannot hold loss notice')
   return result
 end
+-- Admission bounds are validated before constructing a backend or allocating.
+function M.admission(options)
+  local result={sessions=64,ordinary=256,control=32,kill_reserve=8}
+  for k,v in pairs(options or {}) do
+    assert(result[k]~=nil,'unknown admission limit')
+    assert(math.type(v)=='integer' and v>0,'admission limits must be positive integers')
+    result[k]=v
+  end
+  assert(result.kill_reserve>=8 and result.control>=result.kill_reserve,
+    'control capacity must include at least eight kill-only slots')
+  return result
+end
 return M
