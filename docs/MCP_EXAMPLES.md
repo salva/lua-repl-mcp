@@ -29,6 +29,23 @@ The version string is illustrative, not a release commitment. A direct handler
 advertises `repl_execute` and `repl_close`, with instructions appropriate to its
 host rather than managed-session lifecycle instructions.
 
+### Reproducible discovery and schema check
+
+From the repository root, with Python 3 and `jsonschema==4.19.2` installed:
+
+```sh
+python3 docs/check_contracts.py
+```
+
+This expands all fourteen input/output schemas without external references,
+validates manager and direct-handler `tools/list` results against the official
+MCP 2025-11-25 `Tool` and `ListToolsResult` schemas, checks the JSON examples
+below, and runs positive/negative regression fixtures. The official schema is
+downloaded from a pinned upstream commit and SHA-256 checked. For offline use,
+pass `--mcp-schema PATH` with that exact downloaded file. Use `--discovery` to
+print the two validated discovery result objects. This is a documentation
+contract check, not a live-server test. Defaults remain runtime responsibilities.
+
 ## Allocate and execute synchronously
 
 ```json
@@ -84,12 +101,14 @@ same MCP result form above with a text copy and the stated `isError` value.
 
 A second wait after consumption has `isError: true` even though execution succeeded:
 
+<!-- schema: session_wait_output -->
 ```json
 {"session_id":"s2","session_status":"idle","session_usable":true,"status":"completed","error":{"code":"result_unavailable","message":"The result was already returned and consumed.","stage":"validation","execution_state":"completed"}}
 ```
 
 A second execution while busy has `isError: true`; the new code did not run:
 
+<!-- schema: session_execute_output -->
 ```json
 {"session_id":"s2","session_status":"running","session_usable":true,"status":"running","error":{"code":"session_busy","message":"Wait for this session or use another session.","stage":"validation","execution_state":"not_started"}}
 ```
@@ -101,6 +120,7 @@ counter = (counter or 0) + 1
 return function() end
 ```
 
+<!-- schema: session_execute_output -->
 ```json
 {"session_id":"s1","session_status":"idle","session_usable":true,"status":"failed","error":{"code":"result_serialization_error","message":"Execution completed and its effects remain. A function cannot be returned as JSON. Do not rerun automatically.","stage":"serialization","execution_state":"completed","path":"/values/0"}}
 ```
@@ -113,12 +133,14 @@ return function() end
 
 Successful structured content (`isError: false`):
 
+<!-- schema: session_kill_output -->
 ```json
 {"session_id":"s2","status":"killed","session_usable":false,"process_exit_confirmed":true}
 ```
 
 Exceptional best-effort cleanup is also successful:
 
+<!-- schema: session_kill_output -->
 ```json
 {"session_id":"s2","status":"killed","session_usable":false,"process_exit_confirmed":false,"notice":"The managed session was removed, but OS process exit was not confirmed; the process may remain alive."}
 ```
@@ -140,6 +162,7 @@ nothing; use `session_kill`. A normal wait deadline is not cancellation.
 
 `session_list` with `{}` returns (`isError: false`):
 
+<!-- schema: session_list_output -->
 ```json
 {"sessions":[{"session_id":"s1","session_status":"idle","execution_status":"failed","result_available":false,"cwd":"/work/project"}]}
 ```
@@ -153,7 +176,12 @@ Consumed results and closed sessions are not history. Empty managers return
 {"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"repl_execute","arguments":{"code":"local x = ...; host_value = x; return host_value","args":[7]}}}
 ```
 
-Successful structured content: `{"status":"completed","values":[7]}`.
+Successful structured content:
+
+<!-- schema: repl_execute_output -->
+```json
+{"status":"completed","values":[7]}
+```
 There is no session ID or asynchronous mode. No output is captured automatically.
 
 ```json

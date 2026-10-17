@@ -935,9 +935,13 @@ as a real MCP tool, not merely an internal function.
 In `schemas/api.json`, `$defs/<tool_name>` is the input schema and
 `$defs/<tool_name>_output` is its structured-result schema. Resolve/integrate
 references before publishing; every advertised tool schema must be independently
-usable. Schema defaults are descriptive: the implementation must apply them.
+usable, with an explicit root `type: object`, including reference wrappers.
+Schema defaults are descriptive: the implementation must apply them.
 JSON Schema does not enforce numeric lexical precision, UTF-8 correctness,
-session state, or exclusive file creation; runtime checks enforce those rules.
+session state, equality of an echoed ID to a prior request, or exclusive file
+creation; runtime checks enforce those rules. Run `python3 docs/check_contracts.py`
+to check schema expansion, official MCP discovery compatibility, examples, and
+negative regressions (setup and offline usage are in `MCP_EXAMPLES.md`).
 Set `isError: true` exactly when a tool payload contains `error`; normal pending,
 completed, closing, creation, listing, and best-effort kill results use false.
 
@@ -991,13 +995,14 @@ Execution/wait responses use `status: running|completed|failed` to describe
 execution, not success of retrieving its result. An operation error may retain
 `status: completed` (result already consumed) or `status: running` (session busy).
 When no execution can be identified, omit status. MCP `isError` reports the
-tool operation's success independently. Manager responses for a known session
+tool operation's success independently. Manager execution/wait responses for a known session
 also include `session_id`, `session_status`, and `session_usable`; direct-handler
 responses omit session metadata. Terminal success includes `values` (ordered
 JSON array). Errors omit values and include `error`. Error-free completed
 responses require values; pending responses include neither values nor error.
 No output-capture field exists. Unknown-session errors echo the supplied ID but
-omit session status and set session_usable false. Validation/creation errors
+omit both session status and execution status and set session_usable false.
+Validation/creation errors
 before a session exists omit all session metadata.
 
 An error contains `code`, `message`, `stage`, and `execution_state`.
@@ -1019,7 +1024,8 @@ Additional optional error fields are `exit_code` (nonnegative integer),
 `created_files_complete` (boolean), `truncated` (boolean),
 `invalid_bytes_escaped` (boolean), and `process_exit_confirmed` (boolean).
 The last field also appears on execution responses affected by process cleanup.
-`notice` carries the readable explanation for unconfirmed exit. Only include
+Top-level `notice` must be a nonempty string explaining unconfirmed exit whenever
+`process_exit_confirmed` is false at the top level or inside `error`. Only include
 OS exit information actually observed; never infer a signal from EOF alone.
 Diagnostic bounds cover the combined message and traceback after invalid-byte
 escaping; reserve space for the truncation notice and flags.

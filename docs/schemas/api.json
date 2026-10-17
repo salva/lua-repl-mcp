@@ -16,7 +16,7 @@
         "stderr_path": { "type": "string", "minLength": 1 }
       }
     },
-    "session_create": { "$ref": "#/$defs/creationOptions" },
+    "session_create": { "type": "object", "$ref": "#/$defs/creationOptions" },
     "session_execute": {
       "type": "object", "additionalProperties": false, "required": ["code"],
       "properties": {
@@ -82,25 +82,53 @@
       }
     },
     "session_create_output": {
+      "type": "object",
+      "properties": { "status": { "not": {} }, "session_usable": { "not": {} }, "sessions": { "not": {} } },
+      "if": { "required": ["error"] },
+      "then": { "properties": { "session_id": false, "session_status": false } },
       "allOf": [{ "$ref": "#/$defs/result" }, { "anyOf": [{ "required": ["error"] }, { "required": ["session_id", "session_status"], "not": { "required": ["status"] } }] }]
     },
     "session_execute_output": {
-      "allOf": [{ "$ref": "#/$defs/result" }, { "anyOf": [{ "required": ["error"] }, { "required": ["status", "session_id", "session_status", "session_usable"], "properties": { "status": { "enum": ["running", "completed"] } } }] }]
+      "type": "object",
+      "properties": { "status": { "enum": ["running", "completed", "failed"] }, "sessions": { "not": {} } },
+      "dependentRequired": { "status": ["session_id"], "session_status": ["session_id", "session_usable"], "session_usable": ["session_id"] },
+      "if": { "required": ["session_id"], "not": { "properties": { "error": { "properties": { "code": { "const": "unknown_session" } }, "required": ["code"] } }, "required": ["error"] } },
+      "then": { "required": ["session_status", "session_usable"] },
+      "allOf": [
+        { "$ref": "#/$defs/result" },
+        { "anyOf": [{ "required": ["error"] }, { "required": ["status", "session_id", "session_status", "session_usable"], "properties": { "status": { "enum": ["running", "completed"] } } }] },
+        {
+          "if": { "required": ["error"], "properties": { "error": { "required": ["code"], "properties": { "code": { "enum": ["session_busy", "session_terminating", "no_execution", "result_unavailable", "lua_syntax_error", "lua_runtime_error", "result_serialization_error", "execution_timeout", "session_killed", "worker_exited"] } } } } },
+          "then": { "required": ["session_id", "session_status", "session_usable"] }
+        }
+      ]
     },
-    "session_wait_output": { "$ref": "#/$defs/session_execute_output" },
+    "session_wait_output": { "type": "object", "$ref": "#/$defs/session_execute_output" },
     "session_kill_output": {
+      "type": "object",
+      "properties": { "status": { "const": "killed" }, "sessions": { "not": {} } },
+      "if": { "required": ["error"] },
+      "then": { "properties": { "status": false } },
       "allOf": [{ "$ref": "#/$defs/result" }, { "anyOf": [{ "required": ["error"] }, { "required": ["status"], "properties": { "status": { "const": "killed" } } }] }]
     },
     "session_list_output": {
+      "type": "object",
+      "properties": { "status": { "not": {} }, "session_id": { "not": {} }, "session_status": { "not": {} }, "session_usable": { "not": {} }, "process_exit_confirmed": { "not": {} } },
       "allOf": [{ "$ref": "#/$defs/result" }, { "anyOf": [{ "required": ["error"] }, { "required": ["sessions"] }] }]
     },
     "repl_execute_output": {
+      "type": "object",
+      "properties": { "status": { "enum": ["completed", "failed"] }, "sessions": { "not": {} }, "process_exit_confirmed": { "not": {} } },
       "allOf": [{ "$ref": "#/$defs/result" }, {
         "not": { "anyOf": [{ "required": ["session_id"] }, { "required": ["session_status"] }, { "required": ["session_usable"] }] },
         "anyOf": [{ "required": ["error"] }, { "required": ["status", "values"], "properties": { "status": { "const": "completed" } } }]
       }]
     },
     "repl_close_output": {
+      "type": "object",
+      "properties": { "status": { "const": "closing" }, "sessions": { "not": {} }, "process_exit_confirmed": { "not": {} } },
+      "if": { "required": ["error"] },
+      "then": { "properties": { "status": false } },
       "allOf": [{ "$ref": "#/$defs/result" }, {
         "not": { "anyOf": [{ "required": ["session_id"] }, { "required": ["session_status"] }, { "required": ["session_usable"] }] },
         "anyOf": [{ "required": ["error"] }, { "required": ["status"], "properties": { "status": { "const": "closing" } } }]
@@ -117,8 +145,21 @@
         "error": { "$ref": "#/$defs/error" },
         "sessions": { "type": "array", "items": { "$ref": "#/$defs/sessionEntry" } },
         "process_exit_confirmed": { "type": "boolean" },
-        "notice": { "type": "string" }
+        "notice": { "type": "string", "minLength": 1 }
       },
+      "allOf": [
+        {
+          "if": { "required": ["error"], "properties": { "error": { "required": ["code"], "properties": { "code": { "const": "unknown_session" } } } } },
+          "then": { "required": ["session_id", "session_usable"], "properties": { "session_usable": { "const": false }, "session_status": false, "status": false } }
+        },
+        {
+          "if": { "anyOf": [
+            { "required": ["process_exit_confirmed"], "properties": { "process_exit_confirmed": { "const": false } } },
+            { "required": ["error"], "properties": { "error": { "required": ["process_exit_confirmed"], "properties": { "process_exit_confirmed": { "const": false } } } } }
+          ] },
+          "then": { "required": ["notice"] }
+        }
+      ],
       "oneOf": [
         { "required": ["error"], "not": { "anyOf": [{ "required": ["values"] }, { "required": ["sessions"] }] } },
         { "required": ["status"], "properties": { "status": { "const": "running" } }, "not": { "anyOf": [{ "required": ["error"] }, { "required": ["values"] }, { "required": ["sessions"] }] } },
