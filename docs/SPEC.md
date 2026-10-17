@@ -73,13 +73,13 @@ On accepting `repl_close`, the handler must:
 1. Stop accepting further execution requests for that invocation.
 2. Send and flush a successful close acknowledgement before disconnecting,
    if the transport is still writable.
-3. End its protocol attachment, closing owned transport handles. For borrowed
-   handles, instruct the host to perform disconnection instead of silently
-   closing resources it does not own.
+3. End its protocol attachment without closing or shutting down the underlying
+   transport. Cleanup belongs to the parent code/custom manager that set it up.
 4. Return control to the host with an explicit close-requested reason and
    acknowledgement/disconnection status, including any transport error that
    prevented completing those steps.
 
+The parent is responsible for closing the connection after the handler returns.
 The host can then preserve state, reset, or shut down according to its policy.
 The handler itself must not clear globals, reset Lua, or kill the host. No
 requests after the close acknowledgement may be executed, including requests
@@ -136,10 +136,11 @@ Execution results must distinguish:
 Ordinary Lua errors must not end an otherwise usable session. Errors do not roll
 back changes already made to Lua state or external resources.
 
-Multiple return values and `nil` positions must be represented without losing
-their number or order. Values that cannot be represented directly in JSON,
-including functions, userdata, and cyclic tables, must have a safe, documented
-representation. Arbitrary Lua objects need not be serializable or round-trippable.
+Multiple return values must preserve their number and order. Each returned value
+must be representable in JSON without a custom typed-value encoding. If any
+value cannot be represented, return a result-serialization error and discard
+the entire return-value payload; do not substitute descriptions, truncate the
+result, or return only the serializable subset. Section 13.4 defines this policy.
 
 The output-capture contract must be documented. At minimum, ordinary Lua `print`
 output must be included in execution results. Capturing native-library output,
@@ -524,9 +525,11 @@ belongs in the adapter, not in the REPL evaluator.
 
 The adapter contract must define partial reads and writes, end-of-input, and I/O
 errors. It must work with byte streams without assuming that one read equals
-one complete MCP message. Handle ownership must be explicit: borrowed handles
-must not be automatically closed by the handler. Interpreter ownership remains
-independent of transport ownership.
+one complete MCP message. The parent code retains ownership of all supplied
+handles. The handler must never close or shut them down, including on
+`repl_close`, EOF, or error. It returns the reason and transport status so the
+parent can perform cleanup. Interpreter ownership remains independent of
+transport ownership.
 
 Message framing must be separate from the underlying stream. The initial stream
 framing is MCP's stdio-style newline-delimited JSON-RPC: each message occupies
@@ -686,12 +689,11 @@ Embedded disconnect handling remains host-owned as specified above.
 
 ### 11.5 Results, errors, and resource bounds
 
-Propose execution results include captured output, an ordered list of typed
-return values, and structured error information when execution fails. Represent
-Lua `nil` explicitly instead of relying on sparse JSON arrays. Render complex
-objects with bounded inspection rather than evaluating arbitrary serialization
-code. Document handling of binary strings, invalid UTF-8, non-finite numbers,
-cycles, and metatables before finalizing the result schema.
+Execution results include captured output, an ordered list of JSON-compatible
+return values, and structured error information on failure. Nonrepresentable
+results produce an error and the entire return-value payload is discarded;
+custom typed encodings and descriptive object inspection are not supported.
+Section 13.4 governs serialization; detailed table-shape rules remain open.
 
 Define configurable limits for input messages, captured output, value-rendering
 depth and size, and managed session count. Prefer truncating diagnostic output
@@ -807,6 +809,28 @@ A wait timeout alone returns pending status, not a failed execution. Once an
 async execution call has returned, later failure is reported through retained
 session status and `session_wait`, not a second response to the original call.
 
+### 13.4 Nonrepresentable return values
+
+If a return value cannot be represented faithfully by the supported JSON mapping,
+report `result_serialization_error` and discard all returned values for that
+execution. This includes functions, userdata, threads, cyclic tables, non-finite
+numbers, invalid UTF-8/binary strings, and tables whose keys or shape cannot be
+represented by the chosen JSON table mapping. Do not stringify unsupported
+objects or invent tagged encodings to make the result appear successful.
+
+Represent ordinary Lua `nil` returns as JSON null entries in the outer return
+array, preserving the explicit return count: zero returns is `[]`, while one
+nil return is `[null]`. The documented JSON null sentinel also maps to JSON
+null. Exact table shape, numeric precision, and empty-table conventions must
+be finalized before implementation; reject values outside that contract rather
+than silently losing data. Detect cycles and enforce serialization bounds.
+Exceeding a result bound is an error, not successful result truncation.
+
+Serialization failure occurs after execution and does not roll back side
+effects or terminate an otherwise healthy session. Preserve captured output
+and error diagnostics, but expose no partial return-value payload. Apply the
+same rule to direct execution and results obtained via `session_wait`.
+
 ## 14. Open implementation decisions
 
 The following have not yet been agreed:
@@ -816,8 +840,8 @@ The following have not yet been agreed:
 - Session identifiers and complete tool request and response schemas.
 - Precise Lua embedding API and its compatibility with `dosbox-y`.
 - Result rendering, output limits, and oversized-result behaviour.
-- Null sentinel API, exact numeric conversion policy, and typed return-value
-  schema, including binary data and non-JSON Lua values.
+- Null sentinel API, exact numeric conversion policy, and JSON return-value
+  schema, including table shape and empty-table conventions.
 - Event-loop and process-spawning dependencies, internal worker protocol, and
   per-session request queueing or busy-response policy.
 - Execution timeout field, units, bounds, omitted-timeout policy, and ordering
