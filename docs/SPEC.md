@@ -6,8 +6,7 @@ Status: initial functional specification.
 
 Provide a Lua module implementing a persistent REPL accessible through the Model
 Context Protocol (MCP). An MCP client, including an LLM agent, submits Lua code,
-the code executes synchronously, and the client receives its output, returned
-values, or errors.
+the code executes synchronously, and the client receives returned values or errors.
 
 The project must support both standalone sessions and integration into existing
 applications embedding Lua. Host-specific adapters must be validated against
@@ -90,7 +89,9 @@ are not required to adopt this exit policy. The handler itself only acknowledges
 the request and returns control; it neither exits the process nor owns cleanup.
 The handler itself must not clear globals, reset Lua, or kill the host. No
 requests after the close acknowledgement may be executed, including requests
-already buffered behind the close command.
+already buffered behind the close command. Preserve complete trailing messages
+for the parent in arrival order without executing them. Preserve any partially
+read trailing frame as well, so the parent can resume without losing bytes.
 
 Because this handler is blocking and single-threaded, `repl_close` is processed
 only when the handler resumes servicing requests. It cannot interrupt an active
@@ -129,7 +130,7 @@ The handler accepts complete Lua chunks, compiled and executed without source
 rewriting or expression-detection fallback. Returned values always require an
 explicit Lua `return` statement, including for single expressions: use
 `return x * 2`, not bare `x * 2`. Chunks without `return` may execute normally
-but produce no returned values; captured output is still reported. Compilation
+but produce no returned values. Compilation
 and runtime errors must never trigger a second execution attempt.
 
 Globals and globally reachable functions and objects persist between requests.
@@ -141,7 +142,6 @@ Execution results must distinguish:
 - Successful execution, including zero or more returned values.
 - Syntax or compilation errors.
 - Runtime errors, with diagnostic context where available.
-- Output captured during execution, including output preceding a runtime error.
 
 Ordinary Lua errors must not end an otherwise usable session. Errors do not roll
 back changes already made to Lua state or external resources.
@@ -152,13 +152,15 @@ value cannot be represented, return a result-serialization error and discard
 the entire return-value payload; do not substitute descriptions, truncate the
 result, or return only the serializable subset. Section 13.4 defines this policy.
 
-The output-capture contract must be documented. At minimum, ordinary Lua `print`
-output must be included in execution results. Capturing native-library output,
-subprocess output, or every possible direct stream write is not assumed.
+The handler and manager must not capture execution output or replace `print`,
+`io.write`, or host output functions. Output goes to the host's normal streams
+or the managed worker's configured files/default `/dev/null`. Clients needing
+capture must implement it in submitted Lua and return the captured data explicitly.
+There is no automatic output field in execution results, including failures.
 
-For stdio MCP, protocol output must not be mixed with captured REPL output.
-Transport handling must document the limits of this guarantee when full-access
-code deliberately writes directly to protocol streams.
+Dedicated control descriptors keep ordinary standard-stream output separate
+from protocol framing. Full-access code can still deliberately interfere with
+control descriptors; this is not a sandbox guarantee.
 
 ## 5. Access and trust model
 
@@ -324,7 +326,7 @@ JSON-RPC request IDs correlate protocol requests and responses, not executions.
 A response identifies the session and whether its execution is pending or
 terminal. If the wait expires, the manager must return control without cancelling,
 restarting, or resubmitting the execution. The client can subsequently poll that
-same session for status and retrieve its terminal result, including output or errors.
+same session for status and retrieve its terminal values or errors.
 The final result must remain retrievable even if completion races with returning
 the pending response, until returned to a caller or replaced by the next execution.
 Status and result retrieval must not execute the code again.
@@ -460,8 +462,9 @@ immediately. Listing has no pagination initially and is bounded by session limit
 ## 8. Initial acceptance criteria
 
 1. A client defines a global and a function, then uses both in a later request.
-2. A client receives captured `print` output and returned values, including
-   multiple values with intervening `nil` values.
+2. A client receives returned values, including multiple values with intervening
+   `nil` values. Output is not captured automatically; client Lua may explicitly
+   implement capture and return its data.
 3. Syntax and runtime errors are reported, and a later request still succeeds.
 4. An embedded integration uses the handler without the manager and accesses and
    changes the host's existing globals and APIs.
@@ -475,7 +478,7 @@ immediately. Listing has no pagination initially and is bounded by session limit
 9. Long-running execution returns a result when it completes and the client is
    still connected; documentation clearly describes timeout and cancellation
    limitations rather than promising keep-alives.
-10. MCP protocol messages remain separate from normally captured REPL output.
+10. MCP protocol messages remain separate from session standard streams.
 11. Multiple managed sessions share one client-facing MCP connection, with
     responses correlated by JSON-RPC request ID and executions routed by session
     ID. A long execution in one session does not prevent another session from
@@ -511,7 +514,7 @@ immediately. Listing has no pagination initially and is bounded by session limit
 20. JSON arguments convert automatically to Lua values and are passed through
     chunk varargs. Nested nulls and positional null arguments retain their
     positions through a documented sentinel, without source-code interpolation.
-21. Ordinary Lua errors return diagnostics and available prior output without
+21. Ordinary Lua errors return diagnostics without
     terminating the session. Worker exit or premature internal transport closure
     instead resolves pending executions and waits as failures and marks the
     session terminated; unrelated sessions remain usable.
@@ -520,6 +523,12 @@ immediately. Listing has no pagination initially and is bounded by session limit
     returns a structured lifecycle reason, and leaves transport handles and Lua
     state intact. The standard worker wrapper then exits the process; custom
     parent code chooses its own continuation and cleanup policy.
+23. If one read contains `repl_close` and trailing complete or partial frames,
+    the handler returns those frames to the parent in order without executing
+    them or closing the transport.
+24. Out-of-range integral numbers are rejected consistently for JSON integer,
+    decimal, and exponent spellings and Lua integer/float results; conversion
+    does not silently round them into the accepted range.
 
 ## 9. Lua version support
 
@@ -634,8 +643,8 @@ truncated. Keep these files open across tasks. Each omitted stream defaults to
 reads the supplied existing file. If stdout and stderr specify the same path,
 create it once and share the opened destination. Resolve stream paths against
 the chosen session directory; retain files created before startup failure.
-These streams are separate from captured Lua `print` output
-included in execution results; any mirroring of captured output must be explicit.
+These streams include ordinary Lua `print` output. Neither the manager nor
+handler captures or mirrors that output into execution results.
 Implicit creation exposes equivalent settings through `create_options`.
 
 During worker setup, establish the dedicated control descriptors and redirect
@@ -731,18 +740,17 @@ Embedded disconnect handling remains host-owned as specified above.
 
 ### 11.5 Results, errors, and resource bounds
 
-Execution results include captured output, an ordered list of JSON-compatible
+Execution results include an ordered list of JSON-compatible
 return values, and structured error information on failure. Nonrepresentable
 results produce an error and the entire return-value payload is discarded;
 custom typed encodings and descriptive object inspection are not supported.
 Section 13.4 governs serialization and table-shape rules.
 
-Define configurable limits for input messages, captured output, value-rendering
-depth and size, and managed session count. Prefer truncating diagnostic output
-with an explicit truncation indicator to unbounded buffering. Worker output must
-continue to be drained or otherwise handled after a capture limit is reached so
-a full pipe does not deadlock execution. Transport corruption and worker crashes
-must be distinguished from ordinary Lua runtime errors.
+Define configurable limits for input messages, return-value depth and size,
+diagnostics, and managed session count. Truncate oversized diagnostic text with
+an explicit indicator. Worker standard streams go to files/devices, not capture
+pipes. Control-channel processing must use bounded buffers and avoid deadlock.
+Distinguish transport corruption and worker crashes from Lua runtime errors.
 
 ### 11.6 Platform and dependency boundary
 
@@ -801,7 +809,7 @@ the terminal result representation must be the same.
 Compile submitted chunks with error reporting and execute them through a
 protected Lua call, such as `xpcall`. Distinguish syntax/compilation failures
 from runtime failures. Report a safe error description, a traceback where
-available, and captured output produced before failure. Lua may throw values
+available. Lua may throw values
 other than strings; diagnostic formatting must handle them without assuming
 arbitrary user-defined conversion routines will succeed.
 
@@ -825,16 +833,16 @@ it. Perform cleanup without blocking unrelated sessions. A complete response
 received before transport closure remains the execution result, but subsequent
 closure must still update the session lifecycle status appropriately.
 
-Report exit status, signal, and already captured output where available. An
+Report exit status and signal where available. An
 internal EOF alone does not prove memory exhaustion or any other particular
 cause; report unknown causes honestly. Explicit kill and manager-enforced hard
 timeout retain their specific outcomes rather than being overwritten by the
 expected transport closure during cleanup. Record a terminal outcome once and
 resolve affected requests consistently despite exit/EOF/timeout races.
 
-No worker-side diagnostic is guaranteed for a hard failure. Only output already
-delivered to the manager can be guaranteed available after process death;
-worker-buffered output may be lost. This protection applies to managed workers,
+No worker-side diagnostic is guaranteed for a hard failure. Output is not
+captured by the manager, and process-buffered file output may be lost on death.
+This protection applies to managed workers,
 not embedded handlers sharing their host process. Nor does it guarantee survival
 of the manager if host-wide memory exhaustion kills it as well.
 
@@ -874,18 +882,18 @@ contract rather than silently losing data. Detect cycles and enforce serializati
 Exceeding a result bound is an error, not successful result truncation.
 
 Serialization failure occurs after execution and does not roll back side
-effects or terminate an otherwise healthy session. Preserve captured output
-and error diagnostics, but expose no partial return-value payload. Apply the
+effects or terminate an otherwise healthy session. Return error diagnostics,
+but expose no partial return-value payload. Apply the
 same rule to direct execution and results obtained via `session_wait`.
 
 ### 13.5 Diagnostic encoding and failure codes
 
-Error messages, tracebacks, and captured output must remain valid JSON when
+Error messages and tracebacks must remain valid JSON when
 Lua produces invalid UTF-8. Escape invalid bytes with a documented printable
 convention instead of letting diagnostic encoding mask the original failure.
-Flag affected diagnostics/output with `data_preserved: false` and a readable
+Flag affected diagnostics with `data_preserved: false` and a readable
 notice that the original data was not fully preserved. Also flag truncation
-caused by diagnostic/output limits. Ordinary JSON escaping alone does not imply
+caused by diagnostic limits. Ordinary JSON escaping alone does not imply
 data loss. Returned values still follow the strict rejection policy above.
 
 Tool failures must expose stable machine-readable failure codes, not require
@@ -972,9 +980,8 @@ before the monotonic deadline; late responses cannot reverse a timeout.
 Execution/wait responses use `status: running|completed|failed`. Manager
 responses also include `session_id`, `session_status`, and `session_usable`;
 direct-handler responses omit session metadata. Terminal success includes
-`values` (ordered JSON array), `output` (string), and `output_data_preserved`
-(boolean). Failure omits values and includes `error`; captured output accompanies
-execution failures where available. Pending responses include no partial result.
+`values` (ordered JSON array). Failure omits values and includes `error`.
+There is no output-capture field. Pending responses include no partial result.
 
 An error contains `code`, `message`, `stage`, and `execution_state`.
 Stages are `validation`, `creation`, `execution`, `serialization`, `transport`,
@@ -1023,14 +1030,13 @@ Configurable defaults:
 | Concurrent sessions, including starting/terminating | 64 |
 | Input JSON message | 16 MiB |
 | Serialized return values | 16 MiB |
-| Captured output per execution | 4 MiB |
 | Diagnostic text per error | 64 KiB |
 | JSON/table nesting | 128 levels |
 | Outstanding client requests | 256 |
 | Buffered client output | 64 MiB |
 
 Validate operator-configured bounds. Do not impose worker CPU or memory quotas
-by default. Diagnostic/output truncation is flagged; oversized returned values
+by default. Diagnostic truncation is flagged; oversized returned values
 fail serialization. Keep draining workers with bounded buffers. Apply client
 backpressure; if the output buffer cannot stay bounded, disconnect and clean
 up sessions. Reject oversized frames without allocating their full length.
@@ -1057,11 +1063,15 @@ remain errors. Descendant-process termination is not guaranteed initially.
 ### 14.5 Data and embedding
 
 Expose null through `require('lua_repl_mcp').null`, without injecting globals.
-Hosts may preload this pure-Lua module. Integer input/output uses the exact
-interoperable range -(2^53-1) through 2^53-1; reject larger integers rather than
-round them. Fractional numbers use finite IEEE-754 binary64 semantics with
-ordinary decimal rounding. Reject overflow/non-finite values. Validate JSON
-integer tokens before decoder rounding can hide an out-of-range value.
+Hosts may preload this pure-Lua module. Every mathematically integral numeric
+value uses the exact interoperable range -(2^53-1) through 2^53-1, regardless of
+JSON spelling or Lua integer/float subtype. Reject larger integral values rather
+than round them. For example, `9007199254740993.0`, `9.007199254740993e15`,
+and Lua float `1e20` are rejected. Inspect JSON decimal/exponent tokens before
+binary conversion so rounding cannot conceal an out-of-range integral value.
+Nonintegral values use finite IEEE-754 binary64 semantics with ordinary decimal
+rounding; reject overflow, non-finite results, and conversion to an integral
+value outside the safe range. Apply the same range test to Lua float results.
 Escape invalid diagnostic bytes as literal `\\xHH`, with the loss flag.
 
 `require('lua_repl_mcp.handler').serve(io_adapter, options)` is the blocking
@@ -1074,7 +1084,15 @@ Options configure limits and MCP host instructions describing application APIs;
 evaluation always uses the existing interpreter's global environment.
 
 The lifecycle return record contains `reason` (`close_requested|eof|transport_error|handler_error`),
-`acknowledgement_sent`, and optional diagnostics. The standard worker wrapper
+`acknowledgement_sent`, optional diagnostics, `pending_messages`, and
+`pending_bytes`. `pending_messages` is an ordered list of complete unprocessed
+trailing frames as raw JSON strings, excluding their newline delimiters.
+`pending_bytes` is the raw incomplete trailing frame, or an empty string.
+This representation preserves messages without executing, re-encoding, or losing
+information during JSON decoding. The parent can replay the complete frames in
+order and then resume the partial frame. Bytes still buffered inside a
+parent-owned adapter remain there and must not be duplicated in this record.
+The standard worker wrapper
 exits after return; custom parents choose their continuation. Validate adapters
 against the host's actual embedding API during integration.
 
