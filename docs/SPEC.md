@@ -54,6 +54,42 @@ MCP framing and transport concerns must remain separable from code evaluation
 and lifecycle policy. A custom integration may supply its own transport and
 lifecycle handling without depending on the manager.
 
+### 2.3 Direct handler API and explicit disconnect
+
+A directly exposed session handler provides a similar execution interface to
+the manager, but operates synchronously on its one existing interpreter. Its
+execution tool accepts code and optional JSON arguments, using the same
+conversion and terminal result conventions as the manager, without session
+metadata. It has no `session_id`, session allocation/listing, async waiting,
+or manager-enforced execution deadline. The host interpreter is implicit.
+
+The handler must also expose a `repl_close` MCP tool, requiring no session ID,
+to end the blocking REPL invocation and disconnect. This tool is distinct from
+the manager's `session_kill`: it does not terminate a process or dispose of the
+host interpreter.
+
+On accepting `repl_close`, the handler must:
+
+1. Stop accepting further execution requests for that invocation.
+2. Send and flush a successful close acknowledgement before disconnecting,
+   if the transport is still writable.
+3. End its protocol attachment, closing owned transport handles. For borrowed
+   handles, instruct the host to perform disconnection instead of silently
+   closing resources it does not own.
+4. Return control to the host with an explicit close-requested reason and
+   acknowledgement/disconnection status, including any transport error that
+   prevented completing those steps.
+
+The host can then preserve state, reset, or shut down according to its policy.
+The handler itself must not clear globals, reset Lua, or kill the host. No
+requests after the close acknowledgement may be executed, including requests
+already buffered behind the close command.
+
+Because this handler is blocking and single-threaded, `repl_close` is processed
+only when the handler resumes servicing requests. It cannot interrupt an active
+Lua chunk or native host call. The manager's worker control protocol need not
+expose or forward this direct-handler close tool as a public manager operation.
+
 ## 3. Execution model
 
 Each session handler is **blocking and single-threaded**. The manager uses a
@@ -433,6 +469,10 @@ Exact status names and any pagination remain schema decisions.
     terminating the session. Worker exit or premature internal transport closure
     instead resolves pending executions and waits as failures and marks the
     session terminated; unrelated sessions remain usable.
+22. A direct handler exposes synchronous execution without session identifiers
+    and a `repl_close` tool. Close acknowledges before disconnecting where
+    possible, returns a structured lifecycle reason, respects handle ownership,
+    and leaves the host interpreter and its globals intact.
 
 ## 9. Lua version support
 
