@@ -13,27 +13,33 @@ local function failure(code,state)
 end
 -- Manager results are private-frame sized, not public-input sized. Preserve
 -- legal values plus metadata and nesting through snapshots before preflight.
-local function copy(t)
- return assert(codec.clone(t,{max_bytes=64*1048576,max_depth=160}))
+local function copy(t,limits)
+ return assert(codec.clone(t,{max_bytes=limits and limits.response_bytes or 64*1048576,max_depth=limits and limits.max_depth+32 or 160}))
 end
 function M.new(o)
  o=o or {}; serial=serial+1
  local admission=require('lua_repl_mcp.limits').admission(o.admission)
+ local limits=require('lua_repl_mcp.limits').connection(o.limits)
  local backend=o.supervisor or require('lua_repl_mcp.worker_supervisor').new(o)
+ if backend.limits then
+  for k,v in pairs(require('lua_repl_mcp.limits').authored(limits)) do
+   assert(backend.limits[k]==v,'supervisor conflicts with manager limits')
+  end
+ end
  return setmetatable({backend=backend,clock=o.clock or backend.clock,
-  admission=admission,slots={ordinary=0,control=0,kill=0},requests={},sessions={},order={},starting={},next_id=0,prefix='session-'..serial..'-',closed=false},C)
+  limits=limits,limit_options=o.limits and require('lua_repl_mcp.limits').authored(limits),admission=admission,slots={ordinary=0,control=0,kill=0},requests={},sessions={},order={},starting={},next_id=0,prefix='session-'..serial..'-',closed=false},C)
 end
 function C:allocate(options)
  if #self.order>=self.admission.sessions then return nil end
  self.next_id=self.next_id+1
  local id=self.prefix..self.next_id
- local s={id=id,worker=self.backend:allocate(options or {}),generation=0,
+ local s={limits=self.limits,id=id,worker=self.backend:allocate(options or {}),generation=0,
   cwd=(options or {}).cwd or (self.backend.cwd or require('posix.unistd').getcwd())}
  self.sessions[id]=s; self.order[#self.order+1]=s
  return s
 end
 local function envelope(s,r)
- local v=copy(r); v.session_id=s.id
+ local v=copy(r,s.limits); v.session_id=s.id
  v.session_status=s.worker.state=='dead' and 'terminated' or s.worker.state
  v.session_usable=s.worker.state=='idle' or s.worker.state=='running'
  return v
@@ -235,7 +241,7 @@ function C:preview(r)
   elseif r.input then self:dispatch(s,r.input,r)
   else r.response={session_id=s.id,session_status='idle'} end
  end
- if r.response then return copy(r.response) end
+ if r.response then return copy(r.response,self.limits) end
  local e=r.execution
  if not e then return nil end
  if e.cleanup then return nil end

@@ -37,15 +37,15 @@ end
 function M.record(kind,g,extra)
  local v=extra or {}; v.type=kind; v.protocol_version=1; v.allocation_generation=g; return v
 end
-function M.encode(v)
+function M.encode(v,limits)
  local ok,e=M.validate(v); if not ok then return nil,e end
- local s,err=c.encode(v,{max_bytes=M.max_frame,max_depth=140}); if not s then return nil,err end
- if #s>M.max_frame then return nil,'frame too large' end
+ local s,err=c.encode(v,{max_bytes=(limits and limits.worker_bytes or M.max_frame),max_depth=(limits and limits.max_depth+16 or 140)}); if not s then return nil,err end
+ if #s>(limits and limits.worker_bytes or M.max_frame) then return nil,'frame too large' end
  return s..'\n'
 end
-function M.decode(s)
- if #s>M.max_frame then return nil,'frame too large' end
- local v,e=c.decode(s,{max_bytes=M.max_frame,max_depth=140}); if not v then return nil,e end
+function M.decode(s,limits)
+ if #s>(limits and limits.worker_bytes or M.max_frame) then return nil,'frame too large' end
+ local v,e=c.decode(s,{max_bytes=(limits and limits.worker_bytes or M.max_frame),max_depth=(limits and limits.max_depth+16 or 140)}); if not v then return nil,e end
  return M.validate(v)
 end
 return M

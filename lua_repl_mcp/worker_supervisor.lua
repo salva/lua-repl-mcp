@@ -5,10 +5,11 @@ local c=require('lua_repl_mcp.codec')
 local M={}; local S={}; S.__index=S
 function M.new(options)
  options=options or {}
+ local limits=require('lua_repl_mcp.limits').connection(options.limits)
  local timeout=options.startup_timeout_ms; if timeout==nil then timeout=30000 end
  assert(type(timeout)=='number' and timeout==timeout and timeout>=1 and timeout<=2147483647 and timeout%1==0,'startup_timeout_ms must be an integer in [1,2147483647]')
  x.s.signal(x.s.SIGPIPE,x.s.SIG_IGN)
- return setmetatable({workers={},reaping={},generation=0,timeout=timeout/1000,clock=options.clock or x.now,
+ return setmetatable({limits=limits,limit_options=require('lua_repl_mcp.limits').authored(limits),workers={},reaping={},generation=0,timeout=timeout/1000,clock=options.clock or x.now,
   buffer_high_water=0,pending_high_water=0,
   interpreter=options.interpreter or 'lua5.4',launch=options.launch},S)
 end
@@ -47,9 +48,9 @@ function S:allocate(options)
   for n=0,2 do assert(x.u.dup2(fd,n)) end
   if fd>2 then x.u.close(fd) end
   if self.launch then self.launch(a,b,w.allocation_generation,options); x.u._exit(0) end
-  local script="package.path="..string.format('%q',package.path)..";package.cpath="..string.format('%q',package.cpath)..";require('lua_repl_mcp.worker_main').main("..a..","..b..","..w.allocation_generation..",assert(require('lua_repl_mcp.codec').decode("..string.format('%q',assert(c.encode(options)))..")))"
+  local script="package.path="..string.format('%q',package.path)..";package.cpath="..string.format('%q',package.cpath)..";require('lua_repl_mcp.worker_main').main("..a..","..b..","..w.allocation_generation..",assert(require('lua_repl_mcp.codec').decode("..string.format('%q',assert(c.encode(options)))..")),assert(require('lua_repl_mcp.codec').decode("..string.format('%q',assert(c.encode(self.limit_options or {})))..")))"
   x.u.execp(self.interpreter,{'-e',script})
-  x.write_all(b,assert(p.encode(p.record('startup_error',w.allocation_generation,{reason='spawn_failed',message='worker exec failed'}))))
+  x.write_all(b,assert(p.encode(p.record('startup_error',w.allocation_generation,{reason='spawn_failed',message='worker exec failed'}),self.limits)))
   x.u._exit(127)
   end)
   x.u._exit(ok and 0 or 126)
@@ -66,7 +67,7 @@ function S:execute(w,input,deadline)
  local args,e=require('lua_repl_mcp.contracts').validate('repl_execute',input)
  if not args then return nil,e end
  local generation=w.execution_generation+1
- local text,err=p.encode(p.record('execute',w.allocation_generation,{execution_generation=generation,input=input}))
+ local text,err=p.encode(p.record('execute',w.allocation_generation,{execution_generation=generation,input=input}),self.limits)
  if not text then return nil,err end
  w.execution_generation=generation; w.result=nil; w.result_at=nil; w.execution_deadline=deadline; w.state='running'; w.pending=text; w.offset=1
  self.pending_high_water=math.max(self.pending_high_water,#text)
@@ -74,7 +75,7 @@ function S:execute(w,input,deadline)
 end
 function S:graceful_close(w)
  if w.state~='idle' then return nil,'worker not idle' end
- w.pending=assert(p.encode(p.record('close',w.allocation_generation))); w.offset=1; w.state='closing'; return true
+ w.pending=assert(p.encode(p.record('close',w.allocation_generation),self.limits)); w.offset=1; w.state='closing'; return true
 end
 function S:receive(w,v)
  if w.state=='terminating' or w.state=='dead' then return end
@@ -94,7 +95,7 @@ function S:receive(w,v)
  else self:abort(w,'corrupt_worker') end
 end
 function S:drain(w)
- local budget=p.max_frame+1
+ local budget=self.limits.worker_bytes+1
  while w.read_fd and budget>0 do
   local text,_,err=x.u.read(w.read_fd,math.min(65536,budget))
   if not text then if x.retryable(err) then return end; return self:abort(w,'transport_failed') end
@@ -105,11 +106,11 @@ function S:drain(w)
   while w.read_fd do
    local nl=rest:find('\n',1,true)
    local part=nl and rest:sub(1,nl-1) or rest
-   if #w.buffer+#part>p.max_frame then return self:abort(w,'corrupt_worker') end
+   if #w.buffer+#part>self.limits.worker_bytes then return self:abort(w,'corrupt_worker') end
    w.buffer=w.buffer..part
    self.buffer_high_water=math.max(self.buffer_high_water,#w.buffer)
    if not nl then break end
-   local v=p.decode(w.buffer); w.buffer=''
+   local v=p.decode(w.buffer,self.limits); w.buffer=''
    if not v then return self:abort(w,'corrupt_worker') end
    self:receive(w,v); rest=rest:sub(nl+1)
    if rest=='' then break end

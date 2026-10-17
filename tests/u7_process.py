@@ -11,7 +11,8 @@ work = Path(os.environ['SAIVAGE_CARD_WORK_ROOT']) / 'u7-process-verification'
 work.mkdir(parents=True, exist_ok=True)
 env = os.environ.copy()
 env['LUA_PATH'] = f'{root}/?.lua;{root}/?/init.lua;' + env.get('LUA_PATH', ';')
-for fixture, timeout in [('u7_fairness_process.lua', 25),
+for fixture, timeout in [('u7_configuration_process.lua', 25),
+                         ('u7_fairness_process.lua', 25),
                          ('u7_transport_process.lua', 25),
                          ('u7_maximum_process.lua', 110)]:
     with tempfile.TemporaryDirectory(dir=work) as directory:

@@ -283,3 +283,79 @@ inputs unchanged. Universal default coupled-fit reproducer remains deliberately
 failing; no default or ID size changed. Central configuration propagation to
 workers and full configured-value/frame/response coupling remain unimplemented,
 so this is continued progress, not exhaustive original U7 acceptance.
+
+## Configured budget propagation repair (after b3c5e01)
+
+Preserved `tests/u7_configuration_red.lua` now passes: the independently invalid
+4096-input/1024-response configuration is rejected at transport construction,
+not after accepting an unanswerable request. No legal ID is silently narrowed.
+
+`limits.connection` validates per-instance `input_bytes`, `values_bytes`,
+`diagnostic_bytes`, `max_depth`, `worker_bytes`, `response_bytes`, `output_bytes`.
+Manager option is `limits={...}`. Transport inherits the manager budgets; explicit
+conflicting overrides on configured managers are rejected. Supervisor snapshots
+limits before exec; worker receives only scalar authored configuration and uses
+it for evaluator values/depth/diagnostics and private-frame encode/decode. Manager
+snapshots and public response preflight select derived depth and response limits.
+Worker command reads now use bounded framing before concatenating oversized input.
+No module-global protocol limit mutation. Injected supervisors exposing budgets
+must match manager configuration. Tests cover caller mutation isolation.
+
+Independent configured budget checks use conservative payload envelopes:
+`worker >= max(input,values,6*diagnostic)+65536`;
+`response >= input+3*max(values,6*diagnostic)+65536`;
+`output >= response+1`. Scalars are positive integers <=2147483647, depth<=512,
+and diagnostics must hold the loss notice. A source diagnostic byte can encode
+as at most six JSON bytes. Re-escaping already encoded JSON costs at most twice
+its length, so structured plus compatibility copies cost at most three times
+encoded payload; request ID's encoded representation is bounded by input.
+64KiB is explicit conservative envelope headroom, NOT a proof of arbitrary cwd,
+artifact-list or indefinitely growing session metadata fit. Those remaining
+unbounded-metadata proof questions are inventoried below, not silently assumed.
+
+Exact normative defaults (implicit or explicit) remain runnable and marked
+`default_fit_unresolved=true`; the known194-byte contradiction is NOT hidden by
+rejecting defaults or changing them. Other configurations must pass conservative
+coupling checks. Legacy standalone transport test seams allowing response-only
+small bounds remain supported for fallback behavior; explicit input overrides
+must hold input+1024 for ID/error envelope. Such a seam is not a configured
+full-manager universal-result-fit promise.
+
+New tests:
+- `u7_configuration.lua`: worker/response/output required -1/at/+1, invalid
+  scalar/unknown/depth/diagnostic cases, manager->transport inheritance, conflicts,
+  default flag, >16MiB configured values arithmetic, protocol isolation, mutation.
+- `u7_configuration_process.lua`: two actual exec configurations, encoded values
+ 1024/2048, depths8/16, diagnostics256/512. Values -1/at/+1 and depth -1/at/+1
+ traverse manager/public client pipe; overflow is serialization_error, diagnostic
+ truncation fits budget; equal duplicate text. Inputs512/1024 are deliberately
+ smaller than legal returned values. Worker peaks1155/69632 and2179/73728;
+ output peaks2393/74241 and4441/82945. Added to process-group watchdog suite.
+
+Commands: `lua5.4 tests/u7_configuration_red.lua`,
+`lua5.4 tests/u7_configuration.lua`, native-path
+`python3 tests/u7_process.py` and `python3 tests/u4_process.py`,
+`python3 tests/u5_process.py`, `python3 tests/u6_process.py`; existing flood,
+ownership/transport/boundaries/frame budgets, U5/U6 policy/U2, contracts and diff
+checks. All completed checks reported in the status record, including one fixture
+arithmetic correction (diagnostic budget dominates values), not hidden as a pass.
+
+### Full U7 inventory after this repair
+
+Implemented/evidenced: admission/session/control/kill limits and cancellation;
+bounded client input/output with fair ticks; actual saturated waits/control/timer
+progress; no-dispatch rejection; private pre-storage bounds; short write/EPIPE
+cleanup; precommit complete-response fallback versus value serialization error;
+default-scale ASCII/quote/control/backslash values, max depth, unrelated session;
+per-instance worker/evaluator/encoder/transport configuration and independent
+invalid-config rejection. Boundary evidence is distributed across admission,
+frame budgets, adversarial, boundary, configuration and real-process tests above.
+
+Residuals: universal mandated-default max-ID fit remains the exact194-byte
+owner-decision blocker. Mathematical exhaustive metadata/list/cwd/artifact
+headroom proof and generated maximum-ID *all* error/notice combinations are not
+complete; a64KiB fixed metadata allowance is conservative policy, not proof of
+unbounded metadata. Large configured values >16MiB are constructor-tested but not
+yet a separate exec-scale test. Exhaustive all-limit Cartesian combinations and
+all slow-reader schedules are not claimed. U8 external complete MCP conformance
+remains separate. No universal full-U7 acceptance follows from focused green.

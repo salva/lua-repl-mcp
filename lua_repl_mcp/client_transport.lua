@@ -6,14 +6,24 @@ local M={}; local C={}; C.__index=C
 function M.new(manager,io,o)
  o=o or {}
  assert(type(o)=='table','transport options must be a table')
- local bounds={input_bytes=16*1048576,response_bytes=64*1048576,output_bytes=128*1048576}
+ local source=manager.limits or {}
+ local bounds={input_bytes=source.input_bytes or 16*1048576,response_bytes=source.response_bytes or 64*1048576,output_bytes=source.output_bytes or 128*1048576}
  for k,v in pairs(o) do
   assert(bounds[k]~=nil,'unknown transport option')
   assert(math.type(v)=='integer' and v>0 and v<=2147483647,'invalid transport bound')
   bounds[k]=v
  end
+ -- Explicit adapter overrides must still be able to echo every legal input ID
+ -- in the bounded fallback. A manager-configured connection cannot be split
+ -- into independently inconsistent encoder and transport budgets.
+ if manager.limit_options and next(manager.limit_options) then
+  for k,v in pairs(o) do assert(v==source[k],'transport conflicts with manager limits') end
+ end
+ if o.input_bytes~=nil then
+  assert(bounds.response_bytes>=bounds.input_bytes+1024,'response cannot echo legal input ID')
+ end
  local self=setmetatable({manager=manager,io=io,input=framing.new(bounds.input_bytes),
-  response_bytes=bounds.response_bytes,output_bytes=bounds.output_bytes,
+  encode_depth=source.max_depth and source.max_depth+32 or 160,response_bytes=bounds.response_bytes,output_bytes=bounds.output_bytes,
   queue={},pending={},bytes=0,high_water=0,input_high_water=0,closed=false},C)
  assert(self.output_bytes>=self.response_bytes+1,'output must hold a response plus newline')
  return self
@@ -49,7 +59,7 @@ function C:submit(id,tool,args)
   -- No slot means no pending-handle ownership. Charge the rejection to encoded
   -- output immediately; a stopped reader eventually trips the output bound.
   local text=protocol.encode_result(id,assert(self.manager:preview(r)),
-   {max_bytes=self.response_bytes,max_depth=160})
+   {max_bytes=self.response_bytes,max_depth=self.encode_depth})
   if not text then self:close('response bound'); return false end
   return self:enqueue(text)
  end
@@ -86,13 +96,13 @@ function C:step(on_frame)
    local v=self.manager:preview(r)
    if v then
     local text,original=protocol.encode_result(p.id,v,
-     {max_bytes=self.response_bytes,max_depth=160})
+     {max_bytes=self.response_bytes,max_depth=self.encode_depth})
     if not text then self:close('response bound'); return false end
     if original then
      local committed=self.manager:commit(r,function(current)
       -- Recheck at the owning commit boundary, never enqueue stale preview.
       local encoded,full=protocol.encode_result(p.id,current,
-       {max_bytes=self.response_bytes,max_depth=160})
+       {max_bytes=self.response_bytes,max_depth=self.encode_depth})
       return full and self:enqueue(encoded)
      end)
      if self.cleanup_pending then
