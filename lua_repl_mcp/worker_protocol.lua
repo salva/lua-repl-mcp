@@ -2,7 +2,7 @@
 local c=require('lua_repl_mcp.codec')
 local M={version=1,max_frame=20*1024*1024}
 local fields={
- file_created={path='string'}, ready={},
+ file_created={path='string'}, ready={cwd='optional_string'},
  startup_error={reason='string',message='string'},
  execute={execution_generation='integer',input='table'},
  result={execution_generation='integer',result='table'}, close={}}
@@ -15,7 +15,9 @@ function M.validate(v)
   if k~='type' and k~='protocol_version' and k~='allocation_generation' and not spec[k] then return nil,'unknown field' end
  end
  for k,t in pairs(spec) do
-  if (t=='integer' and not integer(v[k])) or (t~='integer' and type(v[k])~=t) then return nil,'invalid '..k end
+  if (t=='optional_string' and v[k]~=nil and (type(v[k])~='string' or v[k]:sub(1,1)~='/')) or
+     (t=='integer' and not integer(v[k])) or
+     (t~='integer' and t~='optional_string' and type(v[k])~=t) then return nil,'invalid '..k end
  end
  if v.type=='execute' then
   local args=require('lua_repl_mcp.contracts').validate('repl_execute',v.input)

@@ -26,7 +26,10 @@ local function stringfield(t,k,required,nonempty,path)
 end
 local function create(t,path)
   object(t,path,creation)
-  for k in next,creation do stringfield(t,k,false,true,path) end
+  for k in next,creation do
+    stringfield(t,k,false,true,path)
+    if t[k] and t[k]:find('\0',1,true) then invalid(codec.pointer(path,k),'path contains NUL') end
+  end
 end
 local function timeout(v,min,path)
   if rawequal(v,null) then return end

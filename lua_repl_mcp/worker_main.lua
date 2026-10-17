@@ -32,7 +32,7 @@ function M.run(input,output,g,options)
  end
  local ok,msg=pcall(setup)
  if not ok then send('startup_error',{reason='stdio_setup_failed',message=tostring(msg)}); return end
- if not send('ready') then return end
+ if not send('ready',{cwd=assert(x.u.getcwd())}) then return end
  local buffer=''; local last=0
  while true do
   local chunk,_,err=x.u.read(input,65536)

@@ -81,7 +81,7 @@ function S:receive(w,v)
    if v.path:sub(1,1)~='/' then return self:abort(w,'handshake_failed') end
    for _,path in ipairs(w.created_paths) do if path==v.path then return self:abort(w,'handshake_failed') end end
    w.created_paths[#w.created_paths+1]=v.path
-  elseif v.type=='ready' then w.state='idle'; w.files_complete=true
+  elseif v.type=='ready' then w.cwd=v.cwd; w.state='idle'; w.files_complete=true
   elseif v.type=='startup_error' then w.startup_message=v.message; self:abort(w,v.reason)
   else self:abort(w,'handshake_failed') end
  elseif w.state=='running' and v.type=='result' and v.execution_generation==w.execution_generation then
