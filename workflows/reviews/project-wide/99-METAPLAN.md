@@ -1,5 +1,10 @@
 # Minimal whole-project repair plan
 
+The operator-requested [multidimensional-review addendum](../multidimensional/PLAN-ADDENDUM.md)
+adds narrow local diagnostic, test-oracle and embedding-documentation work within
+the same three batches. Critically reconcile its findings with current work;
+do not create a parallel repair programme or resurrect superseded machinery.
+
 ## Authority and scope
 
 This is the sole current U13 implementation plan. It replaces the expanded

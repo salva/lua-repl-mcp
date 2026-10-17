@@ -40,6 +40,11 @@ reconciled with source changes made after the pinned commit.
 
 ## Required critical triage and fixing-agent constraint
 
+The operator subsequently requested [a plan addendum](PLAN-ADDENDUM.md) and
+non-interrupting notification to the root project card. This routes work through
+existing Saivage ownership, not a competing external fixing agent. Notification
+receipt/adoption status is recorded separately; delivery is not implementation.
+
 Every allegation must be critically checked for evidence, user impact, current
 applicability and duplication with active repairs. Reviewer authority, preference
 and prior approval are not sufficient. Record accept, simplify, defer or reject
