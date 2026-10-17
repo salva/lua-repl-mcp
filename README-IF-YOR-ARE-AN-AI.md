@@ -116,6 +116,61 @@ loss disposes of its sessions; persistence is not durable across reconnection.
 
 ## Embedded-host use
 
+The embedded handler needs a host running Lua 5.4 or newer supported PUC-Rio Lua,
+with the standard libraries available and dedicated protocol I/O. It does not
+need LuaRocks, luaposix, a compiler or the standalone executable. From a checkout,
+copy only the pure-Lua dependency set into a directory you control:
+
+```sh
+export LUA_REPL_MODULES="$PWD/.local/embedded-lua"
+mkdir -p "$LUA_REPL_MODULES/lua_repl_mcp"
+for module in init handler codec framing protocol evaluator limits errors contracts direct_schemas; do
+  cp "lua_repl_mcp/$module.lua" "$LUA_REPL_MODULES/lua_repl_mcp/$module.lua"
+done
+```
+
+In the existing host interpreter, add that directory to its module search path
+(replace the absolute path with the actual value of `LUA_REPL_MODULES`):
+
+```lua
+local modules = '/absolute/path/to/.local/embedded-lua'
+package.path = modules .. '/?.lua;' .. modules .. '/?/init.lua;' .. package.path
+local handler = require('lua_repl_mcp.handler')
+```
+
+Provide the adapter using the host's dedicated stream/socket APIs. For example,
+if the host supplies Lua file handles named `protocol_input` and
+`protocol_output` on the invoking thread, wrap them as follows (do not substitute
+ordinary application stdout):
+
+```lua
+local adapter = {
+  read = function(n)
+    -- File read(n) may wait to fill n bytes. One byte guarantees progress
+    -- for short MCP frames without waiting for EOF or another request.
+    local bytes, err = protocol_input:read(1)
+    if bytes == nil then return nil, err or 'eof' end
+    return bytes
+  end,
+  write = function(bytes)
+    local ok, err = protocol_output:write(bytes)
+    if not ok then return nil, err end
+    return #bytes
+  end,
+  flush = function()
+    return protocol_output:flush()
+  end,
+}
+local attachment = handler.serve(adapter)
+-- The host now handles attachment.reason and the buffered handoff below.
+```
+
+This call blocks until close, EOF or failure. Host I/O must satisfy the progress
+contract below; adapt non-file handles using their real APIs, not these file
+methods. The one-byte file adapter prioritizes correctness over throughput;
+prefer a bounded read-some API when the host offers one. A successful require
+alone does not establish a working MCP transport.
+
 The host calls `require('lua_repl_mcp.handler').serve(adapter, options)` in its
 existing interpreter, without importing manager/native modules. Supply ordinary
 functions `read(n)`, `write(bytes)`, `flush()` on dedicated protocol handles:
@@ -131,4 +186,3 @@ before continuing; managed kill/deadline semantics do not apply to this mode.
 
 - [Wire examples and initialization](docs/MCP_EXAMPLES.md)
 - [Tool input/output schemas](docs/schemas/api.json)
-- [Functional and lifecycle contract](docs/SPEC.md)

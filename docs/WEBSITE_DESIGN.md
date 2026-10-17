@@ -6,6 +6,8 @@ Create a public-facing static documentation website for Lua REPL MCP, suitable
 for GitHub Pages project hosting. Help an MCP client user install and operate
 the session manager, and a Lua application developer embed the independent
 handler. This adds documentation delivery, not runtime functionality.
+Authoritative product requirements are in `SPEC.md` §15. This document designs
+their presentation and local build; U11 in `PLAN.md` defines execution/evidence.
 
 The site must clearly distinguish the pure-Lua blocking handler from the POSIX
 process-managing server. Do not present a browser-hosted REPL, remote execution
@@ -41,8 +43,9 @@ website artifact. Preserve that evidence; separation is not permission to delete
 it or break internal planning links.
 
 The only Saivage reference permitted anywhere in user-facing documentation is
-one short linked attribution, **Built with Saivage**, pointing to its public
-project page. This rule covers the user README, guides, examples, reference
+the short linked attribution **Built with Saivage**, pointing to its public
+project page. Place it once in the root README and reuse it once on the website
+home page, never as a repeated footer. This rule covers guides, examples, reference
 pages, downloadable documentation and generated HTML. Do not include Saivage
 configuration, integration narratives, issue links, work-card identifiers or
 validation status there. Explain client-side timeout/connection-loss risks in
@@ -64,7 +67,7 @@ bug reports remain available only in the separate work documentation.
 6. **Operations and limitations:** cwd/redirection, current resource defaults,
    trust/system privileges, no automatic output capture, client timeout pitfalls,
    explained independently of the development harness.
-7. **Reference:** reviewed specification, tool schemas, wire examples, tested
+7. **Reference:** user-facing functional/API contract, tool schemas, wire examples, tested
    versions, local build/test commands, and contribution guidance. Public
    reference must exclude work-management material.
 
@@ -84,12 +87,16 @@ generated output in ignored `site/`. Document a clean-venv local build command.
 
 Do not copy the entire repository or `docs/` directory into the public artifact.
 Build an explicit content tree: copy selected public reference files into a
-temporary documentation staging directory, including SPEC.md, MCP_EXAMPLES.md,
-and schemas/api.json, with link paths adjusted and validated by the builder.
+temporary documentation staging directory, including MCP_EXAMPLES.md and
+schemas/api.json only after public-content checks, with link paths adjusted and
+validated by the builder. Do not stage the complete SPEC.md: it is an engineering
+authority containing work requirements and links. Write user-facing reference
+from its functional requirements and check it against the normative schemas and
+runtime; do not silently edit authoritative files to manufacture public copies.
 Keep reference generation deterministic and read-only with respect to sources.
 Author guides for navigation; do not create a second independently maintained
-specification or schema. Changes to generated reference files must come from
-their authoritative source.
+specification or schema. Derived schema/example files must come from their
+authoritative source; authored guides explain rather than redefine the API.
 
 Exclude `.saivage/`, `.saivage-work/`, workflows/operations, raw integration-agent
 conversations, local evidence/log dumps, credentials, and machine-specific runtime
@@ -135,11 +142,14 @@ No credentials are needed to create or build the content.
 - Artifact inspection proves only allowlisted content is published; scan for
   secret-bearing names, accidental local paths, and private conversation artifacts.
 - Validate the user README/source tree and generated HTML/downloads for Saivage
-  references, allowing only the single linked attribution (and its generated
-  rendering). Check links as well as visible prose: no work-report, integration,
+  references, allowing only the README attribution and its single website-home
+  rendering. Check links as well as visible prose: no work-report, integration,
   agent-state or Saivage issue links may leak into the user documentation.
 - Verify repository and website entry points prioritize user documentation;
   work plans/evidence are separate and absent from website navigation/artifacts.
+- Audit existing mixed-audience documents, including `docs/RELEASE.md`, before
+  using their material. Preserve historical reports outside the user tree and
+  replace user-facing work-status links/text with accurate functional guidance.
 - Record commands, pinned versions, outcomes, and local artifact paths in
   `docs/validation/WEBSITE.md`. State that publication is out of scope and not
   performed. No live URL or GitHub deployment is an acceptance requirement.

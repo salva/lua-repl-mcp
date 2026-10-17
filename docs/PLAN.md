@@ -44,7 +44,7 @@ creating a second public MCP connection.
 | U8 | U2, U7 | Complete manager MCP integration and live conformance |
 | U9 | U8 | Packaging, real embedding integration and release acceptance |
 | U10 | U9 | Real Saivage MCP-client integration and defect reporting |
-| U11 | U9; U10 for integration-status content | GitHub Pages-compatible documentation content and local validation |
+| U11 | U9 | GitHub Pages-compatible documentation content and local validation |
 | U12 | U6–U8; revalidate U9 and affected U10 | Manager signal cleanup and guardian orphan prevention |
 
 Test seams are internal: injectable monotonic clock, poll/process operations and
@@ -342,7 +342,7 @@ is required even when no upstream fix can be made during this project.
 
 ## U11 — GitHub Pages documentation website
 
-Implement `docs/WEBSITE_DESIGN.md` after the package/API are stable. Create
+Implement SPEC §15 using `docs/WEBSITE_DESIGN.md` after the package/API are stable. Create
 task-oriented guides, an accessible responsive MkDocs site, deterministic
 allowlisted reference staging and pinned local build dependencies. Do not create
 publishing workflows. Keep normative requirements/schemas authoritative rather
@@ -352,13 +352,17 @@ User-facing README/guides/reference/examples and website output may mention
 Saivage only in one linked "Built with Saivage" attribution; do not link its bug
 reports or integration narratives there. Keep client-timeout guidance generic.
 Preserve work evidence separately, outside public staging and user navigation.
-Follow `AGENTS.md`'s user-documentation requirements: lead with functional
+Follow SPEC §15's user-documentation requirements: lead with functional
 purpose/design/features and organize by user goals, then installation, first
 success, common tasks, reference and recovery. Analyze all topics from the user's
 viewpoint. Maintain root `README-IF-YOR-ARE-AN-AI.md` for LLM consumers, with
 accurate install/launch/discovery, examples, state/result semantics and cleanup.
 Include its examples in installed-package and schema validation, and link it
 from the user entry points without importing development-agent instructions.
+Audit mixed-audience legacy documentation before staging: full SPEC and work
+reports are engineering authorities/evidence, not public pages. The root README
+and user guides must stand on their own. Use one attribution in the README and
+one reuse on the website home, not repeated mentions across guides.
 
 Build and test locally. Verify project-prefix links/assets, relevant
 examples against runtime/contracts, desktop/mobile navigation, and artifact

@@ -22,23 +22,11 @@
   projects, deployment releases, host configuration, or other services.
   Operational setup/launch details belong in `workflows/`, not product docs.
 
-## User documentation requirements
+## Documentation guidance
 
-- User documentation is the primary documentation asset. Structure it around
-  users' goals: what the software does, when to use it, its features and
-  functional design, then installation, first success, common tasks, reference
-  and troubleshooting. Explain observable behaviour before internal machinery.
-- Analyze every feature, example, limitation and design explanation from the
-  user's perspective: purpose, choices, inputs, outcomes, state/side effects,
-  risks and recovery. Use clear headings, progressive detail and runnable
-  examples with expected results; do not substitute implementation reports.
-- Keep Saivage work plans, deployment notes, integration reports and evidence
-  separate from user docs/navigation/artifacts. The only permitted user-doc
-  mention is one linked "Built with Saivage" attribution; see
-  `docs/WEBSITE_DESIGN.md` for the publication-content boundary.
-- Maintain root `README-IF-YOR-ARE-AN-AI.md` as a concise LLM-oriented consumer
-  guide: prerequisites, actual installation/launch, MCP discovery, tool examples,
-  persistent state, JSON/results, async polling, safe cleanup and error recovery.
-  It explains how to use the software, not how to run the development harness.
-  Keep commands/examples aligned with the installed package and public contracts;
-  never describe unpublished packages or unverified capabilities as available.
+- Follow the authoritative user-documentation requirements in `docs/SPEC.md`
+  §15, the structure/build design in `docs/WEBSITE_DESIGN.md`, and U11 acceptance
+  in `docs/PLAN.md`. `workflows/LAUNCH.md` supplies autonomous delivery scope.
+- Keep user guides (including `README-IF-YOR-ARE-AN-AI.md`) separate from work
+  records. This file is contributor guidance, not a replacement product spec or
+  proof that an active planner has adopted a requirements change.

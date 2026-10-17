@@ -1301,3 +1301,72 @@ Guardian loss is fail-closed; simultaneous manager/guardian loss, exceptional OS
 inability to terminate, deliberate trusted-code interference and arbitrary
 descendant trees retain the documented guarantee limits. Existing 30-second
 cleanup fallback applies. No embedded-handler ownership or signal policy changes.
+
+## 15. User documentation requirements
+
+User documentation is a required product deliverable and the primary
+documentation asset. This section is authoritative; implementation planning,
+documentation build design and contributor instructions must implement it,
+not independently redefine it.
+
+### 15.1 Audience and functional organization
+
+The root `README.md` and website must first explain what users can accomplish,
+the functional design and features, and how to choose between managed sessions
+and embedding. Functional design means the user's mental model of state,
+execution, results and lifecycle, not a tour of source files or agent work.
+Organize subsequent material around installation/first success, common tasks,
+reference and troubleshooting, using clear navigation and progressive detail.
+
+Analyze every topic from the user's perspective: purpose, choices, prerequisites,
+inputs, expected outcomes, persistent state, side effects, limitations, risks and
+recovery. Use runnable examples with expected results and explain errors. A user
+must not need implementation plans, validation reports or deployment records to
+install and use the product. Do not describe planned/unverified behaviour as
+available, invent public package availability, or mistake schema validation for
+successful runtime validation.
+
+### 15.2 Required assets
+
+Provide a root `README.md`, task-oriented user guides and public API reference,
+and root `README-IF-YOR-ARE-AN-AI.md` (this exact filename). The latter is an
+LLM-oriented consumer guide, not development-agent instructions. It must cover
+mode selection, prerequisites, actual installation/environment and launch,
+MCP initialization/discovery, tool arguments and expected outcomes, persistence,
+explicit returns, JSON/null, async polling, single-consumption results,
+cancellation/kill, cleanup and recovery. Link it from the README and website.
+The user reference must expose tool schemas and protocol examples consistent
+with the normative contracts without requiring access to engineering records.
+
+### 15.3 User/work documentation boundary
+
+Keep autonomous-work instructions, plans, deployment notes, agent conversations,
+integration reports and acceptance evidence separate from user documentation,
+navigation, downloads and generated site artifacts. Preserve the work records;
+separation does not authorize deleting evidence. Engineering specifications may
+remain authoritative sources without being published as whole user-reference
+pages. Public guides must explain observable functionality independently.
+
+The only permitted Saivage reference in user documentation is a single linked
+"Built with Saivage" attribution to its public project page. Put it in the root
+README and reuse that same attribution once on the website home page; do not
+repeat it in every guide or generated page footer. No other named integration
+status, Saivage configuration, issue links or work narratives belong in user
+docs. Describe client timeouts and connection-loss risks generically. This
+restriction includes link targets and downloadable documents, not just prose.
+
+### 15.4 Acceptance and scope
+
+U11 must validate user sources and local built artifacts for the content boundary,
+links, navigation and usable examples. A newcomer must be able to choose a mode,
+install, obtain a first result, reuse state and recover from an error without
+reading work records. Validate installation and examples against the installed
+package and discovery schemas; store commands, versions, results and missing
+coverage separately in work evidence. Verify the LLM guide as well as the human
+guides. Existing documentation with mixed audiences must be replaced or split
+before counting it as user-ready; retaining it as historical work evidence does
+not qualify it for public staging.
+
+Website work is limited to content, assets, minimal local build configuration
+and local validation. Publishing workflows, pushes, repository settings and
+deployment are out of scope and must not become acceptance blockers.
