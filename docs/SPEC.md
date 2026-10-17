@@ -230,12 +230,59 @@ not a guarantee against upstream breaking changes.
 Lua 5.1, 5.2, 5.3, and LuaJIT are outside the initial support scope;
 compatibility shims for those runtimes are not required.
 
-## 10. Open implementation decisions
+## 10. MCP transport and supplied I/O
+
+### 10.1 Independent session handler
+
+The handler must support a host-supplied bidirectional socket or a pair of input
+and output file descriptors. It must not require opening a listener, creating a
+connection, or launching the manager.
+
+Because standard Lua has no portable API for arbitrary sockets and file
+descriptors, the pure-Lua handler accepts a host-supplied I/O adapter wrapping
+those handles. The adapter provides read and write operations and, where
+appropriate, an explicit close operation. Integration with host-specific handles
+belongs in the adapter, not in the REPL evaluator.
+
+The adapter contract must define partial reads and writes, end-of-input, and I/O
+errors. It must work with byte streams without assuming that one read equals
+one complete MCP message. Handle ownership must be explicit: borrowed handles
+must not be automatically closed by the handler. Interpreter ownership remains
+independent of transport ownership.
+
+Message framing must be separate from the underlying stream. The initial stream
+framing is MCP's stdio-style newline-delimited JSON-RPC: each message occupies
+one line, with embedded newlines escaped within JSON strings. This framing may
+also be used over supplied sockets or FD pairs by agreement with the peer; such
+connections are custom transports, not automatically standard MCP transports.
+
+### 10.2 Standalone session manager
+
+The initial manager uses the standard MCP **stdio transport**. An MCP client
+launches the manager and communicates through its standard input and output.
+Protocol messages must be the only content on standard output; manager
+diagnostics must use standard error or another non-protocol destination.
+
+One manager MCP connection exposes session creation, execution in an identified
+session, and lifecycle operations. Creating a Lua session does not require a new
+MCP connection. MCP connection/session identity must not be conflated with the
+identity of a managed Lua REPL session.
+
+The execution model remains blocking and single-threaded. Stdio support does
+not imply responsiveness to other session requests while execution is active.
+
+Streamable HTTP is a possible future standard transport for independently
+running or remote deployments, but is not required initially. Unix-domain
+sockets and raw TCP remain possible custom integrations through the supplied
+I/O adapter; the initial manager need not listen on either. Legacy HTTP+SSE
+transport is not required.
+
+## 11. Open implementation decisions
 
 The following have not yet been agreed:
 
-- MCP protocol version, transport or transports, and dependency strategy.
-- Whether the manager is a standalone executable as well as a module.
+- MCP protocol version and dependency strategy.
+- Manager launch command, packaging, and optional programmatic module API.
 - Session identifiers, tool names, request and response schemas, and reset
   identifier semantics.
 - Precise Lua embedding API and its compatibility with `dosbox-y`.
