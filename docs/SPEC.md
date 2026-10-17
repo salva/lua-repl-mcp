@@ -416,7 +416,8 @@ cancellation. The cleanup and side-effect limitations of section 7.1 apply.
 Kill targets the session worker present when the kill request is accepted.
 If execution has already completed, its result is not rewritten as killed, but
 the idle worker is still terminated. A session need not have executed any code
-to be killed. Remove the session on confirmed termination. Subsequent calls,
+to be killed. Remove the session on termination or the bounded best-effort
+cleanup fallback specified in section 14. Subsequent calls,
 including repeated kill, receive `unknown_session` without side effects.
 
 Because selection is by session, a delayed kill received after a new execution
@@ -425,14 +426,15 @@ requests accordingly; the API cannot express "kill only an older run". Once a
 kill is accepted, cleanup must be internally bound to the selected worker so it
 cannot subsequently kill another worker or execution.
 
-A successful kill response must not claim termination before the manager has
-confirmed worker exit. Requests waiting for the task must resolve consistently
-with its recorded terminal outcome. Failure to terminate a worker must be
-reported, not presented as successful cleanup. Other sessions remain available.
+A kill response reports successful disposal of the managed session after bounded
+best-effort termination, even if the OS has not confirmed worker exit. Include
+`process_exit_confirmed` so success does not falsely assert that the process is
+dead. Requests waiting for the execution resolve consistently with its recorded
+outcome. Other sessions remain available.
 
 Kill has only a synchronous interface: no wait-timeout parameter or asynchronous
-kill handle. Its request remains pending until termination and cleanup are
-confirmed or a termination error is reported. The manager continues servicing
+kill handle. Its request remains pending until cleanup completes or its bounded
+best-effort fallback is reached. The manager continues servicing
 other sessions while this request waits. Internally the target is terminating
 and rejects new execution; this is not a client-visible asynchronous kill mode.
 
@@ -985,12 +987,15 @@ Codes are `invalid_arguments`, `unknown_session`, `session_busy`,
 `session_terminating`, `no_execution`, `result_unavailable`, `session_limit`,
 `session_creation_error`, `lua_syntax_error`, `lua_runtime_error`,
 `result_serialization_error`, `execution_timeout`, `session_killed`,
-`request_cancelled`, `worker_exited`, `transport_error`, `termination_error`,
+`request_cancelled`, `worker_exited`, `transport_error`,
 and `limit_exceeded`. Creation reasons are `startup_timeout`, `spawn_failed`,
 `cwd_setup_failed`, `stdio_setup_failed`, or `handshake_failed`.
 
 Creation returns session ID and idle status. Kill returns session ID,
-`status: killed`, and `session_usable: false` only after reaping. List returns
+`status: killed`, `session_usable: false`, and `process_exit_confirmed` after
+bounded best-effort cleanup. If exit is unconfirmed, also return a notice that
+the process may remain alive although its managed session has been removed.
+This is a successful tool result, not a termination error. List returns
 `sessions` entries with ID, session status, execution status
 (`none|running|completed|failed`), `result_available`, and initial `cwd`.
 Close returns `status: closing`, acknowledging return to parent code rather
@@ -1000,7 +1005,8 @@ for another retrieval; listing availability refers to retained data only.
 ### 14.4 Lifetime and operational limits
 
 Live session states are `starting`, `idle`, `running`, and `terminating`.
-Once termination is confirmed, remove all metadata and results immediately;
+Once termination is confirmed or bounded best-effort cleanup finishes, remove
+all session metadata and results immediately;
 no tombstones are kept. Already-pending requests receive the termination
 outcome, but later requests receive `unknown_session`. A terminal response
 already being delivered may report `session_status: terminated`; it does not
@@ -1031,10 +1037,22 @@ up sessions. Reject oversized frames without allocating their full length.
 Service timers/control operations fairly even under sustained traffic.
 
 Kill is synchronous to the caller but never blocks the manager event loop.
-Use forced worker termination; if exit is not confirmed within 30 seconds,
-report `termination_error`, retain only the still-live terminating session,
-and continue supervision. Do not falsely report it closed. Descendant process
-termination is not guaranteed in this initial version.
+Attempt forced worker termination and reaping. If exit is not confirmed within
+30 seconds, close manager-owned transport descriptors, discard the session and
+its data, and return successful kill with `process_exit_confirmed: false`.
+The worker may exceptionally remain alive outside session management; this must
+not retain the client call, session slot, or application-level supervision
+indefinitely. Keep only minimal OS child-reaping bookkeeping if needed to avoid
+a zombie should it later exit; do not expose that as a retained session.
+
+Apply the same bounded best-effort disposal to timeout, cancellation, failed
+startup, transport-failure cleanup, and manager disconnect/shutdown. Preserve
+the original failure reason for those operations rather than replacing it with
+a cleanup error. An execution still active when killed is reported killed even
+if its detached process may continue producing external side effects; include
+the unconfirmed-exit notice in affected terminal replies. Never rewrite an
+already recorded completed execution as killed. Unknown-session kill requests
+remain errors. Descendant-process termination is not guaranteed initially.
 
 ### 14.5 Data and embedding
 
