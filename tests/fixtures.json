@@ -775,5 +775,13 @@
     "deadline": 30,
     "run": true,
     "expected_status": 0
+  },
+  {
+    "path": "u13_surrogate_decode.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 30,
+    "run": true,
+    "expected_status": 0
   }
 ]

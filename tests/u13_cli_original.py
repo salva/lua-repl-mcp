@@ -13,8 +13,9 @@ try:
     send(json.dumps({'jsonrpc':'2.0','id':1,'method':'initialize','params':{'protocolVersion':'2025-11-25','capabilities':{},'clientInfo':{'name':'batch2','version':'1'}}}))
     assert receive()['id']==1
     send('{"jsonrpc":"2.0","method":"notifications/initialized"}')
-    for serial,mode in enumerate(['escaped','numeric'],2):
-        args=('"'+r'\u0001'*200000+'"') if mode=='escaped' else '['+','.join(['1e-7']*800001)+']'
+    for serial,mode in enumerate(os.environ.get('U13_ORIGINAL_MODES','escaped,numeric,surrogate').split(','),2):
+        assert mode in ('escaped','numeric','surrogate')
+        args=('"'+(r'\u0001' if mode=='escaped' else r'\ud83d\ude00')*200000+'"') if mode!='numeric' else '['+','.join(['1e-7']*800001)+']'
         text='{"jsonrpc":"2.0","id":'+str(serial)+',"method":"tools/call","params":{"name":"session_execute","arguments":{"code":"local a=...; return type(a)","args":['+args+'],"wait_timeout_ms":null}}}'
         # Complete original body exactly I, including legal trailing whitespace.
         I=16*1024*1024
@@ -23,7 +24,7 @@ try:
         start=time.monotonic(); send(text); r=receive()
         value=r['result']['structuredContent']
         assert value.get('status')=='completed',value
-        assert value['values']==['string' if mode=='escaped' else 'table']
+        assert value['values']==['table' if mode=='numeric' else 'string']
         print('PASS installed_cli_exact_original_I',mode,'bytes',I,'seconds',round(time.monotonic()-start,3),flush=True)
     send('{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"session_list","arguments":{}}}')
     assert receive()['id']==9

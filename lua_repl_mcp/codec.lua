@@ -150,7 +150,7 @@ function M.decode(text, options)
           if #hex~=4 or not hex:match('^%x+$') then bad('invalid Unicode escape',path) end
           local cp=tonumber(hex,16); i=i+5
           if cp>=0xd800 and cp<=0xdbff then
-            local low=text:sub(i):match('^\\u(%x%x%x%x)')
+            local low=text:sub(i,i+5):match('^\\u(%x%x%x%x)')
             low=low and tonumber(low,16)
             if not low or low<0xdc00 or low>0xdfff then bad('unpaired surrogate',path) end
             cp=0x10000+(cp-0xd800)*1024+low-0xdc00; i=i+6
