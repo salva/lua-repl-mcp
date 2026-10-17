@@ -1,6 +1,35 @@
 # U10 — refreshed installed Saivage integration
 
-## Current classification
+## U12 release-refresh acceptance (current)
+
+Verified on `990dd78` with runtime identical `459f7fa` (af80aa9 relay and
+9f82e55 EOF repairs). [U12 real-agent refresh](U12_REAL_AGENT_REFRESH.md)
+contains the current44/18 returned-call trials, actual agent interpretation,
+configuration, versions, matrix and cleanup. [Combined installed verification](U12_COMBINED_VERIFY.md)
+contains the applicable clean-install/full affected suite including28 lifecycle
+cases. These supersede current-applicability claims below, not historical results.
+Final verification accepts scoped U9/U12/U10 coverage, **with issue8 filed-not-fixed**:
+shared-client30000ms timeout loses unrelated sessions, never a continuity pass.
+Lua5.5 native manager install is not claimed; documented pinned dependency/tool
+limitations remain. No public publication or general arbitrary-host support implied.
+
+Fresh verify checks: retained input/output and five advertised schema validation,
+observed binding epochs, ordered finite pending/terminal/consumed semantics,
+negative absent-witness rejection, contracts and manifest lint all exit0.
+Primary output `work:///cards/card-d-c/processes/proc-18ba7971a351/stdout.log`.
+An initial verification-only assertion incorrectly required per-tool rediscovery
+on every new binding and failed (`proc-f846831015f5`); inspection showed fresh
+binding discovery via session_list plus previously observed unchanged schemas.
+Corrected verification checks actual discovered epochs and schemas, not a
+non-required per-tool refresh. No server/harness/result changed to pass it.
+Final follow-up uses newly discovered binding for recovery execute/kill, whose
+schemas had been discovered before restart. The report does not claim every tool
+was individually rediscovered in that final epoch.
+
+Whole-card verdict **done for assigned acceptance scope**, not issue8 resolution,
+U11/SPEC15 approval or public release. Earlier sections retained as1007245 history.
+
+## Historical1007245 classification
 
 **Meaningful focused coverage passes** against package-ready revision
 `1007245423b48b5ff36f5b69638d75608c451247`, local 0.1.0-1, on 2026-10-17.
