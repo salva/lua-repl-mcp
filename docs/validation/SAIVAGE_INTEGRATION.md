@@ -161,3 +161,52 @@ process evidence correctly. No shared restart, sibling/host edits or publication
 This increment adds coverage; final suite acceptance remains verify's work.
 Inherited U7 maximum-ID contradiction remains unresolved and unwaived. No claim
 that every project gate passes or that client deadline preserves unrelated state.
+
+## Verify acceptance
+
+Verify accepted scoped U10 suite/coverage on unchanged runtime inputs. Reused the
+same-card installed run (exit 0, ten live groups plus host) and actual-agent runs,
+not a new purported agent execution. `git diff --quiet 5da1952 HEAD --
+lua_repl_mcp lua-repl-mcp lua-repl-mcp-0.1.0-1.rockspec tests/u8_live.py
+tests/u9_installed.sh` exits 0: their relevant inputs are unchanged. Repeating
+provider calls solely for a green count would add no missing branch evidence.
+
+Fresh verify commands:
+
+- `python3 tests/u10_evidence.py docs/validation/saivage/attempt2.json docs/validation/saivage/attempt3.json`: exit 0.
+- Installed venv Python `docs/check_contracts.py`: exit 0, 14 schemas/7 official
+  tools/2 discovery/23 examples/125 regressions.
+- Independent validation using `docs/check_contracts.py` expand helper and
+  jsonschema 4.19.2: all agent-call inputs valid; 39 native structured results
+  satisfy authoritative per-tool output schemas; all five discovered input
+  schemas exactly equal expanded authority. Exit 0.
+- Python AST parsing for both fixtures, `node --check tests/u10_setup.mjs`,
+  `git diff --check`: pass. Retained process observations plus current absence
+  and closed loopback test pass.
+
+Logs: `work:///cards/card-c-e-a/processes/proc-31069864aa55/stdout.log`
+(and complete checker stderr),
+`work:///cards/card-c-e-a/processes/proc-f87bbf161069/stdout.log`,
+`work:///cards/card-c-e-a/processes/proc-c14b96ac35d5/stdout.log`.
+
+Branch review compared actual calls/results, not only checker labels: allocation,
+no-return/persistent/isolated state, list without consumption, terminal retrieval,
+consumed-result error, recovery with effects once, kill/removal/unknown ID,
+hard fatal response versus later unknown ID, and client containment/restart binding
+are consistent with the contract. Finite wait is robustly observed inside execute
+rather than assuming model latency permits a subsequent 1ms wait to expire.
+Disconnect list actually showed running+idle before stop; process oracle supports
+cleanup independently of an empty new instance. Live provider scheduling is not a
+deterministic regression fixture; retained evidence is asserted deterministically,
+and follow-up instructions avoid the two observed timing pitfalls. Initial
+failures remain historical failures resolved by specific coverage changes, not
+silently relabeled green. No artificial product failure or server fix was needed.
+
+**Scoped acceptance: U10 complete with documented external client limitation.**
+The plan permits reproducible external client reports for affected scenarios;
+the 30s stdio deadline's loss of unrelated state is explicitly not accepted as
+preservation. Independent scenarios are covered, including unrelated session use
+before client containment, and post-restart usability is not misrepresented as
+continuity. This does not accept unresolved U7 maximum-ID fit or full project
+release acceptance. No additional service launch or credentials were needed by
+verify; isolated service remains stopped.
