@@ -196,6 +196,39 @@ Consequently:
 - Clients must not automatically retry a timed-out state-changing execution on
   the assumption that it did not run.
 
+### 7.1 Manager-enforced execution timeouts
+
+Managed execution requests may specify an execution timeout. The manager owns
+worker process creation, supervision, and termination, and enforces the timeout
+using its event loop independently of the worker's Lua execution.
+
+The timeout starts when execution is dispatched to the worker, not while a
+request is waiting in a session queue. If execution has not completed before
+the deadline, the manager must forcibly terminate the worker, reap the process,
+and report an execution-timeout failure to the client. It must not rely on the
+blocked handler to acknowledge cancellation or voluntarily stop. Other managed
+sessions must remain available during timeout handling.
+
+This kills the session's interpreter process, not the MCP client or manager.
+The session becomes terminated and its in-memory Lua state is lost. Subsequent
+executions must fail for that session rather than silently creating a fresh
+interpreter. Other pending requests for the terminated session must also be
+resolved as failures.
+
+Process termination does not roll back filesystem changes or other external
+side effects, permit graceful host cleanup, or guarantee termination of spawned
+descendant processes. Timeout handling must document those limitations.
+
+This server-enforced execution timeout is distinct from a client's own MCP
+request deadline. A client-side timeout alone does not request or guarantee
+worker termination. Timeout field names, units, permitted bounds, and any
+default when omitted remain API decisions.
+
+Embedded handlers do not kill their host application to implement this feature.
+They must reject requests requiring this enforced timeout unless the host
+explicitly provides an equivalent enforcement policy; they must not silently
+claim that a hard deadline can be enforced by a blocked single-threaded handler.
+
 If progress reporting is added later, MCP progress notifications must use a
 client-supplied progress token and satisfy the negotiated protocol's rules.
 Fabricated percentages must not be used as keep-alives.
@@ -226,6 +259,10 @@ Fabricated percentages must not be used as keep-alives.
 12. A managed session calling `os.exit()` ends its worker, not the manager. The
     manager detects worker exit and resolves affected pending requests as failures
     rather than leaving them waiting indefinitely.
+13. A managed execution exceeding its supplied timeout causes the manager to
+    kill and reap that worker, report a timeout, and mark the session terminated.
+    Another managed session remains usable. An execution completing before its
+    deadline does not cause its worker to be killed by a stale timer.
 
 ## 9. Lua version support
 
@@ -325,6 +362,8 @@ The following have not yet been agreed:
 - Result rendering, output limits, and oversized-result behaviour.
 - Event-loop and process-spawning dependencies, internal worker protocol, and
   per-session request queueing or busy-response policy.
+- Execution timeout field, units, bounds, omitted-timeout policy, and ordering
+  rules for completion racing with the deadline.
 - Deployment authentication and authorization for any network transport.
 
 These decisions must preserve the independent handler, shared host environment,
