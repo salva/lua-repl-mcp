@@ -33,7 +33,7 @@ function M.new(config)
   local self={state='new'}
   function self:handle(text)
     local r=codec.decode(text)
-    if not r then return rpc(nil,-32700,'Parse error') end
+    if r==nil then return rpc(nil,-32700,'Parse error') end
     if not object(r) or r.jsonrpc~='2.0' or type(r.method)~='string' or
       (r.id~=nil and (type(r.id)~='string' and type(r.id)~='number')) or
       (r.params~=nil and not object(r.params) and codec.kind(r.params)~='array') then
@@ -45,6 +45,11 @@ function M.new(config)
       -- Cancellation cannot interrupt a synchronous direct execution, nor kill a host.
       if config.notification then config.notification(r) end
       return nil
+    end
+    -- Outstanding IDs remain reserved through response enqueue. Check before
+    -- every ID-bearing dispatch, including ping and initialization.
+    if config.outstanding and config.outstanding(id) then
+      return rpc(nil,-32600,'Duplicate outstanding request ID')
     end
     local function ok(value) return {jsonrpc='2.0',id=id,result=value} end
     if r.method=='ping' then return ok(codec.object({})) end

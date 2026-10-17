@@ -47,6 +47,10 @@ function C:enqueue(text)
 end
 function C:submit(id,tool,args)
  if self.closed then return end
+ if self.manager.requests[id] then
+  local text=require('lua_repl_mcp.codec').encode(protocol.error(nil,-32600,'Duplicate outstanding request ID'))
+  return self:enqueue(text)
+ end
  -- Cancelled handles no longer own slots. Remove them before admitting another
  -- handle even when the caller submits/cancels repeatedly without a tick.
  local live={}

@@ -140,7 +140,7 @@ end
 function C:freeze(s,cause)
  local e=s.execution
  if e and e.status=='running' then
-  e.status='failed'
+  e.status='failed'; e.fatal=true
   e.payload=failure(cause,'started'); e.payload.status=e.status
   e.completed_at=self.clock(); e.deadline=nil; e.cleanup=true
  end
@@ -169,7 +169,7 @@ function C:cancel(id)
  local e=r.execution
  -- A recorded result is completed even if its response has not committed yet.
  if not r.starting and not r.killing and (e and e.status~='running') then
-  self.requests[id]=nil; return false
+  return false
  end
  self.requests[id]=nil; r.cancelled=true; self:release(r)
  if r.session and not r.killing then
@@ -251,12 +251,14 @@ function C:preview(r)
   elseif r.input then self:dispatch(s,r.input,r)
   else r.response={session_id=s.id,session_status='idle'} end
  end
- if r.response then return copy(r.response) end
  local e=r.execution
+ -- Recorded fatal outcomes supersede pending replies until commitment,
+ -- including the explicit zero-wait acceptance snapshot.
+ if r.response and not (e and e.fatal) then return copy(r.response) end
  if not e then return nil end
  if e.cleanup then return nil end
  -- A late observation of a terminal result must not extend a finite wait.
- if r.deadline and self.clock()>=r.deadline and
+ if not e.fatal and r.deadline and self.clock()>=r.deadline and
     (not e.completed_at or e.completed_at>r.deadline) then
   return envelope(s,{status='running'})
  end

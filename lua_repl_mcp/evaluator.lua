@@ -5,7 +5,8 @@ local null=require('lua_repl_mcp').null
 local limits=require('lua_repl_mcp.limits')
 -- Capture primitives before running user code. The evaluator is not a sandbox;
 -- ordinary mutation of host globals must not change its bookkeeping mid-call.
-local load, xpcall, pack, unpack, traceback = load, xpcall, table.pack, table.unpack, debug.traceback
+local load, xpcall, pcall, pack, unpack = load, xpcall, pcall, table.pack, table.unpack
+local traceback = type(debug)=='table' and type(debug.traceback)=='function' and debug.traceback
 local M={}
 function M.execute(input,options)
   options=limits.evaluator(options)
@@ -18,7 +19,12 @@ function M.execute(input,options)
   if not f then return err('lua_syntax_error',compile_error,'execution','not_started') end
   local thrown,trace
   local result=pack(xpcall(f,function(v)
-    thrown=v; trace=traceback('',2); return v
+    thrown=v
+    if traceback then
+      local ok,value=pcall(traceback,'',2)
+      if ok and type(value)=='string' then trace=value end
+    end
+    return v
   end,unpack(args.args,1,#args.args)))
   if not result[1] then return err('lua_runtime_error',thrown,'execution','started',{traceback=trace}) end
   local values=codec.array({})
