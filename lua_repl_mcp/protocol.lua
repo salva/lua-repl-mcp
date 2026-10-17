@@ -39,8 +39,8 @@ function M.encode_result(id,payload,options,tool)
 end
 function M.new(config)
   local self={state='new'}
-  function self:handle(text)
-    local r=codec.decode(text,{max_depth=(config.max_depth or 128)+4,max_bytes=config.input_bytes})
+  function self:handle(text,checkpoint)
+    local r=codec.decode(text,{max_depth=(config.max_depth or 128)+4,max_bytes=config.input_bytes,checkpoint=checkpoint})
     if r==nil then return rpc(nil,-32700,'Parse error') end
     if not object(r) or r.jsonrpc~='2.0' or type(r.method)~='string' or
       (r.id~=nil and (type(r.id)~='string' and type(r.id)~='number')) or
@@ -83,7 +83,7 @@ function M.new(config)
     local input=p.arguments
     if input==nil then input=codec.object({}) end
     if config.submit then
-      config.submit(id,p.name,input,assert(codec.json_data(text,{max_depth=(config.max_depth or 128)+4,max_bytes=config.input_bytes})))
+      config.submit(id,p.name,input,assert(codec.json_data(text,{max_depth=(config.max_depth or 128)+4,max_bytes=config.input_bytes,checkpoint=checkpoint})))
       return nil
     end
     local args,e=contracts.validate(p.name,input,{max_depth=config.max_depth or 128})

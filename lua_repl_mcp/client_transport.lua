@@ -112,7 +112,7 @@ function C:cancel(id)
  end
  return self.manager:cancel(id)
 end
-function C:step(on_frame)
+function C:step(on_frame,progress)
  if self.closed then return false end
  -- Each direction is bounded per tick, independently of request saturation.
  -- Always advance worker timers before processing more client traffic.
@@ -128,10 +128,11 @@ function C:step(on_frame)
   chosen.turn=self.preparation_turn; self:prepare(chosen)
   if self.closed then return false end
  end
+ local ingress=not progress or progress()
  local chunk,err
  -- Drain buffered complete frames before asking the adapter for more. Otherwise
  -- a flood of short frames could grow a backlog faster than the tick quota.
- if self.input.buffer:find('\n',1,true) then err='again'
+ if not ingress or self.input.buffer:find('\n',1,true) then err='again'
  else chunk,err=self.io.read(math.min(65536,self.input.limit-#self.input.buffer+1)) end
  if chunk then
   if #chunk==0 or #chunk>65536 then self:close('invalid read'); return false end
@@ -139,12 +140,13 @@ function C:step(on_frame)
   self.input_high_water=math.max(self.input_high_water,#self.input.buffer)
   if not ok then self:close('input bound'); return false end
  elseif err~='again' then self:close(err or 'eof'); return false end
- for _=1,16 do
+ for _=1,ingress and 16 or 0 do
   local frame,e=self.input:pop()
   if e then self:close(e); return false end
   if not frame then break end
-  on_frame(frame,self)
+  local more=on_frame(frame,self)
   if self.closed then return false end
+  if more==false then break end
  end
  local rest={}
  for _,p in ipairs(self.pending) do

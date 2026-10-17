@@ -21,15 +21,27 @@ function M.serve(io,options)
    end
   end,
  }
- local function frame(text)
-  if io.stopping and io.stopping() then return end
-  local response=core:handle(text)
+ -- One complete frame owns strict decoding. Preserve wire dispatch order and
+ -- bounded retention; worker timers/output still progress between parser slices.
+ local decoding
+ local function progress()
+  if not decoding then return true end
+  local pass,response=coroutine.resume(decoding)
+  if not pass then error(response,0) end
+  if coroutine.status(decoding)~='dead' then return false end
+  decoding=nil
   if response then
    local encoded=codec.encode(response,{max_bytes=transport.response_bytes,max_depth=transport.encode_depth})
    if encoded then transport:enqueue(encoded) else transport:close('protocol response bound') end
   end
+  return true
  end
-  while not (io.stopping and io.stopping()) and transport:step(frame) do
+ local function frame(text)
+  if io.stopping and io.stopping() then return end
+  decoding=coroutine.create(function() return core:handle(text,coroutine.yield) end)
+  return progress()
+ end
+  while not (io.stopping and io.stopping()) and transport:step(frame,progress) do
    if io.pause then io.pause() end
   end
  end)

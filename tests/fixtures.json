@@ -975,5 +975,13 @@
     "deadline": 90,
     "run": true,
     "expected_status": 0
+  },
+  {
+    "path": "u13_server_decode.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 30,
+    "run": true,
+    "expected_status": 0
   }
 ]
