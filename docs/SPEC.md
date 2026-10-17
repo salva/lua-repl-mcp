@@ -328,7 +328,7 @@ terminal. If the wait expires, the manager must return control without cancellin
 restarting, or resubmitting the execution. The client can subsequently poll that
 same session for status and retrieve its terminal result, including output or errors.
 The final result must remain retrievable even if completion races with returning
-the pending response, until consumed by wait or replaced by the next execution.
+the pending response, until returned to a caller or replaced by the next execution.
 Status and result retrieval must not execute the code again.
 
 The wait deadline starts when the execution is dispatched. The manager must
@@ -366,16 +366,24 @@ Waiting reattaches to the session's current execution, never dispatches another 
 and never resets or extends its hard execution deadline. Expiry of a wait does
 not kill the task. Waiting on an already terminal task returns its retained
 result immediately and consumes that retained result. Retain terminal results
-until returned by `session_wait` or replaced by the next accepted execution,
-without time-based result expiry. A wait returning pending status consumes
-nothing. A synchronous execution response does not itself consume the result.
+until returned by either `session_execute` or `session_wait`, or replaced by
+the next accepted execution, without time-based result expiry. Returning a
+terminal result always consumes it, including errors. A response containing
+only pending status consumes nothing.
+
+Synchronous execution is conceptually asynchronous dispatch followed by a wait.
+The initial execution call's wait and any later explicit wait use the same
+single-consumer result mechanism. This applies both to indefinite synchronous
+execution and to execution completing within a finite wait deadline. Once the
+terminal result is returned, it is gone; a later wait cannot retrieve it again.
 Unknown sessions, consumed results, and sessions without an execution produce
 explicit, distinguishable errors. Keep lightweight status after consumption.
 Rejected executions must not discard the preceding result. These rules also
 apply to failed results and results from terminated sessions.
 
-Consume when the terminal wait response is committed for transmission; delivery
-cannot be guaranteed after disconnect. If multiple waits are outstanding, one
+Consume when a terminal execution or wait response is committed for transmission;
+delivery cannot be guaranteed after disconnect. If multiple waits are outstanding,
+including the initial execution call's wait, one
 receives and consumes the payload; the others receive a result-unavailable error
 with terminal status. An existing pending waiter must not receive a newer
 execution's result if the session is reused.
@@ -487,6 +495,8 @@ Exact status names and any pagination remain schema decisions.
 16. A client reattaches with `session_wait`, can poll or wait with a fresh wait
     timeout, and consumes the terminal result without re-execution. A subsequent
     wait reports result unavailable; a pending response does not consume a result.
+    A terminal result returned directly by `session_execute` is likewise consumed,
+    with exactly the same semantics as asynchronous execution followed by wait.
 17. `session_kill(session_id)` disposes of newly allocated, idle, or running
     sessions; pending execution waits resolve as killed. Repeating the kill
     has no further side effects. Accepted kill cleanup never
