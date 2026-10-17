@@ -52,3 +52,56 @@ reran that check and all remaining checks successfully. U5/U6 real suites valida
 short-write disconnect closure, complete-response budgeting, coupled transport
 configuration or near-default encoding/ID measurements are established here;
 those accepted-brief U7 requirements remain open.
+
+## Continued implementation (3278262, 0aab697)
+
+The preserved `tests/u7_encoding_red.lua` now passes: encoded values of
+16777215/16777216 bytes yield complete responses of 33554621/33554623 bytes;
+16777217 value bytes remain rejected. `protocol.tool_result` uses an explicit
+payload budget, not the input/value default. `protocol.encode_result` preflights
+the complete response and returns a small replacement plus `original=false` on
+overflow. A replacement must not consume the retained execution payload.
+
+New `client_transport.lua` is a native-independent connection transport seam:
+nonblocking plain-function read/write adapters use `nil,'again'` for EAGAIN;
+submit/cancel expose manager admission; step accepts a raw-frame callback for
+U8 lifecycle/RPC routing. Worker timers advance every tick. Reads/writes have
+64 KiB quotas, frame callbacks 16/tick; buffered complete input is drained before
+another read. Entire retained output strings (including already-written prefixes)
+count against the output bound. Short writes retain offsets, overflow/failure/EOF
+calls manager disconnect and cleanup. This is not full MCP initialization or
+conformance routing. Configured transport bounds are not yet coupled/validated
+against all possible worker results and IDs.
+
+Commands (native environment as above):
+
+```sh
+lua5.4 tests/u7_encoding_red.lua
+lua5.4 tests/u7_transport.lua
+(ulimit -n 256; timeout 25 lua5.4 tests/u7_transport_process.lua)
+lua5.4 tests/u7_bounds_red.lua
+lua5.4 tests/u7_admission.lua
+lua5.4 tests/u5.lua
+lua5.4 tests/u6_policy.lua
+lua5.4 tests/u2.lua
+python3 tests/u5_process.py
+python3 tests/u6_process.py
+python3 docs/check_contracts.py
+git diff --check
+```
+
+Completed checks pass. Real stopped pipe tests record 65536 bytes short-output
+progress while retaining exactly 200001 bytes against 134217728 output bound.
+Closing the actual reader produces EPIPE and cleanup with empty worker/session
+inventory during startup, execution and transmission. Deterministic output fills
+exactly 2048 bytes then rejects the next enqueue. These are explicit retained
+buffer measurements, not constant-RSS claims. A fixture initially failed after
+commit-return checking was added because its fake commit omitted the real
+manager's response return; corrected fake contract and reran successfully.
+
+**Still open:** exhaustive coupled configuration/worst-case mathematical proof,
+max legal escaped ID and default-scale control/quote/backslash/depth/diagnostic
+payload coverage; real transport saturation/timer/kill-reserve fairness and legal
+max result with unrelated session alive; all-limit boundary mapping. These are
+required U7 work, not deferred to U8 and not an external blocker. The ASCII
+reproducer passes but does not complete original acceptance.
