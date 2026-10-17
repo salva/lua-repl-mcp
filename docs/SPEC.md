@@ -126,9 +126,17 @@ the REPL session.
 
 ## 4. Persistent REPL behaviour
 
-The handler must accept Lua statements and provide a documented way to evaluate
-expressions and retrieve their values. The exact expression-entry convention is
-an implementation decision.
+The handler accepts Lua statements and expression input. First try compiling
+the input prefixed with `return `; if that fails to compile, compile the original
+input as a normal Lua chunk. Execute only the successfully compiled form, once.
+A runtime error must never cause fallback execution of the other form. If both
+compilation attempts fail, report a syntax error with diagnostics referring to
+the submitted code rather than exposing confusing synthetic-prefix locations.
+
+Expression input returns all values produced by that expression list. Normal
+multi-statement chunks use explicit `return` to produce results; otherwise they
+return no values. Automatic return of a trailing expression in a multi-statement
+chunk is not part of the initial syntax contract.
 
 Globals and globally reachable functions and objects persist between requests.
 Ordinary chunk-local variables follow Lua's normal scoping rules; the REPL does
@@ -624,7 +632,7 @@ retains control of its own standard streams.
 ## 11. API policies and remaining proposals
 
 Policies in this section are requirements unless explicitly marked as proposals.
-Code-entry syntax and dependency selection still require final decisions.
+Dependency selection still requires a final decision.
 
 ### 11.1 Public tool surface and code entry
 
@@ -637,10 +645,10 @@ than separate synchronous and asynchronous tools. A directly embedded handler ex
 execution and only those lifecycle operations the host supports; it does not
 pretend to create or manage independent host interpreters.
 
-Propose execution takes a complete Lua chunk, with explicit `return` for results.
-This supports both statements and expressions without automatic expression
-detection or a multiline interactive input protocol. For example, `x = 7` sets
-a global and a later `return x * 2` returns its computed value.
+Execution accepts expression input with automatic return, or a complete Lua
+chunk with explicit `return` for results, as specified in section 4. For example,
+`x = 7` sets a persistent global and a later `x * 2` returns its computed value.
+Chunk-local variables follow ordinary Lua scope and do not become globals.
 
 ### 11.2 Busy sessions and lifecycle operations
 
@@ -864,7 +872,7 @@ The following have not yet been agreed:
 - Startup deadline default/bounds, standard-stream file open modes and path
   resolution, and creation options for implicit session allocation.
 - Deployment authentication and authorization for any network transport.
-- Code-entry expression convenience and resource-bound defaults.
+- Resource-bound defaults.
 
 These decisions must preserve the independent handler, shared host environment,
 full-access trust model, explicit lifecycle handoff, and blocking single-threaded
