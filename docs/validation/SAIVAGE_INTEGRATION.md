@@ -178,3 +178,63 @@ stop; PID absent and loopback port closed. Private copied auth file removed.
 Setup/runtime source in /opt never written, no shared restart, host/sibling
 modifications, generated-state edits, push or publication. Disposable install/
 project retained for reproducibility without copied credentials.
+
+## Refreshed verify acceptance
+
+**Accepted: scoped U10 suite and meaningful coverage**, with the documented
+external Saivage client limitation allowed by PLAN U10. This supersedes the
+coverage_ready classification above; it does not claim a fix for issue8 or
+full-project release acceptance.
+
+Verify reused the immediately preceding same-card refreshed clean-install/full
+suite and genuine agent trials only after confirming runtime/package/test-suite
+inputs unchanged between 1007245423b48b5ff36f5b69638d75608c451247 and 4be95d6.
+No old-5da1952 unchanged assumption was used. The installed suite's expected
+hardcoded64MiB historical failure is accounted for explicitly by u9_suite.py;
+current production maximum fit, progressive termination and complete installed
+suite pass. No unresolved failed current check was hidden by aggregate status.
+
+Fresh verify commands (all exit0):
+
+```sh
+python3 tests/u10_evidence.py docs/validation/saivage/refresh-1007245/agent.json docs/validation/saivage/refresh-1007245/followup.json
+python3 tests/u10_evidence.py docs/validation/saivage/attempt2.json docs/validation/saivage/attempt3.json
+"$SAIVAGE_CARD_WORK_ROOT/u10-refresh/u9-clean-reproducer/venv/bin/python" docs/check_contracts.py
+node --check tests/u10_setup.mjs
+git diff --check
+git diff --exit-code 1007245423b48b5ff36f5b69638d75608c451247 HEAD -- lua_repl_mcp lua-repl-mcp lua-repl-mcp-0.1.0-1.rockspec tests/u9_installed.sh tests/u9_suite.py tests/u8_live.py
+```
+
+Also freshly parsed Python fixture syntax, checked retained 10 worker PIDs and
+isolated owner absent, port18081 closed and copied auth absent. Log:
+`work:///cards/card-c-e-a/processes/proc-5755c0b96885/stdout.log`; complete stderr
+records checker PASS14 schemas/7 tools/2 discovery/23 examples/125 regressions.
+Independent schema/binding review freshly validates all call inputs,40 native
+outputs, five exact advertised schemas and previously observed binding epochs:
+`work:///cards/card-c-e-a/processes/proc-86ec9715ca37/stdout.log`.
+
+Branch-by-branch review of actual returned evidence agrees with SPEC state and
+error ordering: allocation/idle, execution pending, list availability without
+consumption, terminal then result_unavailable, usable recovery with effects once,
+kill then unknown ID, fatal hard deadline versus later unknown ID, and fresh
+binding/empty inventory after client containment. Agent interpretation is retained
+verbatim, including its limitations. Its first summary says45 calls; returned API
+evidence contains44 invocations, the authoritative retained count used here.
+
+Coverage is scoped rather than merely green: provider latency made short
+subsequent waits nondeterministic, so finite expiry is observed in execute itself
+and the follow-up has an explicit terminal-consumption sequence within its own
+binding epoch. A separate finite-pending execution was deliberately killed;
+no terminal-consumption claim is made for it. Live scheduling is not advertised
+as deterministic regression machinery; stored evidence checks are deterministic.
+Kill while still active is not proven by model latency; actual kill/disposal is
+observed and installed real-process tests independently exercise active kill.
+Disconnect has running+idle list evidence and nonempty process oracle, not merely
+an empty replacement server. Real-agent returns/interpretation establish the
+client boundary, while installed process tests establish rare/order/boundary
+branches; neither is substituted for the other.
+
+No further agent rerun was required with unchanged inputs. No service or secret
+was accessed by verify. U7 blocker claims remain historical only. Client timeout
+still destroys unrelated state: only before-containment unrelated usability and
+post-restart new usability pass, never continuity across shared-stdio teardown.
