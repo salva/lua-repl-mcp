@@ -105,3 +105,37 @@ payload coverage; real transport saturation/timer/kill-reserve fairness and lega
 max result with unrelated session alive; all-limit boundary mapping. These are
 required U7 work, not deferred to U8 and not an external blocker. The ASCII
 reproducer passes but does not complete original acceptance.
+
+## Coupled-default counterexample (4aaa599)
+
+A materially different next attempt tested the actual maximum legal ID together
+with an escape-heavy legal result. `lua5.4 tests/u7_coupled_defaults_red.lua`
+completes **exit 1**, not acceptance. Exact measurements:
+
+- Public session_wait request: 16777216 bytes (including all request fields).
+- ASCII ID: 16777075 bytes; the remaining request overhead is 141 bytes.
+- Values array: 16777216 bytes, containing 8388606 backslashes.
+- Complete response with required session metadata, structuredContent and equal
+  compatibility text: **67109058 bytes**, exceeding 67108864 by **194** bytes.
+- Existing bounded encoder correctly emits a limit_exceeded replacement without
+  partial original frame; that is not the required legal-maximum-result delivery.
+
+Independent Python stdlib `json.dumps(...,separators=(',',':'),sort_keys=True)`
+reconstructs the same request overhead, value size and complete response size.
+This does not depend on Lua codec allocation estimates or an unproved bound.
+Mathematically each value backslash needs two bytes in structured JSON and four
+inside the re-escaped compatibility string. Thus the two representations alone
+cost approximately 3V. A legal ID takes approximately I, where I=V at defaults;
+3V+I fills all 64 MiB before mandatory envelopes/metadata. The concrete counts
+above establish overflow using only standard required fields, no notices.
+
+SPEC14.4 simultaneously fixes 16 MiB input/values, 64 MiB complete responses,
+and requires a legal maximum result to fit, with maximum legal request ID in U7.
+There is no smaller ID bound in the specification. Raising the response default,
+restricting legal IDs, or reducing legal values changes an owner requirement.
+Rejecting default configuration also violates required runnable defaults. An
+owner decision on that conflict is required to finish exhaustive coupling:
+raise complete response/output budgets as needed, specify an ID bound, or
+explicitly narrow the legal-maximum fit guarantee. No normative limit was
+silently changed. Other previously listed incomplete U7 tests remain incomplete;
+this conflict is not evidence that those independent tests pass.
