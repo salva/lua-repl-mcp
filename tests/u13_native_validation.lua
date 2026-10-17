@@ -11,7 +11,7 @@ local function worker()
  local w={state='running',allocation_generation=1,execution_generation=1,execution_deadline=10,read_fd=101,buffer='',pending='',created_paths={}}
  s.workers={w}; local pos=1
  x.u.read=function(_,n)
-  if pos>#text then return nil,'again',x.e.EAGAIN end
+  if pos>#text then if s.workers[1].reaped then return '' end; return nil,'again',x.e.EAGAIN end
   local v=text:sub(pos,pos+n-1); pos=pos+#v; return v
  end
  while pos<=#text do s:step(0) end

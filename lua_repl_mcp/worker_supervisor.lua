@@ -236,7 +236,11 @@ function S:step(timeout_ms)
     w.pid=nil; self:abort(w,'wait_failed')
    end
   end
-  if w.exit_pending and not w.validation then
+  -- wait confirms identity disappearance, not pipe exhaustion. In particular
+  -- EAGAIN after a fragmented final record must not discard its prefix/tail.
+  -- Continue bounded draining/validation until EOF, or an original deadline
+  -- or active abort closes the owned endpoint.
+  if w.exit_pending and not w.validation and (w.eof or not w.read_fd) then
    if not w.failure and w.state~='closing' then w.failure=w.state=='starting' and 'handshake_failed' or 'worker_exited' end
    if w.state=='starting' then w.files_complete=false end
    close(w); w.state='dead'; w.exit_pending=nil

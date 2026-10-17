@@ -807,5 +807,13 @@
     "deadline": 30,
     "run": true,
     "expected_status": 0
+  },
+  {
+    "path": "u13_reaped_tail.lua",
+    "kind": "process",
+    "wrapper": "u9_suite.py",
+    "deadline": 30,
+    "run": true,
+    "expected_status": 0
   }
 ]
