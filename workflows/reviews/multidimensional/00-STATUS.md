@@ -45,6 +45,15 @@ non-interrupting notification to the root project card. This routes work through
 existing Saivage ownership, not a competing external fixing agent. Notification
 receipt/adoption status is recorded separately; delivery is not implementation.
 
+Addendum committed `e56986e`, independently editorially approved by Astra
+`ses_eb45b3871ffeeHA7ITuqLPd4G7`; local link/diff checks passed. Supported Analyst
+`queue_notification` to root `project`, normal urgency, returned queued:true,
+notification `2140a253-1cb1-464c-ae36-76e868ddd3d5`, interruption:not_requested.
+Receipt saved privately at workspace
+`tmp/lua-repl-mcp-container-setup/multidimensional-addendum/notification-response.json`.
+No accepted-brief edit, source/test fix, lifecycle interruption or competing fixer
+was performed. Planner adoption/implementation is not established by this receipt.
+
 Every allegation must be critically checked for evidence, user impact, current
 applicability and duplication with active repairs. Reviewer authority, preference
 and prior approval are not sufficient. Record accept, simplify, defer or reject
