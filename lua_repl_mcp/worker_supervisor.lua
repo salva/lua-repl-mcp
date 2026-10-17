@@ -130,7 +130,12 @@ function S:drain(w)
  while w.read_fd and budget>0 do
   local text,_,err=x.u.read(w.read_fd,math.min(65536,budget))
   if not text then if x.retryable(err) then return end; return self:abort(w,'transport_failed') end
-  if text=='' then w.eof=true; return end
+  if text=='' then
+   -- Endpoint closure is a logical worker loss, not proof of an OS exit.
+   -- Keep it distinct from a locally failed/closed channel. wait alone owns
+   -- exit confirmation/reason/status, which may become observable later.
+   w.eof=true; w.control_eof=true; return
+  end
   budget=budget-#text
   -- Check length before adding an unbounded incomplete frame.
   local rest=text
@@ -174,7 +179,7 @@ function S:step(timeout_ms)
   if w.state=='running' and w.execution_deadline and self.clock()>=w.execution_deadline then self:abort(w,'execution_timeout') end
   if w.state=='starting' and self.clock()>=w.deadline then self:abort(w,'startup_timeout') end
   if w.read_fd then self:drain(w) end
-  if w.write_fd and #w.pending>0 then
+  if not w.control_eof and w.write_fd and #w.pending>0 then
    local n,_,err=x.u.write(w.write_fd,w.pending:sub(w.offset,w.offset+65535))
    if n and n>0 then w.offset=w.offset+n; if w.offset>#w.pending then w.pending=''; w.offset=1 end
    elseif not x.retryable(err) then self:abort(w,'transport_failed') end
@@ -200,7 +205,7 @@ function S:step(timeout_ms)
    if w.pid and not w.reaped then self.reaping[#self.reaping+1]=w.pid end
    x.u.write(2,'worker exit unconfirmed after bounded disposal; external side effects may continue\n')
   end
-  if w.eof and w.state~='dead' and w.state~='closing' then self:abort(w,w.state=='starting' and 'handshake_failed' or 'transport_failed') end
+  if w.eof and w.state~='dead' and w.state~='closing' then self:abort(w,w.state=='starting' and 'handshake_failed' or (w.control_eof and 'worker_exited' or 'transport_failed')) end
  end
  local live={}; for _,w in ipairs(self.workers) do
   if w.state~='dead' then live[#live+1]=w end

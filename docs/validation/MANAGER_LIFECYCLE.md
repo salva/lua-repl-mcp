@@ -352,3 +352,48 @@ this is a pre-existing native EOF-vs-wait classification issue, not proven repai
 or waived by passing reruns, and is outside this relay-only correction. Native
 supervisor and that fixture are unchanged. Initial baseline extraction named an
 absent root module and failed before running; corrected archive excludes it.
+
+## Native EOF-before-wait correction (original U12 regression scope)
+
+The previously recorded native U6 failure was not waived as pre-existing. Test
+commit70f8c5e deterministically demonstrated that read EOF one turn before
+wait(WNOHANG) confirmation froze transport_failed; same-turn wait confirmation
+instead produced worker_exited. All three empty/partial/complete record variants
+failed in the next-turn case. Original `tests/u6_eof_wait_red.lua` is unchanged.
+
+The owning native drain now records `control_eof` only on an actual empty read.
+After bounded available-byte validation, this endpoint loss begins the same
+progressive cleanup with logical worker_exited (startup: handshake_failed).
+This does NOT assert process exit: confirmation, exit reason and exit status are
+still set only by wait. A locally closed/failed descriptor remains transport_failed,
+even if cleanup subsequently confirms the child. No sleeping/retry-to-infer-exit,
+blanket replacement of prior failures or guessed OS status. Once EOF is observed,
+do not attempt queued command writes that could spuriously overwrite endpoint
+loss with EPIPE. Deadline/accepted kill/corrupt-record failures already frozen
+remain unchanged. A validated result survives idle endpoint loss; incomplete
+records never become results. Drain budgets and disposal origin/bounds unchanged.
+
+Additional `tests/u6_eof_policy.lua` covers endpoint EOF while wait remains0
+through30s abandonment/minimal eventual reap (no invented exit info), local channel
+closure, startup, reached hard deadline, accepted kill, and pending command write.
+All six assert original disposal origin, TERM/KILL progression and confirmation
+only from observed wait. The original six-branch reproducer and existing15-case
+ordering/deadline/policy fixtures pass after correction. Twenty sequential real
+`python3 tests/u6_process.py` runs passed, each with21 schema-validated committed
+responses, including real os.exit/signal versus live local-channel closure.
+Expected unconfirmed warnings are deterministic fallback injections, not live
+unresolved workers. Lua5.4.6/luaposix36.3/Python3.12.3, same local runtime paths.
+
+Current correction evidence: original reproducer + new EOF policy + existing
+U6 ordering/policy/deadlines +19 partial acquisition injections + contracts/diff
+all exit0 (`proc-1f319c2c1ed2`). EOF policy +20 sequential real U6 runs exit0
+(`proc-871e31230d23`). Unchanged audit relay, six relay process cases, delegated
+policy12, lifecycle matrix28, full U8, rare/progressive cleanup, contracts/diff
+all exit0 (`proc-3ad398c3b5c6`); audit completion879678.73018241 precedes
+deadline879680.51503431, TERM-ignore matrix disposal20.019s/20.048s. Real
+partial-fault4 and identity40/stale cases exit0 under25s/45s external group
+watchdogs (`proc-45377f231bfb`), with expected stale identity diagnostics.
+Primary process artifacts are cited in the continued card-d-a status record.
+Prior failed run and baseline1/10 remain historical evidence, now addressed by
+owning repair plus deterministic and repeated process verification, not erased.
+Independent review, clean-install/U10 and release acceptance remain separate.
