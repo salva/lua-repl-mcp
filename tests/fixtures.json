@@ -751,5 +751,13 @@
     "deadline": 90,
     "run": true,
     "expected_status": 0
+  },
+  {
+    "path": "u13_cli_original.py",
+    "kind": "process",
+    "wrapper": "u13_cli_original.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
   }
 ]

@@ -106,7 +106,7 @@ function S:execute(w,input,deadline,original)
   input=resolved
  end
  -- Validate the direct evaluator arguments before dispatch.
- local args,e=require('lua_repl_mcp.contracts').validate('repl_execute',input,{max_depth=self.limits.max_depth,max_bytes=not original and self.limits.input_bytes or nil})
+ local args,e=require('lua_repl_mcp.contracts').validate('repl_execute',input,{max_depth=self.limits.max_depth,max_bytes=not original and self.limits.input_bytes or math.huge})
  if not args then return nil,e end
  local generation=w.execution_generation+1
  local record={execution_generation=generation}

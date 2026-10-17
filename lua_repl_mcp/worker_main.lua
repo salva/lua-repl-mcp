@@ -54,7 +54,7 @@ function M.run(input,output,g,options,limit_options)
     if v.type~='execute' or v.execution_generation~=last+1 then return end
     local execution=p.execution_input(v,limits); if not execution then return end
     last=v.execution_generation
-    local result=evaluator.execute(execution,{max_bytes=limits.values_bytes,max_depth=limits.max_depth,diagnostic_bytes=limits.diagnostic_bytes})
+    local result=evaluator.execute(execution,{max_bytes=limits.values_bytes,max_depth=limits.max_depth,diagnostic_bytes=limits.diagnostic_bytes},math.huge)
     if not send('result',{execution_generation=last,result=result}) then return end
    end
   end

@@ -89,7 +89,7 @@ end
 function C:accept(tool,input,request_id,original)
  assert(not self.committing,'response commit must not reenter manager')
  self:refresh()
- local a,err=contracts.validate(tool,input,{max_depth=self.limits.max_depth,max_bytes=not original and self.limits.input_bytes or nil})
+ local a,err=contracts.validate(tool,input,{max_depth=self.limits.max_depth,max_bytes=not original and self.limits.input_bytes or math.huge})
  local r={tool=tool,accepted_at=self.clock(),original=original}
  if not self:admit(r,tool) then
   r.admission_rejected=true; r.response=failure('limit_exceeded'); return r

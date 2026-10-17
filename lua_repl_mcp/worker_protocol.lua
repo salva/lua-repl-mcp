@@ -51,7 +51,7 @@ function M.execution_input(v,limits)
    r.jsonrpc~='2.0' or r.method~='tools/call' or type(r.params)~='table' or
    r.params.name~='session_execute' then return nil,'invalid original request' end
   local a=require('lua_repl_mcp.contracts').validate('session_execute',r.params.arguments,
-   {max_depth=limits and limits.max_depth or 128})
+   {max_depth=limits and limits.max_depth or 128,max_bytes=math.huge})
   if not a then return nil,'invalid original arguments' end
   return {code=a.code,args=a.args}
  end
@@ -74,7 +74,7 @@ function M.validate(v,limits)
  if v.type=='execute' then
   local input,e=M.execution_input(v,limits)
   if not input then return nil,e end
-  local args=require('lua_repl_mcp.contracts').validate('repl_execute',input,{max_depth=limits and limits.max_depth or 128})
+  local args=require('lua_repl_mcp.contracts').validate('repl_execute',input,{max_depth=limits and limits.max_depth or 128,max_bytes=v.request and math.huge or (limits and limits.input_bytes or 16*1048576)})
   if not args then return nil,'invalid execution input' end
  end
  if v.type=='startup_error' and v.reason~='spawn_failed' and v.reason~='cwd_setup_failed' and v.reason~='stdio_setup_failed' and v.reason~='handshake_failed' then return nil,'invalid startup reason' end

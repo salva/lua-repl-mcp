@@ -8,9 +8,9 @@ local limits=require('lua_repl_mcp.limits')
 local load, xpcall, pcall, pack, unpack = load, xpcall, pcall, table.pack, table.unpack
 local traceback = type(debug)=='table' and type(debug.traceback)=='function' and debug.traceback
 local M={}
-function M.execute(input,options)
+function M.execute(input,options,admitted_input_bytes)
   options=limits.evaluator(options)
-  local args,e=contracts.validate('repl_execute',input,{max_depth=options.max_depth})
+  local args,e=contracts.validate('repl_execute',input,{max_depth=options.max_depth,max_bytes=admitted_input_bytes})
   if not args then return errors.failure(e) end
   local function err(code,msg,stage,state,extra)
     return errors.failure(errors.new(code,msg,stage,state,extra,options.diagnostic_bytes))
@@ -66,7 +66,7 @@ function M.execute(input,options)
 end
 function M.from_json(text,options)
   options=limits.evaluator(options)
-  local input,e=contracts.from_json('repl_execute',text,{max_depth=options.max_depth})
+  local input,e=contracts.from_json('repl_execute',text,{max_depth=options.max_depth,max_bytes=admitted_input_bytes})
   if not input then return errors.failure(e) end
   return M.execute(input,options)
 end
