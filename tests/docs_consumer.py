@@ -1,11 +1,13 @@
 """Validate LLM-guide arguments and run its embedded recipe over live pipes."""
 import json
+import os
 import pathlib
 import re
 import selectors
 import shutil
 import subprocess
 import tempfile
+import time
 
 from jsonschema import Draft202012Validator
 
@@ -51,18 +53,34 @@ with tempfile.TemporaryDirectory(prefix='lua-doc-consumer-', dir=scratch) as dir
     proc = subprocess.Popen(
         ['lua5.4', str(path / 'host.lua')], cwd=path,
         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        text=True, bufsize=1,
+        bufsize=0,
     )
+    os.set_blocking(proc.stdout.fileno(), False)
     selector = selectors.DefaultSelector()
     selector.register(proc.stdout, selectors.EVENT_READ)
+    pending = bytearray()
 
     def send(value):
-        proc.stdin.write(json.dumps(value) + '\n')
+        proc.stdin.write((json.dumps(value) + '\n').encode())
         proc.stdin.flush()
 
     def receive():
-        assert selector.select(5), 'Short frame stalled on a live connection'
-        return json.loads(proc.stdout.readline())
+        deadline = time.monotonic() + 5
+        while b'\n' not in pending:
+            remaining = deadline - time.monotonic()
+            assert remaining > 0 and selector.select(remaining), (
+                'Complete response frame not received within five seconds'
+            )
+            try:
+                chunk = os.read(proc.stdout.fileno(), 65536)
+            except BlockingIOError:
+                continue
+            assert chunk, 'EOF before complete response frame'
+            pending.extend(chunk)
+            assert len(pending) <= 2 * 1024 * 1024, 'Unexpectedly large response'
+        frame, _, tail = pending.partition(b'\n')
+        pending[:] = tail
+        return json.loads(frame)
 
     try:
         send({

@@ -24,6 +24,11 @@ Reviewer: OpenAI GPT-6 Astra (`openai/gpt-6-astra`), separate agent session
 3. Round 3: **no issues found within the scoped review**. All prior findings
    resolved; authority and requirements aligned. This is review evidence, not
    acceptance of future website content or every runtime lifecycle scenario.
+4. Final test/evidence review found the new test's readiness wait did not bound
+   a blocking `readline()` after partial output. Replaced it with nonblocking
+   reads under an absolute monotonic deadline, including EOF/size guards.
+5. Re-review of the corrected test and evidence: **no issues found within the
+   scoped review**; all findings resolved.
 
 ## Validation
 
@@ -32,11 +37,18 @@ Reviewer: OpenAI GPT-6 Astra (`openai/gpt-6-astra`), separate agent session
   executes `return 42` and closes over live pipes while input remains open. Host
   runs outside the checkout with only the copied pure-Lua module set; asserts no
   manager/server/posix module imports. External five-second response/process
-  watchdogs bound the observed operations. Run on host Lua 5.4.8.
+  watchdogs bound complete frames and process exit, including partial output.
+  Run on host Lua 5.4.8.
 - `python3 docs/check_contracts.py`: PASS, 14 standalone schemas, 7 official MCP
   Tools, 2 discovery results, 23 examples and 125 regression cases. This does not
   validate installed-manager examples.
 - `git diff --check`: PASS.
+- Watchdog failure injection: executed `tests/docs_consumer.py` through
+  `runpy.run_path`, temporarily replacing `subprocess.Popen` with a real fixture
+  emitting partial JSON then sleeping 60 seconds. PASS: complete-frame assertion
+  fired within the five-second deadline (elapsed checked within 4.5–10 seconds)
+  and cleanup killed/reaped the fixture. This is a negative watchdog check, not
+  a product failure or an installed-manager validation.
 
 Clean-installed manager commands/examples and the full website user journey
 remain explicit U11 gates. Current checks do not claim those tests have run.
