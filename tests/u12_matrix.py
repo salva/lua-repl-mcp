@@ -1,6 +1,8 @@
 """Real U12 watchdog/barrier matrix; only isolated test process groups contained.
 Run with the recorded project-local Lua module environment.
 """
+from containment import enter
+enter(420)
 import concurrent.futures
 import json
 import os
@@ -47,7 +49,7 @@ end
             script = hook + script
         p = subprocess.Popen(['lua5.4', '-e', PRELUDE + script], cwd=CWD,
                              stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE, bufsize=0, start_new_session=True)
+                             stderr=subprocess.PIPE, bufsize=0, start_new_session=False)
         buf = b''
         serial = 0
         tracked = []
@@ -177,7 +179,7 @@ end
             print('FAIL matrix',mode,state,str(e),flush=True)
             return False
         finally:
-            try: os.killpg(p.pid,signal.SIGKILL)
+            try: p.kill()
             except ProcessLookupError: pass
             p.wait(timeout=5)
             for stream in (p.stdin,p.stdout,p.stderr):

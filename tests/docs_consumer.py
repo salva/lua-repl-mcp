@@ -1,4 +1,6 @@
 """Validate LLM-guide arguments and run its embedded recipe over live pipes."""
+from containment import enter
+enter(420)
 import json
 import os
 import pathlib

@@ -1,0 +1,627 @@
+[
+  {
+    "path": "u1.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u12_aggregate_process.lua",
+    "kind": "process",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u12_aggregate_reports_red.lua",
+    "kind": "native",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u12_audit_eof_policy.lua",
+    "kind": "native",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u12_audit_relay_red.lua",
+    "kind": "process",
+    "wrapper": "u12_audit_relay.py",
+    "deadline": 240,
+    "run": false,
+    "expected_status": 0
+  },
+  {
+    "path": "u12_channel_stream.lua",
+    "kind": "native",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u12_identity_races.lua",
+    "kind": "process",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u12_large_frame.lua",
+    "kind": "native",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u12_partial_acquisition.lua",
+    "kind": "native",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u12_rare_policy.lua",
+    "kind": "native",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u12_real_faults.lua",
+    "kind": "process",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u12_relay_order.lua",
+    "kind": "process",
+    "wrapper": "u12_relay_order.py",
+    "deadline": 240,
+    "run": false,
+    "expected_status": 0
+  },
+  {
+    "path": "u12_relay_policy.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u12_server_boundary.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u12_topology.lua",
+    "kind": "process",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u1_diagnostic_notice.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u1_public_entrypoint.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u1_review_invalid_key.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u2.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u2_handler_entrypoint.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u2_host.lua",
+    "kind": "host",
+    "wrapper": "u2_live.py",
+    "deadline": 240,
+    "run": false,
+    "expected_status": 0
+  },
+  {
+    "path": "u2_review_argument_matrix.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u2_review_false_arguments.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u3_posix.lua",
+    "kind": "host",
+    "wrapper": "u3_posix.py",
+    "deadline": 240,
+    "run": false,
+    "expected_status": 0
+  },
+  {
+    "path": "u4_error_contract.lua",
+    "kind": "native",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u4_error_drain.lua",
+    "kind": "native",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u4_process.lua",
+    "kind": "process",
+    "wrapper": "u4_process.py",
+    "deadline": 240,
+    "run": false,
+    "expected_status": 0
+  },
+  {
+    "path": "u4_review_malformed_error.lua",
+    "kind": "native",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u5.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u5_process.lua",
+    "kind": "process",
+    "wrapper": "u5_process.py",
+    "deadline": 240,
+    "run": false,
+    "expected_status": 0
+  },
+  {
+    "path": "u6_deadlines_red.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u6_eof_policy.lua",
+    "kind": "native",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u6_eof_wait_red.lua",
+    "kind": "native",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u6_ordering.lua",
+    "kind": "native",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u6_policy.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u6_process.lua",
+    "kind": "process",
+    "wrapper": "u6_process.py",
+    "deadline": 240,
+    "run": false,
+    "expected_status": 0
+  },
+  {
+    "path": "u6_progressive_policy.lua",
+    "kind": "native",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u6_progressive_process.lua",
+    "kind": "process",
+    "wrapper": "u6_progressive_process.py",
+    "deadline": 240,
+    "run": false,
+    "expected_status": 0
+  },
+  {
+    "path": "u6_review_progressive_termination.lua",
+    "kind": "native",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u7_admission.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u7_adversarial.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u7_approved_limits_red.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u7_boundaries.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u7_bounds_red.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u7_configuration.lua",
+    "kind": "native",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u7_configuration_process.lua",
+    "kind": "process",
+    "wrapper": "u7_process.py",
+    "deadline": 240,
+    "run": false,
+    "expected_status": 0
+  },
+  {
+    "path": "u7_configuration_red.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u7_coupled_defaults_red.lua",
+    "kind": "historical",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 1,
+    "expected_assertion": "SPEC14.4 coupled defaults cannot fit legal values plus legal request ID"
+  },
+  {
+    "path": "u7_default_maximum.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u7_encoding_red.lua",
+    "kind": "native",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u7_fairness_process.lua",
+    "kind": "process",
+    "wrapper": "u7_process.py",
+    "deadline": 240,
+    "run": false,
+    "expected_status": 0
+  },
+  {
+    "path": "u7_frame_budgets.lua",
+    "kind": "native",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u7_large_configuration_process.lua",
+    "kind": "process",
+    "wrapper": "u7_process.py",
+    "deadline": 240,
+    "run": false,
+    "expected_status": 0
+  },
+  {
+    "path": "u7_max_id.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u7_maximum_process.lua",
+    "kind": "process",
+    "wrapper": "u7_process.py",
+    "deadline": 240,
+    "run": false,
+    "expected_status": 0
+  },
+  {
+    "path": "u7_metadata_budget_red.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u7_metadata_flood.lua",
+    "kind": "native",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u7_pending_flood_red.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u7_pending_ownership.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u7_review_preallocation.lua",
+    "kind": "native",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u7_snapshot.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u7_transport.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 240,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u7_transport_process.lua",
+    "kind": "process",
+    "wrapper": "u7_process.py",
+    "deadline": 240,
+    "run": false,
+    "expected_status": 0
+  },
+  {
+    "path": "u8_direct_host.lua",
+    "kind": "host",
+    "wrapper": "u8_live.py",
+    "deadline": 240,
+    "run": false,
+    "expected_status": 0
+  },
+  {
+    "path": "u9_host.lua",
+    "kind": "host",
+    "wrapper": "u9_installed.sh",
+    "deadline": 240,
+    "run": false,
+    "expected_status": 0
+  },
+  {
+    "path": "u2_live.py",
+    "kind": "process",
+    "wrapper": "u2_live.py",
+    "deadline": 420,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u3_posix.py",
+    "kind": "process",
+    "wrapper": "u3_posix.py",
+    "deadline": 420,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u4_process.py",
+    "kind": "process",
+    "wrapper": "u4_process.py",
+    "deadline": 420,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u5_process.py",
+    "kind": "process",
+    "wrapper": "u5_process.py",
+    "deadline": 420,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u6_process.py",
+    "kind": "process",
+    "wrapper": "u6_process.py",
+    "deadline": 420,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u6_progressive_process.py",
+    "kind": "process",
+    "wrapper": "u6_progressive_process.py",
+    "deadline": 420,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u7_process.py",
+    "kind": "process",
+    "wrapper": "u7_process.py",
+    "deadline": 420,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u12_audit_relay.py",
+    "kind": "process",
+    "wrapper": "u12_audit_relay.py",
+    "deadline": 420,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u12_relay_order.py",
+    "kind": "process",
+    "wrapper": "u12_relay_order.py",
+    "deadline": 420,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u12_installed_environment.py",
+    "kind": "process",
+    "wrapper": "u12_installed_environment.py",
+    "deadline": 420,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u12_lifecycle_red.py",
+    "kind": "process",
+    "wrapper": "u12_lifecycle_red.py",
+    "deadline": 420,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u12_guardian_process.py",
+    "kind": "process",
+    "wrapper": "u12_guardian_process.py",
+    "deadline": 420,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "u12_matrix.py",
+    "kind": "process",
+    "wrapper": "u12_matrix.py",
+    "deadline": 420,
+    "run": true,
+    "expected_status": 0
+  }
+]

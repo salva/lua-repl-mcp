@@ -1,3 +1,8 @@
+> Applicability correction (U13 batch A): this is a historical U11 receipt, not
+> current no-gap or release acceptance. U13 F01–F13 remain subject to their
+> selected plans and current assertions. Publication of a development candidate
+> is not qualification. No historical command below is claimed as a fresh run.
+
 # U11 local website validation
 
 ## Scope and baseline
@@ -122,8 +127,10 @@ check, not a general accessibility or every-browser certification.
 2 discovery results, 23 examples, 125 regression cases passed.
 `tests/docs_consumer.py`: all three LLM-guide argument blocks validated and exact
 pure-Lua copy/module-path adapter recipe initialized/executed/closed over live
-pipes with native imports unavailable. It preserves dedicated handles,
-plain-function calls and progress-safe `read(1)`, including parent handoff.
+pipes with native imports unavailable. This recipe probe does not separately assert dedicated-handle ownership or
+buffered parent handoff; those require the native-host/handoff fixtures.
+Historical U9 `tests/u9_host.c`/`tests/u9_host.lua` evidence is retained, not
+requalified by this recipe run. Changed runtime inputs require a current rerun.
 `tests/website_examples.py`: all seven authored website JSON tool arguments
 validated; actual Lua resource/admission defaults asserted against displayed
 values. Wait default is also covered by authoritative schemas/contracts;
@@ -137,7 +144,10 @@ validate calls and replies against discovered schemas; execute each guide's
 first result (human 42, LLM 2), persisted state and confirmed kill. Also exercised
 consumed-result errors, runtime error with retained side effects, conversion
 error without session loss, async execution and subsequent polling. Complete
-frames and eight-second watchdogs prevent hangs. The first fresh LuaRocks
+frames and per-RPC eight-second watchdogs bounded individual idle reads in this
+historical run; they did not establish a total pending-scenario bound or enforce
+the frame deadline while incomplete data stayed continuously readable. Batch A
+adds those checks; current qualification is recorded separately, not backdated. The first fresh LuaRocks
 installation compiled luaposix and bit32; its full install process output is
 retained under the card process artifacts (`proc-7b5540819dc3`).
 

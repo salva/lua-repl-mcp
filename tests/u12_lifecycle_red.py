@@ -2,6 +2,8 @@
 Run: python3 tests/u12_lifecycle_red.py
 Linux /proc is used only by the test to observe process identity and ownership.
 """
+from containment import enter
+enter(420)
 import concurrent.futures
 import json
 import os
@@ -25,7 +27,7 @@ def identity(pid):
 def case(mode, state):
     p = subprocess.Popen([str(CLI)], cwd=CWD,
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE, start_new_session=True, bufsize=0)
+                         stderr=subprocess.PIPE, start_new_session=False, bufsize=0)
     buf = b''
     serial = 0
     worker = None
@@ -96,7 +98,7 @@ def case(mode, state):
     finally:
         # Only this test's isolated process group; no host/shared processes.
         try:
-            os.killpg(p.pid, signal.SIGKILL)
+            p.kill()
         except ProcessLookupError:
             pass
         p.wait(timeout=5)

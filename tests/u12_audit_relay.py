@@ -1,4 +1,6 @@
 """Bound the independent relay regression, including all owned child processes."""
+from containment import enter
+enter(420)
 import os
 from pathlib import Path
 import signal
@@ -8,8 +10,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 if __name__ == '__main__':
     process = subprocess.Popen(
-        ['lua5.4', 'tests/u12_audit_relay_red.lua'], cwd=ROOT,
-        start_new_session=True,
+        ['lua5.4', str(ROOT / 'tests' / 'u12_audit_relay_red.lua')], cwd=os.environ.get('U9_INSTALLED_CWD', ROOT),
+        start_new_session=False,
     )
     try:
         try:
@@ -18,9 +20,9 @@ if __name__ == '__main__':
             print('FAIL relay regression external 45s watchdog', flush=True)
             status = 1
     finally:
-        # Contain only the isolated test group, never other project processes.
+        # Local wait ends here; the external owner reaps the complete tree.
         try:
-            os.killpg(process.pid, signal.SIGKILL)
+            process.kill()
         except ProcessLookupError:
             pass
         process.wait()

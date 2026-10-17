@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Run U7 real-process fixtures with scoped files and a process-group watchdog."""
+"""Run U7 real-process fixtures with scoped files and a external subreaper watchdog."""
+from containment import enter
+enter(420)
 import os
 from pathlib import Path
 import resource
@@ -20,7 +22,7 @@ for fixture, timeout in [('u7_large_configuration_process.lua', 150),
     with tempfile.TemporaryDirectory(dir=work) as directory:
         env['U7_DIR'] = directory
         proc = subprocess.Popen(['lua5.4', str(root / 'tests' / fixture)],
-                                cwd=os.environ.get('U9_INSTALLED_CWD', root), env=env, start_new_session=True,
+                                cwd=os.environ.get('U9_INSTALLED_CWD', root), env=env, start_new_session=False,
                                 preexec_fn=lambda: resource.setrlimit(resource.RLIMIT_NOFILE, (256, 256)))
         try:
             result = proc.wait(timeout=timeout)
@@ -29,7 +31,7 @@ for fixture, timeout in [('u7_large_configuration_process.lua', 150),
             result = 124
         finally:
             try:
-                os.killpg(proc.pid, signal.SIGKILL)
+                proc.kill()
             except ProcessLookupError:
                 pass
         if result:

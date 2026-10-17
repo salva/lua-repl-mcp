@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Run U3 in an isolated process group; kill descendants on timeout/failure."""
+"""Run U3 in an inherited external containment; bound immediate child waits."""
+from containment import enter
+enter(420)
 import os
 from pathlib import Path
 import shutil
@@ -18,7 +20,7 @@ if not os.environ.get('U9_INSTALLED_CWD'):
 env['U3_LUA'] = lua
 env['U3_SCRIPT'] = str(root / 'tests/u3_posix.lua')
 proc = subprocess.Popen([lua, env['U3_SCRIPT']], cwd=os.environ.get('U9_INSTALLED_CWD', root), env=env,
-                        start_new_session=True)
+                        start_new_session=False)
 try:
     result = proc.wait(timeout=20)
 except subprocess.TimeoutExpired:
@@ -27,7 +29,7 @@ except subprocess.TimeoutExpired:
 finally:
     # Also contain fixtures left behind by abrupt errors in the parent.
     try:
-        os.killpg(proc.pid, signal.SIGKILL)
+        proc.kill()
     except ProcessLookupError:
         pass
     proc.wait()

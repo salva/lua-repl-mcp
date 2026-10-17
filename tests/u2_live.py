@@ -1,4 +1,6 @@
 """Live dedicated pipe fixture, schema validation and blocking close ordering."""
+from containment import enter
+enter(420)
 import importlib.util
 import json
 import pathlib
@@ -33,9 +35,9 @@ def send(id, method, params=None):
     if params is not None:
         r['params'] = params
     p.stdin.write((json.dumps(r) + '\n').encode())
+from deadlines import frame
 def receive():
-    assert select.select([p.stdout], [], [], 5)[0], 'host response timeout'
-    return json.loads(p.stdout.readline())
+    return json.loads(frame(p.stdout))
 try:
     send(1, 'initialize', dict(protocolVersion='2025-11-25', capabilities={}, clientInfo=dict(name='external', version='1')))
     assert receive()['result']['protocolVersion'] == '2025-11-25'

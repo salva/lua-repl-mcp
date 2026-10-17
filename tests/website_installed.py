@@ -1,4 +1,6 @@
 """Human/LLM documentation examples against clean-installed manager discovery."""
+from containment import enter
+enter(420)
 import json, os, pathlib, re, select, subprocess, time
 from jsonschema import Draft202012Validator
 ROOT=pathlib.Path(__file__).resolve().parents[1]
@@ -19,7 +21,8 @@ for guide in ['site-docs/getting-started.md','README-IF-YOR-ARE-AN-AI.md']:
         seq+=1;p.stdin.write((json.dumps(dict(jsonrpc='2.0',id=seq,method=method,params=params))+'\n').encode())
         deadline=time.monotonic()+8
         while b'\n' not in pending:
-            assert select.select([p.stdout],[],[],max(0,deadline-time.monotonic()))[0], 'watchdog'
+            remaining=deadline-time.monotonic()
+            assert remaining>0 and select.select([p.stdout],[],[],remaining)[0], 'complete-frame deadline'
             chunk=os.read(p.stdout.fileno(),65536);assert chunk,'EOF';pending+=chunk
         line,pending=pending.split(b'\n',1);r=json.loads(line);assert r['id']==seq,r
         return r['result']
@@ -36,7 +39,9 @@ for guide in ['site-docs/getting-started.md','README-IF-YOR-ARE-AN-AI.md']:
         blocks=re.findall(r'```json\n(.*?)\n\s*```',(ROOT/guide).read_text(),re.S)
         first=json.loads(blocks[0]);v=call('session_execute',first);sid=v['session_id']
         def completed(v):
+            deadline=time.monotonic()+15
             while v.get('status') in ('pending','running'):
+                assert time.monotonic()<deadline, 'total scenario deadline'
                 v=call('session_wait',dict(session_id=sid,wait_timeout_ms=1000))
             return v
         v=completed(v);assert v['values']==([42] if 'getting-started' in guide else [2]),v

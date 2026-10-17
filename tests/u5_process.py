@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Real U5 manager processes under an external group watchdog; fixture files are disposable."""
+from containment import enter
+enter(420)
 import os
 from pathlib import Path
 import signal
@@ -17,7 +19,7 @@ with tempfile.TemporaryDirectory(dir=work) as directory:
     env['U5_DIR'] = directory
     env['U5_RESPONSES'] = str(Path(directory) / 'responses.jsonl')
     proc = subprocess.Popen(['lua5.4', str(root / 'tests/u5_process.lua')], cwd=os.environ.get('U9_INSTALLED_CWD', root), env=env,
-                            start_new_session=True,
+                            start_new_session=False,
                             preexec_fn=lambda: resource.setrlimit(resource.RLIMIT_NOFILE, (256, 256)))
     try:
         result = proc.wait(timeout=45)
@@ -26,7 +28,7 @@ with tempfile.TemporaryDirectory(dir=work) as directory:
         result = 124
     finally:
         try:
-            os.killpg(proc.pid, signal.SIGKILL)
+            proc.kill()
         except ProcessLookupError:
             pass
     if result == 0:

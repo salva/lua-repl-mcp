@@ -1,6 +1,9 @@
 #!/bin/sh
 # Run from checkout; build/install in caller-selected disposable directory.
 set -eu
+if ! PYTHONPATH="$(dirname "$0")" python3 -c 'from containment import supervised; raise SystemExit(0 if supervised() else 1)'; then
+  exec python3 "$(dirname "$0")/containment.py" 3000 sh "$0" "$@"
+fi
 : "${SAIVAGE_CARD_WORK_ROOT:?set a disposable card work root}"
 ROOT=$(pwd)
 W="$SAIVAGE_CARD_WORK_ROOT/u9-clean-reproducer"

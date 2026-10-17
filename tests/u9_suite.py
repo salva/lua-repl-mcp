@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Complete installed regression driver. Test source is data, never a module path."""
+from containment import enter
+enter(2400)
 import os
 from pathlib import Path
 import subprocess
@@ -15,22 +17,24 @@ for source in sorted((root / 'lua_repl_mcp').glob('*.lua')):
     assert (modules / source.name).read_bytes() == source.read_bytes(), source
 print('PASS installed_all_module_byte_identity', flush=True)
 os.environ['U12_INSTALLED_CLI'] = str(modules.parents[3] / 'bin/lua-repl-mcp')
-# Lua adapters/process fixtures are driven by their native or external hosts.
-external = {'u2_host.lua', 'u9_host.lua', 'u3_posix.lua'}
-for test in sorted((root / 'tests').glob('u[1-7]*.lua')):
-    if test.name in external or test.name.endswith('_process.lua'):
+# Explicit fixture manifest; no filename-prefix/glob execution policy.
+import json
+manifest = json.loads((root / 'tests/fixtures.json').read_text())
+for fixture in manifest:
+    if not fixture['run']:
         continue
+    test = root / 'tests' / fixture['path']
     print('RUN installed ' + test.name, flush=True)
-    result = subprocess.run(['lua5.4', str(test)], timeout=240)
-    if test.name == 'u7_coupled_defaults_red.lua':
-        assert result.returncode == 1, 'historical hardcoded 64MiB reproducer must remain red'
-        print('PASS historical_64MiB_red_preserved_not_current_default', flush=True)
+    interpreter = sys.executable if test.suffix == '.py' else 'lua5.4'
+    result = subprocess.run([interpreter, str(test)], timeout=fixture['deadline'],
+                            capture_output=fixture['kind']=='historical', text=True)
+    if fixture['kind']=='historical':
+        print(result.stdout, end='')
+        print(result.stderr, end='', file=sys.stderr)
+        assert result.returncode == fixture['expected_status']
+        assert fixture['expected_assertion'] in result.stderr, result.stderr
+        print('PASS named historical 64MiB assertion (not current default)', flush=True)
     else:
         result.check_returncode()
-for name in ['u2_live.py', 'u3_posix.py', 'u4_process.py', 'u5_process.py',
-             'u6_process.py', 'u6_progressive_process.py', 'u7_process.py',
-             'u12_installed_environment.py', 'u12_lifecycle_red.py', 'u12_guardian_process.py', 'u12_matrix.py']:
-    print('RUN installed ' + name, flush=True)
-    subprocess.run([sys.executable, str(root / 'tests' / name)], check=True, timeout=420)
 subprocess.run([sys.executable, str(root / 'docs/check_contracts.py')], check=True, timeout=180)
 print('PASS complete_installed_core_handler_manager_suite', flush=True)

@@ -1,4 +1,6 @@
 """External MCP conformance. Usage: python3 tests/u8_live.py [CLI [args...]]."""
+from containment import enter
+enter(420)
 import hashlib
 import importlib.util
 import json
@@ -59,7 +61,9 @@ class Client:
         assert r['jsonrpc'] == '2.0'
         return r
     def get(self, id):
+        deadline = time.monotonic() + 15
         while id not in self.saved:
+            assert time.monotonic() < deadline, 'total response scenario deadline'
             r = self.receive()
             assert r['id'] not in self.saved
             self.saved[r['id']] = r

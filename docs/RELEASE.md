@@ -2,7 +2,10 @@
 
 Lua REPL MCP provides persistent managed Lua sessions and an independent,
 blocking pure-Lua embedded handler. This is trusted arbitrary code execution,
-not a sandbox. No public package registry release or live website is claimed.
+not a sandbox. No public package registry release is claimed. The operator
+published a development-candidate repository/site separately; publication is
+not release acceptance. U13 findings and final installed/live-client qualification
+remain open; historical U1–U12 receipts are not a current no-gap claim.
 
 Start with the [installation and usage guide](../README-IF-YOR-ARE-AN-AI.md).
 The manager targets Lua 5.4 on POSIX, with luaposix 36.3-1 and a C compiler
