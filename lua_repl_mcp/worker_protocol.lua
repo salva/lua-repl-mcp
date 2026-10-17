@@ -7,6 +7,41 @@ local fields={
  execute={execution_generation='integer',input='table'},
  result={execution_generation='integer',result='table'}, close={}}
 local function integer(v) return type(v)=='number' and math.type(v)=='integer' and v>0 end
+local function enum(words)
+ local values={}; for word in words:gmatch('%S+') do values[word]=true end
+ return function(v) return type(v)=='string' and values[v]==true end
+end
+local function string_value(v) return type(v)=='string' end
+local function boolean(v) return type(v)=='boolean' end
+-- Validate nested errors before recording a consumable result, not at output.
+-- These fields mirror the public error contract in docs/schemas/api.json.
+local error_fields={
+ code=enum('invalid_arguments unknown_session session_busy session_terminating no_execution result_unavailable session_limit session_creation_error lua_syntax_error lua_runtime_error result_serialization_error execution_timeout session_killed request_cancelled worker_exited transport_error limit_exceeded'),
+ message=string_value,
+ stage=enum('validation creation execution serialization transport termination'),
+ execution_state=enum('not_started started completed unknown'),
+ traceback=string_value,
+ path=function(v) return type(v)=='string' and (v=='' or v:sub(1,1)=='/') end,
+ reason=enum('startup_timeout spawn_failed cwd_setup_failed stdio_setup_failed handshake_failed'),
+ data_preserved=boolean,truncated=boolean,invalid_bytes_escaped=boolean,
+ exit_code=function(v) return type(v)=='number' and v%1==0 and v>=0 and v<math.huge end,
+ signal=function(v) return type(v)=='number' and v%1==0 and v>=1 and v<math.huge end,
+ created_files=function(v)
+  if type(v)~='table' or c.kind(v)~='array' then return false end
+  for _,path in pairs(v) do if type(path)~='string' then return false end end
+  return true
+ end,
+ created_files_complete=boolean,process_exit_confirmed=boolean}
+local function valid_error(e)
+ if type(e)~='table' or e==require('lua_repl_mcp').null or c.kind(e)=='array' then return false end
+ for _,k in ipairs({'code','message','stage','execution_state'}) do
+  if e[k]==nil then return false end
+ end
+ for k,v in pairs(e) do
+  if not error_fields[k] or not error_fields[k](v) then return false end
+ end
+ return true
+end
 function M.validate(v)
  if type(v)~='table' or c.kind(v)=='array' then return nil,'expected record' end
  local spec=fields[v.type]
@@ -30,7 +65,7 @@ function M.validate(v)
   for k in pairs(r) do if k~='status' and k~='values' and k~='error' then return nil,'unknown result field' end end
   if (r.status=='completed' and r.error~=nil) or (r.status=='failed' and r.values~=nil) then return nil,'conflicting result' end
   if r.status=='completed' and (type(r.values)~='table' or c.kind(r.values)~='array') then return nil,'invalid values' end
-  if r.status=='failed' and type(r.error)~='table' then return nil,'invalid error' end
+  if r.status=='failed' and not valid_error(r.error) then return nil,'invalid error' end
  end
  return v
 end

@@ -40,3 +40,11 @@ U7 supplies a nonblocking transport seam with raw-frame callback, manager submis
 - Original coupled reproducer standalone exit1 measured194 excess (`proc-a28d740d2e1b`, complete inline output).
 
 Changes: one minimal deliberately failing malformed-error fixture and this evidence document; no production/spec/default change. Diagnosis classification: **failing_test**. Full acceptance remains withheld; later verification owns acceptance, and an owner decision is needed for normative default fit.
+
+## Repair follow-up
+
+On explicit repair direction, `worker_protocol.lua` now validates the entire nested public error shape at the owning private boundary: required fields, enums, optional types/ranges, object/array/null distinctions and unknown fields. Both encode and decode reuse that validation; invalid frames therefore reach the existing supervisor corrupt-worker disposal path without recording a completion. Valid evaluator syntax/runtime/serialization failures remain accepted. No schema/default/ID or fallback policy changes.
+
+The original `u4_review_malformed_error.lua` is unchanged and now passes. New `u4_error_contract.lua` covers omitted required fields, wrong optional types, invalid enums/ranges/pointers, unknown fields, array/null errors and valid optional/evaluator shapes. `u4_error_drain.lua` uses a real nonblocking pipe and supervisor drain to prove error={} causes terminating/corrupt_worker, closed descriptor and no result. It does not claim child-process reaping by itself; existing real suites cover that disposal machinery.
+
+Native environment is unchanged from above. Repair verification commands: `lua5.4 tests/u4_review_malformed_error.lua`, `tests/u4_error_contract.lua`, `tests/u4_error_drain.lua`, `tests/u6_ordering.lua`, `tests/u5.lua`, `tests/u6_policy.lua`, then Python U4/U5/U6/U7 process drivers (fail-fast). Additional max-ID/configuration/snapshot, R1 argument matrix/false and supplementary contract checks pass. Detailed final process status belongs in status.md. The unchanged coupled-default test was rerun separately and still exits1 with exactly194 excess; this is not a fixture defect and cannot be repaired without an owner requirement decision. No full acceptance or U8 conformance claim follows from repairing nested validation.
