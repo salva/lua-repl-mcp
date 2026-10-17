@@ -378,7 +378,7 @@ clean-install, cancellation/timeout and Saivage integration tests after ownershi
 changes. No embedded-host signal policy or descendant-tree sandbox is added.
 
 Use the progressive policy in SPEC §14.4 for every disposal path: repeated
-SIGTERM over 10 seconds, then repeated SIGKILL over 20 seconds, at 1-second retry
+SIGTERM over 20 seconds, then repeated SIGKILL over 10 seconds, at 1-second retry
 intervals, stopping on confirmed exit. At the 30-second total bound abandon
 unconfirmed children, release session resources and report the existing warning.
 Do not reset cleanup on repeated requests or guardian handoff. Preserve safe

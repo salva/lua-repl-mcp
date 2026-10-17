@@ -1137,8 +1137,8 @@ or kill behind a backlog of waiting calls. Control floods remain bounded.
 
 Kill is synchronous to the caller but never blocks the manager event loop.
 Use progressive termination: send SIGTERM immediately and repeat every 1 second
-for up to 10 seconds; if exit is still unconfirmed, send SIGKILL and repeat every
-1 second for the remaining 20 seconds. Stop signalling as soon as child exit is
+for up to 20 seconds; if exit is still unconfirmed, send SIGKILL and repeat every
+1 second for the remaining 10 seconds. Stop signalling as soon as child exit is
 confirmed. Timers use monotonic elapsed time; delayed event-loop turns must not
 extend the 30-second total bound or cause catch-up signal bursts. Signal delivery
 success alone does not confirm exit. Retain race-safe child identity throughout;
