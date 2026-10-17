@@ -1,5 +1,18 @@
 # Authorized implementation launch
 
+## Whole-project repair continuation
+
+The operator authorized U13 implementation through the existing project process:
+adopt the independently approved `workflows/reviews/project-wide/99-METAPLAN.md`
+and exact per-finding APPROVED.md editions through supported root/owner records,
+then use normal Run if stopped. Preserve history, model configuration and current
+work; do not edit generated state or restart shared services. Reconcile source
+drift, execute batches A–E and verify actual child tool activity. Plan approval is
+not runtime acceptance. Operator-owned GitHub/Pages publication is separately
+recorded in `PUBLISHING.md`; no publication permissions are delegated to Saivage.
+
+## Original delivery scope
+
 The operator authorized a new isolated Saivage environment, credential copying
 from the designated deployment reference, and autonomous implementation after
 independent review convergence of the specification and implementation plan.

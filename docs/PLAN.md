@@ -46,6 +46,7 @@ creating a second public MCP connection.
 | U10 | U9 | Real Saivage MCP-client integration and defect reporting |
 | U11 | U9 | GitHub Pages-compatible documentation content and local validation |
 | U12 | U6–U8; revalidate U9 and affected U10 | Manager signal cleanup and guardian orphan prevention |
+| U13 | Current U1–U12 candidate; revalidate affected gates | Independently audited whole-project repairs and refreshed acceptance |
 
 Test seams are internal: injectable monotonic clock, poll/process operations and
 response-commit boundary, plus controllable process fixtures. They must not add
@@ -411,6 +412,34 @@ signal/abandonment timing, early-exit and handoff-deadline cases. Record
 capability findings and real-process results in
 `docs/validation/MANAGER_LIFECYCLE.md`. Configured cleanup or fake tests alone
 do not establish acceptance.
+
+## U13 — Whole-project audited repair plan
+
+Execute `workflows/reviews/project-wide/99-METAPLAN.md` and the exact editions
+selected by each F01–F13 APPROVED.md. Independent Astra audit baseline is
+`8383c03`; three planning rounds ended with integrated approval. This is not
+evidence that the candidate runtime is defect-free or these repairs are done.
+Compare current code before creating work; do not replay a finding already fixed.
+
+Sequence: A reliable fixture containment/evidence; B locale-safe data, effective
+limits and public failure interface; C protected invocation/optional debug and
+correlation; D coordinated guardian control/completion/provenance/wait repairs;
+E repository/site journeys and current installed/live-client acceptance. Preserve
+the selected authority and transport designs, owner requirements and source/user
+documentation separation. Keep overlapping runtime changes serialized.
+
+**Acceptance:** minimal regressions for all findings, corrected full contained
+runner, real legal-default aggregate-result/control tests through installed
+guardian CLI, exact custom-bound input/worker fit, fresh actual-client tool
+evidence and source/built/browser doc validation. Record missing environments as
+blocked coverage. Do not substitute historical counts or public Pages availability
+for current runtime acceptance. Commit coherent batches using owner identity.
+
+Operator-owned GitHub repository/Pages publication is separately authorized and
+recorded in `workflows/PUBLISHING.md`; autonomous executors still must not push,
+publish, acquire publication credentials or alter GitHub settings. Root adopts
+this plan through supported cards/briefs, then normal Run if stopped, preserving
+history and existing configuration. No shared runtime changes are authorized.
 
 ## Test orchestration and evidence rules
 
