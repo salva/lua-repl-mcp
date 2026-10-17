@@ -16,7 +16,7 @@ function M.new(o)
  o=o or {}; serial=serial+1
  local backend=o.supervisor or require('lua_repl_mcp.worker_supervisor').new(o)
  return setmetatable({backend=backend,clock=o.clock or backend.clock,
-  sessions={},order={},starting={},next_id=0,prefix='session-'..serial..'-',closed=false},C)
+  requests={},sessions={},order={},starting={},next_id=0,prefix='session-'..serial..'-',closed=false},C)
 end
 function C:allocate(options)
  self.next_id=self.next_id+1
@@ -28,7 +28,7 @@ function C:allocate(options)
 end
 local function envelope(s,r)
  local v=copy(r); v.session_id=s.id
- v.session_status=s.worker.state=='dead' and 'terminating' or s.worker.state
+ v.session_status=s.worker.state=='dead' and 'terminated' or s.worker.state
  v.session_usable=s.worker.state=='idle' or s.worker.state=='running'
  return v
 end
@@ -44,7 +44,7 @@ function C:dispatch(s,a,r)
  if a.execution_timeout_ms~=null then e.deadline=e.dispatch_at+a.execution_timeout_ms/1000 end
  s.execution=e; s.generation=e.generation; r.execution=e
  if a.wait_timeout_ms~=null then r.deadline=e.dispatch_at+a.wait_timeout_ms/1000 end
- local generation,err=self.backend:execute(s.worker,{code=a.code,args=a.args})
+ local generation,err=self.backend:execute(s.worker,{code=a.code,args=a.args},e.deadline)
  if not generation then
   s.execution=old; s.generation=s.generation-1; r.execution=nil
   r.response=envelope(s,failure('transport_error')); return
@@ -53,10 +53,12 @@ function C:dispatch(s,a,r)
  -- Zero execution is acceptance, even when a backend completes immediately.
  if a.wait_timeout_ms==0 then r.response=envelope(s,{status='running'}) end
 end
-function C:accept(tool,input)
+function C:accept(tool,input,request_id)
  assert(not self.committing,'response commit must not reenter manager')
+ self:refresh()
  local a,err=contracts.validate(tool,input)
  local r={tool=tool,accepted_at=self.clock()}
+ if request_id~=nil then self:bind(request_id,r) end
  if a and tool~='session_create' and tool~='session_execute' and tool~='session_wait' and tool~='session_list' and tool~='session_kill' then
   r.response={error=errors.new('invalid_arguments','unknown manager tool','validation','not_started')}; return r
  end
@@ -91,10 +93,53 @@ function C:accept(tool,input)
   if not r.execution then r.response=envelope(s,failure('no_execution'))
   elseif a.wait_timeout_ms~=null then r.deadline=r.accepted_at+a.wait_timeout_ms/1000 end
  elseif tool=='session_kill' then
-  self.backend:abort(s.worker,'session_killed'); r.response=envelope(s,failure('session_killed','started'))
+  self:terminate(s,'session_killed'); r.killing=true
  end
  if r.starting then self.starting[#self.starting+1]=r end
  return r
+end
+-- All destructive paths freeze only a still-active generation. The backend owns
+-- signals, descriptors and bounded reaping; policy waits for its terminal state.
+function C:freeze(s,cause)
+ local e=s.execution
+ if e and e.status=='running' then
+  e.status='failed'
+  e.payload=failure(cause,'started'); e.payload.status=e.status
+  e.completed_at=self.clock(); e.deadline=nil; e.cleanup=true
+ end
+end
+function C:terminate(s,cause)
+ self:freeze(s,cause); self.backend:abort(s.worker,cause)
+end
+function C:exit_info(v,w)
+ v.process_exit_confirmed=w.process_exit_confirmed==true or w.reaped==true
+ if not v.process_exit_confirmed then
+  v.notice='Worker exit was not confirmed; external side effects may continue. Descendant termination is not guaranteed.'
+ end
+end
+-- Internal adapter seam: bind before any response can commit. IDs retain JSON
+-- type identity. Completed/answered/cancelled IDs are inert, never retargeted.
+function C:bind(id,r)
+ assert(type(id)=='string' or type(id)=='number','invalid request ID')
+ assert(not self.requests[id] and not r.request_id,'request already bound')
+ self.requests[id]=r; r.request_id=id; return r
+end
+function C:cancel(id)
+ assert(not self.committing,'response commit must not reenter manager')
+ self:refresh()
+ local r=self.requests[id]
+ if not r or r.done or r.cancelled then return false end
+ local e=r.execution
+ -- A recorded result is completed even if its response has not committed yet.
+ if not r.starting and not r.killing and (e and e.status~='running') then
+  self.requests[id]=nil; return false
+ end
+ self.requests[id]=nil; r.cancelled=true
+ if r.session and not r.killing then
+  if r.starting then r.starting=nil; r.input=nil end
+  self:terminate(r.session,'request_cancelled')
+ end
+ return true
 end
 function C:refresh()
  for _,s in ipairs(self.order) do
@@ -102,12 +147,21 @@ function C:refresh()
    local w=s.worker; local e=s.execution
    if w.cwd then s.cwd=w.cwd end
    if e and e.status=='running' and w.result then
-    e.payload=w.result; e.status=w.result.status; e.completed_at=self.clock(); w.result=nil
+    local received=w.result_at or self.clock()
+    if not e.deadline or received<e.deadline then
+     e.payload=w.result; e.status=w.result.status; e.completed_at=received; e.deadline=nil
+    end
+    w.result=nil
+   end
+   if e and e.status=='running' and e.deadline and self.clock()>=e.deadline then self:terminate(s,'execution_timeout') end
+   if e and e.status=='running' and (w.state=='terminating' or w.state=='dead') then
+    self:freeze(s,w.failure=='execution_timeout' and 'execution_timeout' or (w.failure=='worker_exited' and 'worker_exited' or 'transport_error'))
    end
    if w.state=='dead' then
     if e then
-     if e.status=='running' then e.status='failed'; e.payload=failure('worker_exited','started'); e.payload.status='failed' end
+     if e.status=='running' then self:freeze(s,'worker_exited') end
      e.terminated=true
+     if e.cleanup then self:exit_info(e.payload,w); e.cleanup=nil end
     end
     self.sessions[s.id]=nil
    end
@@ -126,28 +180,41 @@ function C:refresh()
 end
 function C:step(ms)
  assert(not self.committing,'response commit must not reenter manager')
- self.backend:step(ms or 0); self:refresh()
+ local delay=ms or 0
+ self:refresh()
+ for _,s in ipairs(self.order) do
+  local e=s.execution
+  if e and e.deadline then delay=math.min(delay,math.max(0,math.ceil((e.deadline-self.clock())*1000))) end
+ end
+ self.backend:step(delay); self:refresh()
 end
 -- Inspecting a response never claims a payload. A stale preview must not be sent:
 -- commit() rechecks generation availability at the transmission boundary.
 function C:preview(r)
  if r.done then return nil,'request already committed' end
  local s=r.session
+ if r.cancelled then return nil,'request cancelled' end
+ if r.killing then
+  if s.worker.state~='dead' then return nil end
+  local v=envelope(s,{status='killed'}); self:exit_info(v,s.worker); return v
+ end
  if r.starting then
   local state=s.worker.state
-  if state=='starting' then return nil end
+  if state=='starting' or state=='terminating' then return nil end
   r.starting=nil
   if state~='idle' then
    r.response=failure('session_creation_error')
    r.response.error.stage='creation'; r.response.error.reason=s.worker.failure or 'spawn_failed'
    r.response.error.created_files=codec.array(s.worker.created_paths or {})
    r.response.error.created_files_complete=s.worker.files_complete or false
+   self:exit_info(r.response,s.worker)
   elseif r.input then self:dispatch(s,r.input,r)
   else r.response={session_id=s.id,session_status='idle'} end
  end
  if r.response then return copy(r.response) end
  local e=r.execution
  if not e then return nil end
+ if e.cleanup then return nil end
  -- A late observation of a terminal result must not extend a finite wait.
  if r.deadline and self.clock()>=r.deadline and
     (not e.completed_at or e.completed_at>r.deadline) then
@@ -176,12 +243,15 @@ function C:commit(r,send)
  if not ok then return nil,accepted end
  if not accepted then return nil,'response not committed' end
  r.done=true
+ if r.request_id~=nil then self.requests[r.request_id]=nil end
  if e then e.payload=nil; e.consumed=true end
  return response
 end
 function C:disconnect()
  assert(not self.committing,'response commit must not reenter manager')
  self.closed=true
+ for _,r in pairs(self.requests) do r.cancelled=true end
+ self.requests={}
  for _,s in ipairs(self.order) do
   if s.execution then s.execution.payload=nil end
  end

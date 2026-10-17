@@ -8,7 +8,7 @@ function M.new(options)
  local timeout=options.startup_timeout_ms; if timeout==nil then timeout=30000 end
  assert(type(timeout)=='number' and timeout==timeout and timeout>=1 and timeout<=2147483647 and timeout%1==0,'startup_timeout_ms must be an integer in [1,2147483647]')
  x.s.signal(x.s.SIGPIPE,x.s.SIG_IGN)
- return setmetatable({workers={},generation=0,timeout=timeout/1000,clock=options.clock or x.now,
+ return setmetatable({workers={},reaping={},generation=0,timeout=timeout/1000,clock=options.clock or x.now,
   interpreter=options.interpreter or 'lua5.4',launch=options.launch},S)
 end
 local function close(w)
@@ -18,6 +18,7 @@ end
 function S:abort(w,reason)
  if w.state=='terminating' or w.state=='dead' then return end
  w.failure=reason; w.state='terminating'; w.files_complete=false
+ w.cleanup_deadline=self.clock()+30; w.execution_deadline=nil
  close(w); if w.pid then x.s.kill(w.pid,x.s.SIGKILL) end
 end
 function S:allocate(options)
@@ -58,7 +59,7 @@ function S:allocate(options)
  x.nonblock(read); x.nonblock(write)
  return w
 end
-function S:execute(w,input)
+function S:execute(w,input,deadline)
  if w.state~='idle' then return nil,'worker not idle' end
  -- Validate the direct evaluator arguments before dispatch.
  local args,e=require('lua_repl_mcp.contracts').validate('repl_execute',input)
@@ -66,7 +67,7 @@ function S:execute(w,input)
  local generation=w.execution_generation+1
  local text,err=p.encode(p.record('execute',w.allocation_generation,{execution_generation=generation,input=input}))
  if not text then return nil,err end
- w.execution_generation=generation; w.result=nil; w.state='running'; w.pending=text; w.offset=1
+ w.execution_generation=generation; w.result=nil; w.result_at=nil; w.execution_deadline=deadline; w.state='running'; w.pending=text; w.offset=1
  return generation
 end
 function S:graceful_close(w)
@@ -85,11 +86,13 @@ function S:receive(w,v)
   elseif v.type=='startup_error' then w.startup_message=v.message; self:abort(w,v.reason)
   else self:abort(w,'handshake_failed') end
  elseif w.state=='running' and v.type=='result' and v.execution_generation==w.execution_generation then
-  w.result=v.result; w.state='idle'
+  local now=self.clock() -- protocol.decode has fully validated the result
+  if w.execution_deadline and now>=w.execution_deadline then return self:abort(w,'execution_timeout') end
+  w.result=v.result; w.result_at=now; w.execution_deadline=nil; w.state='idle'
  else self:abort(w,'corrupt_worker') end
 end
 function S:drain(w)
- local budget=256*1024
+ local budget=p.max_frame+1
  while w.read_fd and budget>0 do
   local text,_,err=x.u.read(w.read_fd,math.min(65536,budget))
   if not text then if x.retryable(err) then return end; return self:abort(w,'transport_failed') end
@@ -113,6 +116,11 @@ end
 function S:step(timeout_ms)
  local poll={}; local now=self.clock(); local delay=timeout_ms or 0
  for _,w in ipairs(self.workers) do
+  if w.state=='running' and w.execution_deadline then
+   if now>=w.execution_deadline then self:abort(w,'execution_timeout')
+   else delay=math.min(delay,math.max(0,math.ceil((w.execution_deadline-now)*1000))) end
+  end
+  if w.cleanup_deadline then delay=math.min(delay,math.max(0,math.ceil((w.cleanup_deadline-now)*1000))) end
   if w.state=='starting' then
    if now>=w.deadline then self:abort(w,'startup_timeout') else delay=math.min(delay,math.max(0,math.ceil((w.deadline-now)*1000))) end
   end
@@ -121,6 +129,7 @@ function S:step(timeout_ms)
  end
  x.p.poll(poll,delay)
  for _,w in ipairs(self.workers) do
+  if w.state=='running' and w.execution_deadline and self.clock()>=w.execution_deadline then self:abort(w,'execution_timeout') end
   if w.state=='starting' and self.clock()>=w.deadline then self:abort(w,'startup_timeout') end
   if w.read_fd then self:drain(w) end
   if w.write_fd and #w.pending>0 then
@@ -131,7 +140,7 @@ function S:step(timeout_ms)
   if w.pid and not w.reaped then
    local pid,why,status=x.w.wait(w.pid,x.w.WNOHANG)
    if pid==w.pid then
-    w.reaped=true; w.exit_reason=why; w.exit_status=status
+    w.reaped=true; w.process_exit_confirmed=true; w.exit_reason=why; w.exit_status=status
     -- Drain already available data before recording exit; U6 owns full races.
     if w.read_fd then self:drain(w) end
     if not w.failure and w.state~='closing' then w.failure=w.state=='starting' and 'handshake_failed' or 'worker_exited' end
@@ -139,19 +148,24 @@ function S:step(timeout_ms)
     close(w); w.state='dead'
    elseif not pid then self:abort(w,'wait_failed') end
   end
+  if w.state=='terminating' and self.clock()>=w.cleanup_deadline then
+   close(w); w.state='dead'; w.process_exit_confirmed=false
+   if w.pid and not w.reaped then self.reaping[#self.reaping+1]=w.pid end
+  end
   if w.eof and w.state~='dead' and w.state~='closing' then self:abort(w,w.state=='starting' and 'handshake_failed' or 'transport_failed') end
  end
+ local live={}; for _,w in ipairs(self.workers) do
+  if w.state~='dead' then live[#live+1]=w end
+ end; self.workers=live
+ local pending={}; for _,pid in ipairs(self.reaping) do
+  local got=x.w.wait(pid,x.w.WNOHANG)
+  if got==0 then pending[#pending+1]=pid end
+ end; self.reaping=pending
 end
--- Provisional U3-style bounded confirmed-reap cleanup; event-loop step is reusable.
-function S:shutdown(timeout)
+-- Shutdown is admission-independent; normal step performs bounded cleanup.
+function S:shutdown()
  for _,w in ipairs(self.workers) do self:abort(w,'shutdown') end
- local deadline=x.now()+(timeout or 3)
- repeat
-  self:step(5)
-  local done=true
-  for _,w in ipairs(self.workers) do if w.pid and not w.reaped then done=false end end
-  if done then return true end
- until x.now()>=deadline
- return nil,'unconfirmed worker exit'
+ repeat self:step(5) until #self.workers==0
+ return #self.reaping==0
 end
 return M
