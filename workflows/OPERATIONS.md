@@ -12,6 +12,7 @@ plan review. Review receipts are in `REVIEW.md`; the root objective is in
 | Item | Configuration |
 | --- | --- |
 | Container | `saivage-lua-repl-mcp`, classic LXC, Ubuntu 24.04 amd64 |
+| Control room | `http://10.0.3.18:8080/` (DHCP; verify current address before operation) |
 | Project | Host `/home/salva/g/ml/lua-repl-mcp` → `/work/lua-repl-mcp`, writable |
 | Runtime | Dedicated release `39ffe231` copy mounted read-only at `/opt/saivage` |
 | Host runtime source | `/home/salva/g/ml/tmp/lua-repl-mcp-container-setup/release-39ffe231` |
@@ -49,6 +50,28 @@ inside this dedicated guest, but must not modify its runtime release or siblings
 
 ## Verification and launch receipt
 
-Provisioning and service/runtime checks are in progress. Record observed address,
-readiness, restart confinement, and supported Analyst/child execution evidence
-here after verification; configuration alone is not a successful launch.
+Verified 2026-10-17 before autonomous Run:
+
+- Fresh environment initialized with the supported `init --profile classic-typed`
+  CLI. Template agent/session identities preserved; only routing/provider and
+  compaction settings imported, with selected credentials kept private.
+- Dedicated runtime copy compared byte-for-byte with its source before mounting.
+- Host and guest health/readiness passed. The control room rendered and connected
+  successfully, with execution initially stopped.
+- Service and nftables survived a full LXC stop/start. Access from another
+  container was rejected before and after restart; host access stayed available.
+- NIC MAC `c2:2f:f2:f0:9c:c4` persisted in container configuration; address stayed
+  `10.0.3.18` across restart.
+- Guest-user toolchain checked: Node 24.16.0, npm 11.13.0, Lua 5.4.6, LuaRocks
+  defaulting to 5.4, Git identity inherited from the operator's repository config.
+- `python3 docs/check_contracts.py` passed inside the container: 14 schemas,
+  seven official MCP Tools, two discovery results, 23 examples, 125 regressions.
+- Auth store mode is 0600; `.saivage/` is ignored and no credentials are tracked.
+
+Evidence: `tmp/lua-repl-mcp-container-setup/deployment-verification.json` and
+private setup logs under the workspace. Provisioning fixed private umask-created
+parent directory traversal permissions before launch; no runtime source change.
+
+The supported Analyst launch request has been submitted. Its Run/child execution
+receipt will be recorded after verification; service readiness alone is not
+evidence that implementation has begun.
