@@ -31,10 +31,10 @@ Use at most3 correction rounds once authorized; escalate repeated objections.
 
 | Dimension | Fresh Astra session | Status |
 | --- | --- | --- |
-| Architecture/lifecycle | `ses_eb21e1fe3ffe3Ka5kKDb0DJc4W` | Running |
+| Architecture/lifecycle | `ses_eb21e1fe3ffe3Ka5kKDb0DJc4W` | Complete; four claims including one contracts duplicate, triage pending |
 | Code quality/simplicity | `ses_eb21ded6effeOmOmVh2Vbx7jfC` | Running |
-| Tests/evidence | `ses_eb21db3deffeAWeHYac4PrE2wK` | Running |
-| Public contracts/user journeys | `ses_eb21d8fceffe5e61gFiaMRJfjw` | Running |
+| Tests/evidence | `ses_eb21db3deffeAWeHYac4PrE2wK` | Complete; one residual overlap-oracle claim, triage pending |
+| Public contracts/user journeys | `ses_eb21d8fceffe5e61gFiaMRJfjw` | Complete; two residual embedded-limit claims, triage pending |
 
 Model `openai/gpt-6-astra`, read-only/pure bounded probes at most, no unsafe process
 fixtures or claimed installed qualification. Every finding requires current
