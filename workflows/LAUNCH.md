@@ -1,5 +1,16 @@
 # Authorized implementation launch
 
+## Current simplicity-first continuation
+
+After U13 completion and cycle2 review, the operator approved
+`reviews/multidimensional/cycle-2/SIMPLICITY-PLAN.md`, notification to the main
+planner and normal resume. That plan supersedes the earlier cycle2 recovery
+prescriptions: simple safe failure, temporary capacity rejection and optional
+diagnostic omission; critically reconcile claims and preserve completed work.
+Use supported accepted root/owning directions and normal Run. No service restart,
+reset, competing fixer, provider/config change, push or publication is delegated.
+Earlier continuation/launch receipts below describe historical authorization.
+
 ## Whole-project repair continuation
 
 The operator authorized stopping this dedicated instance, simplifying U13,
