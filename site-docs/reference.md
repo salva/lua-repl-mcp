@@ -15,11 +15,11 @@ conversion and [operations](operations.md) for defaults and cleanup.
 
 ## Authoritative downloads
 
-- [Tool input/output JSON schemas](docs/schemas/api.json): all seven tools,
+- [Tool input/output JSON schemas](../docs/schemas/api.json): all seven tools,
   shared errors and result types. Download/parse as JSON; `$defs` are not URLs.
-- [MCP wire examples](docs/MCP_EXAMPLES.md): initialization, discovery,
+- [MCP wire examples](../docs/MCP_EXAMPLES.md): initialization, discovery,
   execution, pending results and failures, with expected outcomes.
-- [Exact LLM guide](README-IF-YOR-ARE-AN-AI.md): install, launch and recovery,
+- [Exact LLM guide](../README-IF-YOR-ARE-AN-AI.md): install, launch and recovery,
   including pure-Lua adapter recipe.
 
 MCP uses newline-delimited JSON-RPC, protocol version `2025-11-25`.

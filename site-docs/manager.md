@@ -14,7 +14,7 @@ consumed result payloads do not. There are no public task IDs or detached sessio
 | `session_wait` | Wait for or consume a result in a concrete session ID |
 | `session_kill` | Dispose of a concrete session ID and its state |
 
-Input and output fields are defined by the [downloadable schemas](docs/schemas/api.json),
+Input and output fields are defined by the [downloadable schemas](../docs/schemas/api.json),
 not by client-specific tool prefixes. Missing/unknown IDs, invalid options and
 busy sessions report operation errors; they are not permission to resubmit code.
 Wait and kill reject null IDs. Create options and execution `create_options`
@@ -57,9 +57,19 @@ replaces any unread old result. A busy session rejects another execution.
 ## Deadlines, cancellation and disposal
 
 `execution_timeout_ms` is a separate hard execution deadline; omission has none.
-Expiry destroys the session. Cancelling a request also destroys its associated
-managed session and suppresses the cancelled RPC reply. Cancellation is **not**
-a safe substitute for stopping a wait. Explicit kill destroys state too.
+Expiry destroys the session. Accepted cancellation of an active request destroys
+its associated managed session and suppresses that RPC reply. Cancellation of an
+unknown, already completed or answered request is inert, including a completed
+request whose response has not yet been committed. Cancellation is **not** a safe
+substitute for stopping a wait.
+
+Complete worker-result validation, manager recording and public response commitment
+are distinct: data still in transit is not yet a recorded outcome. Kill or active
+cancellation before manager recording can freeze disposal; an already recorded
+result cannot be rewritten. Explicit kill still destroys an idle session's state,
+while waiters already bound to its recorded result retain that result under the
+single-consumer rules. A result is consumed on public response commitment, not
+merely when the worker finishes.
 
 Ordinary syntax/runtime/serialization errors usually leave the session usable;
 check `session_usable`. A worker exit, kill, cancellation or hard deadline can

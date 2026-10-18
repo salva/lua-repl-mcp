@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import pathlib
+import posixpath
 import re
 import shutil
 import subprocess
@@ -17,6 +18,22 @@ PAGES = ('index getting-started manager embedding data-errors operations referen
 ALLOW = [*(f'site-docs/{p}.md' for p in PAGES), 'README-IF-YOR-ARE-AN-AI.md',
          'docs/MCP_EXAMPLES.md', 'docs/schemas/api.json']
 ATTR = 'Built with [Saivage](https://github.com/salva/saivage-v3).'
+
+def staged_name(name):
+    return name.removeprefix('site-docs/')
+
+def stage_links(name, text):
+    """Resolve authored inline links before relocating allowlisted sources."""
+    def rewrite(match):
+        link = match[1]
+        u = urlsplit(link)
+        if u.scheme or u.netloc or not u.path:
+            return match[0]
+        target = posixpath.normpath(posixpath.join(posixpath.dirname(name), unquote(u.path)))
+        assert target in ALLOW, (name, link, 'destination outside public allowlist')
+        relative = posixpath.relpath(staged_name(target), posixpath.dirname(staged_name(name)) or '.')
+        return '](' + u._replace(path=relative).geturl() + ')'
+    return re.sub(r'\]\(([^)]+)\)', rewrite, text)
 
 def boundary(text, home=False):
     if home:
@@ -81,8 +98,8 @@ if __name__ == '__main__':
     stage.mkdir()
     for name in ALLOW:
         text=(ROOT/name).read_text();boundary(text,name=='site-docs/index.md')
-        dest=stage/(name.removeprefix('site-docs/'))
-        dest.parent.mkdir(parents=True,exist_ok=True);dest.write_text(text)
+        dest=stage/staged_name(name)
+        dest.parent.mkdir(parents=True,exist_ok=True);dest.write_text(stage_links(name, text))
     assert sorted(str(p.relative_to(stage)) for p in stage.rglob('*') if p.is_file())==sorted(n.removeprefix('site-docs/') for n in ALLOW)
     os.environ['SOURCE_DATE_EPOCH']='0'
     config=yaml.safe_load((ROOT/'mkdocs.yml').read_text());config['docs_dir']=str(stage)

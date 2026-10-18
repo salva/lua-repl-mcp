@@ -16,7 +16,10 @@ JSON results. Strings must be valid UTF-8.
 Integers must be in the JSON-safe range -9007199254740991 to 9007199254740991.
 Out-of-range integer tokens are rejected even if floating conversion would round
 them. Finite nonintegral numbers use binary64 rounding; NaN/infinity and overflow
-are rejected. Bounds apply to nested data and return tuples too.
+are rejected. Byte bounds include the encoded return tuple. Depth is measured separately
+within each user argument or returned value: a root container counts as one,
+scalar leaves add none. Positional tuples, tool arguments and fixed protocol
+wrappers do not deduct from the configured user depth allowance.
 
 ## Explicit null example
 
@@ -52,5 +55,5 @@ Conversion errors include RFC 6901 JSON Pointers when applicable (`~0` escapes
 For example `counter = 9; return function() end` fails conversion atomically,
 but `return counter` in the usable session still yields `[9]`.
 
-Use [schemas](docs/schemas/api.json) for exact errors/fields and
-[wire examples](docs/MCP_EXAMPLES.md) for completed, pending and error responses.
+Use [schemas](../docs/schemas/api.json) for exact errors/fields and
+[wire examples](../docs/MCP_EXAMPLES.md) for completed, pending and error responses.

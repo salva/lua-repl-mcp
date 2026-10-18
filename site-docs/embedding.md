@@ -7,7 +7,7 @@ blocking user code cannot be preempted to process close/cancellation.
 
 ## Install only pure Lua
 
-Use the exact [copy and package.path recipe](README-IF-YOR-ARE-AN-AI.md#embedded-host-use).
+Use the exact [copy and package.path recipe](../README-IF-YOR-ARE-AN-AI.md#embedded-host-use).
 Copy `init`, `handler`, `codec`, `framing`, `protocol`, `evaluator`, `limits`,
 `errors`, `contracts` and `direct_schemas` modules under `lua_repl_mcp/`.
 Add both `?.lua` and `?/init.lua` paths. Require `lua_repl_mcp.handler`, not
@@ -57,9 +57,31 @@ continuation, reset and shutdown. EOF/errors also return without taking ownershi
 
 ## Configure bounds
 
-Options are positive integer `input_bytes`, `response_bytes`, `read_bytes`,
-`evaluator` limits and optional UTF-8 `instructions`; unknown options fail with
-`handler_error`. Defaults include 16 MiB input/value limits, 128 MiB response,
-65536-byte reads and diagnostics, depth 128. Smaller response limits can reject
-otherwise valid values after side effects; do not assume arbitrary low limits
-preserve all legal payloads. See [data and errors](data-errors.md).
+Top-level options are positive integer `input_bytes`, `response_bytes`,
+`read_bytes`, an `evaluator` table and optional UTF-8 `instructions`. Unknown
+options or invalid limits return `handler_error` before protocol I/O. Defaults
+are 16777216 input bytes, 134217728 response bytes and 65536 bytes per read.
+
+The existing `evaluator` options are:
+
+| Key | Unit / meaning | Default |
+| --- | --- | --- |
+| `max_bytes` | Bytes in the encoded JSON `values` array, including its tuple wrapper | 16777216 (16 MiB) |
+| `max_depth` | Nested containers per user argument or returned value | 128 |
+| `diagnostic_bytes` | Combined cleaned message/traceback UTF-8 bytes | 65536 |
+
+All three must be positive Lua integers. `diagnostic_bytes` must be at least
+49 bytes, enough to hold the current loss notice; smaller values are invalid.
+For example, with the dedicated adapter described above:
+
+```lua
+local attachment = require('lua_repl_mcp.handler').serve(adapter, {
+  evaluator = {max_bytes = 1048576, max_depth = 64, diagnostic_bytes = 4096},
+})
+```
+
+These are evaluator bounds, not an execution time/memory sandbox. Container
+roots count as one; scalar leaves add no depth. Positional tuples and fixed
+protocol wrappers do not deduct from the user depth allowance. Smaller response
+limits can reject otherwise valid values after side effects; do not assume
+arbitrary low limits preserve all legal payloads. See [data and errors](data-errors.md).

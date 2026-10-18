@@ -25,7 +25,8 @@ to obtain results.
 Globals persist within a session or host interpreter; top-level locals do not.
 Managed sessions belong to their client connection, not to durable storage.
 Waiting is distinct from execution: a wait timeout leaves work running, whereas
-cancellation or a hard execution timeout destroys the associated managed session.
+accepted active-request cancellation or a hard execution timeout destroys the
+associated managed session. Completed-request cancellation is inert.
 
 ## Install and get a first result
 

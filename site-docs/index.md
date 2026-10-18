@@ -37,7 +37,7 @@ loss disposes of all its sessions; this is not durable storage.
 ## Get a first result
 
 [Install the manager](getting-started.md), [embed in a host](embedding.md), or
-use the exact [LLM consumer guide](README-IF-YOR-ARE-AN-AI.md).
+use the exact [LLM consumer guide](../README-IF-YOR-ARE-AN-AI.md).
 Continue with [stateful tasks and recovery](manager.md) and
 [public reference](reference.md).
 

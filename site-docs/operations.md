@@ -49,7 +49,8 @@ apply to them. Close returns control without closing handles or clearing state.
 
 A client may time out before the requested wait completes, close the connection
 and lose unrelated sessions too. Use asynchronous execute and bounded polling;
-wait expiry does not kill work, while cancellation does. No keep-alive guarantee
+wait expiry does not kill work, while accepted active-request cancellation does. Completed-request cancellation
+is inert. No keep-alive guarantee
 or durable reconnect semantics exist. Filesystem/network access is the host's,
 and user code can exhaust resources or leak capabilities. Do not accept untrusted
 code or share privileged credentials. No website endpoint executes Lua.

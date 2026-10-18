@@ -89,8 +89,9 @@ status before using `values`; an accepted call need not be a successful executio
   A client's own shorter deadline may interrupt either choice and close the
   connection, losing all sessions. Prefer bounded polling when uncertain.
 - `execution_timeout_ms` is a separate hard deadline that destroys the session.
-  Omission means no hard deadline. Request cancellation also destroys the
-  associated session; it is not a harmless way to stop waiting.
+  Omission means no hard deadline. Accepted cancellation of an active request
+  destroys its associated session; it is not a harmless way to stop waiting. Unknown, completed (even before
+  response commitment) and answered request cancellations are inert.
 - A terminal payload is consumed exactly once through execute or wait. Save it
   when received. Later wait can return `result_unavailable`. An accepted new
   execution replaces any unread prior result; do not execute into a busy session.

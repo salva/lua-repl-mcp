@@ -28,7 +28,7 @@ terminal waits for MCP input; it is not an interactive Lua prompt.
 ## Discover and execute
 
 Your MCP client initializes, sends `notifications/initialized`, then calls
-`tools/list`. See [complete wire examples](docs/MCP_EXAMPLES.md#initialize).
+`tools/list`. See [complete wire examples](../docs/MCP_EXAMPLES.md#initialize).
 The manager advertises five `session_*` tools; an embedded host advertises two
 `repl_*` tools instead. Do not invent a reset or task-ID tool.
 
@@ -62,5 +62,5 @@ not a second result. Check errors/status before reading `values`.
 Try a [stateful counter and asynchronous polling](manager.md). If a chunk errors,
 inspect `session_usable` before reusing state; effects before the error may remain.
 If a client times out or disconnects, do not blindly replay state-changing code.
-The [LLM guide](README-IF-YOR-ARE-AN-AI.md) gives the same installation journey
+The [LLM guide](../README-IF-YOR-ARE-AN-AI.md) gives the same installation journey
 and an independent pure-Lua copy/path/adapter recipe.
