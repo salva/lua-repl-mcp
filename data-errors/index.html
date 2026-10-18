@@ -123,7 +123,10 @@ JSON results. Strings must be valid UTF-8.</p>
 <p>Integers must be in the JSON-safe range -9007199254740991 to 9007199254740991.
 Out-of-range integer tokens are rejected even if floating conversion would round
 them. Finite nonintegral numbers use binary64 rounding; NaN/infinity and overflow
-are rejected. Bounds apply to nested data and return tuples too.</p>
+are rejected. Byte bounds include the encoded return tuple. Depth is measured separately
+within each user argument or returned value: a root container counts as one,
+scalar leaves add none. Positional tuples, tool arguments and fixed protocol
+wrappers do not deduct from the configured user depth allowance.</p>
 <h2 id="explicit-null-example">Explicit null example</h2>
 <p>Call <code>session_execute</code> with these arguments (or use code/args on <code>repl_execute</code>):</p>
 <pre><code class="language-json">{&quot;code&quot;:&quot;local x = ...; return x, nil, {label = 'ok'}&quot;,&quot;args&quot;:[null],&quot;wait_timeout_ms&quot;:1000}

@@ -181,12 +181,48 @@ the adapter. The handler does not execute those trailing messages, close handles
 reset globals, destroy the interpreter or exit the host. The parent chooses
 continuation, reset and shutdown. EOF/errors also return without taking ownership.</p>
 <h2 id="configure-bounds">Configure bounds</h2>
-<p>Options are positive integer <code>input_bytes</code>, <code>response_bytes</code>, <code>read_bytes</code>,
-<code>evaluator</code> limits and optional UTF-8 <code>instructions</code>; unknown options fail with
-<code>handler_error</code>. Defaults include 16 MiB input/value limits, 128 MiB response,
-65536-byte reads and diagnostics, depth 128. Smaller response limits can reject
-otherwise valid values after side effects; do not assume arbitrary low limits
-preserve all legal payloads. See <a href="../data-errors/">data and errors</a>.</p></div>
+<p>Top-level options are positive integer <code>input_bytes</code>, <code>response_bytes</code>,
+<code>read_bytes</code>, an <code>evaluator</code> table and optional UTF-8 <code>instructions</code>. Unknown
+options or invalid limits return <code>handler_error</code> before protocol I/O. Defaults
+are 16777216 input bytes, 134217728 response bytes and 65536 bytes per read.</p>
+<p>The existing <code>evaluator</code> options are:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>max_bytes</code></td>
+<td>16777216 (16 MiB)</td>
+</tr>
+<tr>
+<td><code>max_depth</code></td>
+<td>128</td>
+</tr>
+<tr>
+<td><code>diagnostic_bytes</code></td>
+<td>65536</td>
+</tr>
+</tbody>
+</table>
+<p><code>max_bytes</code> counts bytes in the encoded JSON <code>values</code> array, including its tuple
+wrapper. <code>max_depth</code> counts nested containers per user argument or returned
+value. <code>diagnostic_bytes</code> bounds combined cleaned message/traceback UTF-8 bytes.</p>
+<p>All three must be positive Lua integers. <code>diagnostic_bytes</code> must be at least
+49 bytes, enough to hold the current loss notice; smaller values are invalid.
+For example, with the dedicated adapter described above:</p>
+<pre><code class="language-lua">local attachment = require('lua_repl_mcp.handler').serve(adapter, {
+  evaluator = {max_bytes = 1048576, max_depth = 64, diagnostic_bytes = 4096},
+})
+</code></pre>
+<p>These are evaluator bounds, not an execution time/memory sandbox. Container
+roots count as one; scalar leaves add no depth. Positional tuples and fixed
+protocol wrappers do not deduct from the user depth allowance. Smaller response
+limits can reject otherwise valid values after side effects; do not assume
+arbitrary low limits preserve all legal payloads. See <a href="../data-errors/">data and errors</a>.</p></div>
             </div>
         </div>
 

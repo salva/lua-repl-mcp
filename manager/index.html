@@ -179,9 +179,18 @@ received; later waits report <code>result_unavailable</code>. An accepted new ex
 replaces any unread old result. A busy session rejects another execution.</p>
 <h2 id="deadlines-cancellation-and-disposal">Deadlines, cancellation and disposal</h2>
 <p><code>execution_timeout_ms</code> is a separate hard execution deadline; omission has none.
-Expiry destroys the session. Cancelling a request also destroys its associated
-managed session and suppresses the cancelled RPC reply. Cancellation is <strong>not</strong>
-a safe substitute for stopping a wait. Explicit kill destroys state too.</p>
+Expiry destroys the session. Accepted cancellation of an active request destroys
+its associated managed session and suppresses that RPC reply. Cancellation of an
+unknown, already completed or answered request is inert, including a completed
+request whose response has not yet been committed. Cancellation is <strong>not</strong> a safe
+substitute for stopping a wait.</p>
+<p>Complete worker-result validation, manager recording and public response commitment
+are distinct: data still in transit is not yet a recorded outcome. Kill or active
+cancellation before manager recording can freeze disposal; an already recorded
+result cannot be rewritten. Explicit kill still destroys an idle session's state,
+while waiters already bound to its recorded result retain that result under the
+single-consumer rules. A result is consumed on public response commitment, not
+merely when the worker finishes.</p>
 <p>Ordinary syntax/runtime/serialization errors usually leave the session usable;
 check <code>session_usable</code>. A worker exit, kill, cancellation or hard deadline can
 make it unavailable. Connection loss disposes of all connection-owned sessions.
