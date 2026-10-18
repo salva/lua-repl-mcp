@@ -10,6 +10,12 @@ local raw=assert(c.encode({protocol_version=1,type='result',allocation_generatio
  execution_generation=1,result={status='failed',error={}}}))..'\n'
 assert(x.u.write(write,raw)==#raw)
 b:drain(w)
+-- Parsing is resumable; receipt of a complete frame is not validation.
+local turns=0
+while w.validation do
+ turns=turns+1; assert(turns<100,'invalid reply validation watchdog')
+ b:drain(w)
+end
 x.u.close(write)
 assert(w.state=='terminating' and w.failure=='corrupt_worker')
 assert(w.result==nil and w.read_fd==nil and w.buffer=='')
