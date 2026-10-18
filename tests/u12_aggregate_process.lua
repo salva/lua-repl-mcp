@@ -25,22 +25,13 @@ local ok,err=pcall(function()
  end
  await('idle')
  for _,w in ipairs(workers) do assert(#w.result.values[1]==1048572) end
- -- A further empty command batch forces a snapshot containing all nine retained
- -- maximal results, rather than only staggered completion reports.
- local wire=require('lua_repl_mcp.guardian_channel')
- local receive=wire.receive; local completed=0
- wire.receive=function(ch,accept)
-  return receive(ch,function(items,done)
-   accept(items,done)
-   if ch==b.channel and done then completed=completed+1 end
-  end)
- end
- local deadline=x.now()+20
- local passed,why=pcall(function()
-  repeat b:step(5); assert(x.now()<deadline,'retained aggregate watchdog') until completed>=2
- end)
- wire.receive=receive
- assert(passed,why)
+ -- Results are transferred once, not periodically resent as full snapshots.
+ -- Keep stepping the actual guardian while retaining all nine payloads.
+ local transfers=b.result_transfers
+ assert(transfers==9)
+ for _=1,40 do b:step(1) end
+ assert(b.result_transfers==transfers,'retained result retransmitted')
+ for _,w in ipairs(workers) do assert(#w.result.values[1]==1048572) end
  assert(not b.closed)
  print('PASS real_guardian_nine_maximal_results_survive_aggregate_frame_boundary')
 end)

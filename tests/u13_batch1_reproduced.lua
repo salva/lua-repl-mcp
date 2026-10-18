@@ -1,5 +1,5 @@
 -- Preserved red-stage reproducer, followed by affected-path boundary gates.
-package.path='./?.lua;./?/init.lua'
+package.path=os.getenv('U9_INSTALLED_LUA_PATH') or './?.lua;./?/init.lua'
 package.cpath=''
 local codec=require('lua_repl_mcp.codec')
 local manager=require('lua_repl_mcp.manager')

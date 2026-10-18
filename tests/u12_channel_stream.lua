@@ -39,7 +39,9 @@ local ok,err=pcall(function()
  repeat wire.flush(ch); wire.receive(rx,accept) until not wire.busy(ch) and bytes==''
  assert(done_count==2 and #received==30,'empty batch completion missing')
  local oversized={fd=125,limit=64,output='',offset=1}
- assert(not pcall(wire.enqueue,oversized,{{payload=string.rep('x',100)}}),'single oversized item must still fail')
+ wire.enqueue(oversized,{{payload=string.rep('x',100)}})
+ local encoded,why=pcall(function() while wire.busy(oversized) do wire.flush(oversized) end end)
+ assert(not encoded and type(why)=='table' and why.reason=='encoded size limit exceeded','oversized item must fail during resumable encoding: '..tostring(why))
  print('PASS guardian_stream_order_partial_write_EAGAIN_one_completion_empty_bound_single_overflow')
 end)
 x.u.write=write; x.u.read=read

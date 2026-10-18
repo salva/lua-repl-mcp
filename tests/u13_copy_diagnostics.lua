@@ -1,5 +1,5 @@
 -- Raw-copy validity/canonical-size controls and bounded diagnostic intermediates.
-package.path='./?.lua;./?/init.lua'
+package.path=os.getenv('U9_INSTALLED_LUA_PATH') or './?.lua;./?/init.lua'
 package.cpath=''
 local c=require('lua_repl_mcp.codec')
 local errors=require('lua_repl_mcp.errors')

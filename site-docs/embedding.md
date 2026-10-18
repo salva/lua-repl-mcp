@@ -64,11 +64,15 @@ are 16777216 input bytes, 134217728 response bytes and 65536 bytes per read.
 
 The existing `evaluator` options are:
 
-| Key | Unit / meaning | Default |
-| --- | --- | --- |
-| `max_bytes` | Bytes in the encoded JSON `values` array, including its tuple wrapper | 16777216 (16 MiB) |
-| `max_depth` | Nested containers per user argument or returned value | 128 |
-| `diagnostic_bytes` | Combined cleaned message/traceback UTF-8 bytes | 65536 |
+| Key | Default |
+| --- | --- |
+| `max_bytes` | 16777216 (16 MiB) |
+| `max_depth` | 128 |
+| `diagnostic_bytes` | 65536 |
+
+`max_bytes` counts bytes in the encoded JSON `values` array, including its tuple
+wrapper. `max_depth` counts nested containers per user argument or returned
+value. `diagnostic_bytes` bounds combined cleaned message/traceback UTF-8 bytes.
 
 All three must be positive Lua integers. `diagnostic_bytes` must be at least
 49 bytes, enough to hold the current loss notice; smaller values are invalid.

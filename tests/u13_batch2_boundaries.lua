@@ -1,5 +1,5 @@
 -- Batch2 red/green gates: configured user depth and raw-copy boundaries.
-package.path='./?.lua;./?/init.lua'
+package.path=os.getenv('U9_INSTALLED_LUA_PATH') or './?.lua;./?/init.lua'
 package.cpath=''
 local codec=require('lua_repl_mcp.codec')
 local evaluator=require('lua_repl_mcp.evaluator')
