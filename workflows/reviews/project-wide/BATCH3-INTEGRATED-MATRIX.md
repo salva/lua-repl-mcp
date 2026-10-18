@@ -29,7 +29,7 @@ This file is work evidence, never part of the public staging allowlist.
 | F10 source/built journey | `website_source_links.py`: original oracle0 missing/31 existing plus fragments/staging controls; strict double build286 links/exact schema/public boundary | Current inline-link source format, not general Markdown parser |
 | Batch3 embedding/lifecycle | `website_embedding_options.py`: authored snippet initialize/execute/close, invalid48 before I/O, defaults/min49/native-free; public guidance branch comparison | Evaluator bounds not sandbox/time quota |
 | Batch3 browser repeats | Chromium145.0.7632.6 desktop1440x1000/mobile390x844; home/install/manager/embedding nav/layout/keyboard PASS after table-width repair | Local static prefix mount; no published site or remote service |
-| Batch3 current clean installed suite | `u9_installed.sh` clean LuaRocks dependency/product build and outside-cwd `u9_suite.py`, byte identity and explicit selection | See status for terminal full-suite outcome; interrupted attempts not passes |
+| Batch3 current clean installed suite | `u9_installed.sh` clean LuaRocks dependency/product build and outside-cwd `u9_suite.py`, byte identity and explicit selection | PASS proc-7a75b5c55dc9 exit0, all112 selected fixtures plus contracts; earlier interrupted attempts not passes |
 | Batch3 fresh real client | MCP Python SDK1.26.0 live installed stdio init/discovery/execute/null/async/wait/consumption/error effects/recovery/list/kill | Not operator/provider integration; active cancellation races rely on scoped batch evidence |
 
 ## Multidimensional addendum dispositions
@@ -52,3 +52,18 @@ TERM20+KILL10/retry1. No publication/push/config/credentials/service/host change
 Dependency .deb archives are only downloaded/extracted into purpose-named card
 work and selected through command-local LD_LIBRARY_PATH; no package installation.
 Historical batch1/batch2 approvals are scoped evidence, never labeled reruns.
+
+## Current completed installed refresh
+
+Receipt `proc-7a75b5c55dc9` completed exit0 on the final test inputs (runtime
+unchanged). All112 selected fixtures executed; historical64MiB expected assertion
+verified by driver, not silently ignored. Current observed V16777216 delivered
+9.133s; exact I16777216 escaped16.546s/numeric65.491s/surrogate17.519s;
+partial-bulk manager death identity disappeared0.011s; ingress/decode concurrent
+list/kill original deadline identity disappearance observed0.475s. Actual tight
+floors, D1/128/256/512, three-generation once-result,12-session population,
+40identity transitions, independent blocked/preparation/encoding controls and
+original deadline permutations passed. These current assertions supersede the
+corresponding historically-only classification, not unrelated historical claims.
+Browser, external SDK client and additional final-read/reap controls retain their
+separate current receipts in status. No runtime or docs inputs changed thereafter.
