@@ -991,5 +991,13 @@
     "deadline": 120,
     "run": true,
     "expected_status": 0
+  },
+  {
+    "path": "u13_decode_control.py",
+    "kind": "process",
+    "wrapper": "self",
+    "deadline": 120,
+    "run": true,
+    "expected_status": 0
   }
 ]
