@@ -700,6 +700,18 @@ execute any code, alter the active execution, or replace its result. Other sessi
 remain available. Kill must remain actionable while a worker is busy; it
 terminates the active worker and resolves its pending execution as killed.
 
+
+### Bounded allocation availability
+
+A terminated session disappears from the public live list independently of bulk
+result delivery. Its internal allocation may still occupy capacity until ordered
+release progresses. During this interval replacement creation (explicit or
+implicit) is rejected with `limit_exceeded` before dispatch, not deferred or
+retried automatically. Independent kill, disposal and liveness do not wait for
+bulk release; other sessions remain usable. Optional error JSON Pointers may be
+omitted conservatively when their worst-case encoded size exceeds the reserved
+metadata allowance. Omission does not change completed effects or error state.
+
 ### 11.3 Timeout and cancellation policy
 
 Accept an optional positive integer `execution_timeout_ms` on managed execution,

@@ -36,11 +36,15 @@ function S:abort(w,reason,started)
  w.execution_deadline=nil
  close(w); self:termination_signal(w)
 end
-function S:allocate(options,started)
+function S:allocate(options,started,original)
  -- Complete raw validation and detachment precedes descriptors/fork. Direct
  -- callers receive the same creation contract as manager-originated calls.
- local validated,problem=require('lua_repl_mcp.contracts').validate('session_create',options==nil and {} or options,
-  {max_bytes=self.limits.input_bytes,max_depth=self.limits.max_depth})
+ local validated,problem
+ if original then validated,problem=require('lua_repl_mcp.worker_protocol').creation_arguments(original,self.limits)
+ else
+  validated,problem=require('lua_repl_mcp.contracts').validate('session_create',options==nil and {} or options,
+   {max_bytes=self.limits.input_bytes,max_depth=self.limits.max_depth})
+ end
  assert(validated,problem and problem.message)
  options=validated
  local now=self.clock()

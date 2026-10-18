@@ -35,6 +35,10 @@ function M.new(code, message, stage, state, extra, limit)
   assert(math.type(limit)=='integer' and limit>=#notice, 'diagnostic limit too small')
   local result={code=code,stage=stage,execution_state=state}
   if extra then for k,v in next,extra do result[k]=v end end
+  -- Optional pointers must never crowd out required error/effect metadata.
+  -- Six bytes per source byte covers worst-case JSON escaping; no ancestor
+  -- search or truncated (and hence false) pointer is emitted.
+  if result.path and #result.path>math.floor(65536/6) then result.path=nil end
   local m,a,mb=clean(safe(message),limit)
   local trace,b,tb=clean(result.traceback or '',limit)
   local trunc=mb+tb>limit

@@ -24,7 +24,7 @@ assert(p.max_frame==64*1048576)
 local b={clock=function() return 0 end,step=function() end,shutdown=function() return true end}
 local m=manager.new{limits=base,supervisor=b}
 local t=transport.new(m,{})
-assert(t.input.limit==4096 and t.response_bytes==4218368 and t.output_bytes==4218369 and t.encode_depth==base.max_depth+4)
+assert(t.input.limit==4096 and t.response_bytes==4218368 and t.output_bytes==4218369 and t.encode_depth==math.max(base.max_depth+4,require('lua_repl_mcp.protocol').discovery_depth))
 assert(not pcall(transport.new,m,{}, {input_bytes=8192}))
 local text=assert(p.encode(p.record('result',1,{execution_generation=1,
  result={status='completed',values=c.array({string.rep('x',1020)})}}),m.limits))

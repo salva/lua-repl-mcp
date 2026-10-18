@@ -1013,5 +1013,45 @@
     "deadline": 60,
     "run": true,
     "expected_status": 0
+  },
+  {
+    "path": "simplicity_remaining_red.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 90,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "simplicity_allocation_red.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 90,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "simplicity_reap_red.lua",
+    "kind": "process",
+    "wrapper": "u9_suite.py",
+    "deadline": 90,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "simplicity_native.lua",
+    "kind": "process",
+    "wrapper": "u9_suite.py",
+    "deadline": 90,
+    "run": true,
+    "expected_status": 0
+  },
+  {
+    "path": "simplicity_input_native.lua",
+    "kind": "process",
+    "wrapper": "u9_suite.py",
+    "deadline": 90,
+    "run": true,
+    "expected_status": 0
   }
 ]

@@ -66,8 +66,8 @@ function M.execute(input,options,admitted_input_bytes)
 end
 function M.from_json(text,options)
   options=limits.evaluator(options)
-  local input,e=contracts.from_json('repl_execute',text,{max_depth=options.max_depth,max_bytes=admitted_input_bytes})
+  local input,e=contracts.from_json('repl_execute',text,{max_depth=options.max_depth})
   if not input then return errors.failure(e) end
-  return M.execute(input,options)
+  return M.execute(input,options,math.huge)
 end
 return M

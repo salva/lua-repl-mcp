@@ -80,7 +80,7 @@ local function guardian(fd,control,live,options)
        assert(id>last_id and not allocations[id],'reused allocation'); last_id=id
        local count=0; for _ in pairs(allocations) do count=count+1 end
        assert(count<require('lua_repl_mcp.limits').admission(options.admission).sessions,'guardian capacity')
-       local w=backend:allocate(cmd.options,cmd.started); allocations[id]=w
+       local w=backend:allocate(cmd.options,cmd.started,cmd.request); allocations[id]=w
        if pending_aborts[id] then abort(pending_aborts[id]); pending_aborts[id]=nil end
       else
        local w=assert(allocations[id],'stale allocation')
@@ -218,16 +218,25 @@ function B:queue(v)
  if v.id and self.by_id[v.id] then self.by_id[v.id].dirty=true end
  self.commands[#self.commands+1]=v
 end
-function B:allocate(options)
- local validated,problem=require('lua_repl_mcp.contracts').validate('session_create',options==nil and {} or options,
-  {max_bytes=self.limits.input_bytes,max_depth=self.limits.max_depth})
+function B:can_allocate()
+ local count=0; for _ in pairs(self.by_id) do count=count+1 end
+ return not self.closed and count<self.control_capacity
+end
+function B:allocate(options,started,original)
+ assert(self:can_allocate(),'guardian allocation capacity unavailable')
+ local validated,problem
+ if original then validated,problem=require('lua_repl_mcp.worker_protocol').creation_arguments(original,self.limits)
+ else
+  validated,problem=require('lua_repl_mcp.contracts').validate('session_create',options==nil and {} or options,
+   {max_bytes=self.limits.input_bytes,max_depth=self.limits.max_depth})
+ end
  assert(validated,problem and problem.message)
  local started=self.clock()
  self.generation=self.generation+1
  local w={allocation_generation=self.generation,state='starting',created_paths={},files_complete=false,
   pending='',buffer='',execution_generation=0,deadline=started+self.timeout}
  self.workers[#self.workers+1]=w; self.by_id[self.generation]=w
- self:queue{op='allocate',id=self.generation,options=validated,started=started}
+ self:queue{op='allocate',id=self.generation,options=not original and validated or nil,started=started,request=original}
  return w
 end
 function B:execute(w,input,deadline,original,checkpoint)
@@ -271,6 +280,22 @@ function B:graceful_close(w)
  local ok,err=native.methods.graceful_close(self,w)
  if ok then w.pending=''; self:queue{op='close',id=w.allocation_generation} end
  return ok,err
+end
+-- Descriptor failure and owned guardian finalization are separate facts. Only
+-- wait on the guardian we forked; never signal remembered worker identities.
+function B:finalize()
+ if self.guardian_reaped then return true end
+ if not self.finalize_deadline then self.finalize_deadline=self.clock()+31 end
+ if self.live then x.u.close(self.live); self.live=nil end
+ repeat
+  local pid,_,errno=x.w.wait(self.guardian_pid,x.w.WNOHANG)
+  if pid==self.guardian_pid or (pid==nil and errno==x.e.ECHILD) then
+   self.guardian_reaped=true; return true
+  end
+  if pid==nil and errno~=x.e.EINTR then return false end
+  x.p.poll({},5)
+ until self.clock()>=self.finalize_deadline
+ return false
 end
 function B:step(delay)
  if self.closed then return end
@@ -328,6 +353,7 @@ function B:step(delay)
   end)
   assert(open~=false,'guardian channel lost')
   local pid=x.w.wait(self.guardian_pid,x.w.WNOHANG)
+  if pid==self.guardian_pid then self.guardian_reaped=true end
   assert(pid==0,'guardian exited')
   local live={}; for _,w in ipairs(self.workers) do
    if w.state~='dead' then
@@ -343,7 +369,9 @@ function B:step(delay)
  end)
  if not ok then
   self.closed=true
-  x.u.close(self.live); self.live=nil; x.u.close(self.channel.fd); x.u.close(self.control_channel.fd)
+  if self.live then x.u.close(self.live); self.live=nil end
+  x.u.close(self.channel.fd); x.u.close(self.control_channel.fd)
+  self:finalize()
   -- No PID fallback: after guardian loss child identity is not safely owned.
   for _,w in ipairs(self.workers) do
    w.failure=w.failure or 'transport_failed'; w.state='dead'; w.process_exit_confirmed=false
@@ -353,18 +381,15 @@ function B:step(delay)
  end
 end
 function B:shutdown()
- if self.closed then return false end
- for _,w in ipairs(self.workers) do self:abort(w,'shutdown') end
- repeat self:step(5) until #self.workers==0
- -- EOF is authoritative even when the output channel is backpressured.
- x.u.close(self.live); self.live=nil
- local deadline=self.clock()+1
- repeat
-  local pid=x.w.wait(self.guardian_pid,x.w.WNOHANG)
-  if pid==self.guardian_pid then self.closed=true; x.u.close(self.channel.fd); x.u.close(self.control_channel.fd); return true end
-  x.p.poll({},5)
- until self.clock()>=deadline
- self.closed=true; x.u.close(self.channel.fd); x.u.close(self.control_channel.fd)
- x.u.write(2,'guardian disposal exit unconfirmed\n'); return false
+ if not self.closed then
+  for _,w in ipairs(self.workers) do self:abort(w,'shutdown') end
+  local ok=pcall(function() repeat self:step(5) until #self.workers==0 end)
+  self.closed=true
+  x.u.close(self.channel.fd); x.u.close(self.control_channel.fd)
+  if not ok then return self:finalize() end
+ end
+ local reaped=self:finalize()
+ if not reaped then x.u.write(2,'guardian disposal exit unconfirmed\n') end
+ return reaped
 end
 return M

@@ -2,7 +2,8 @@
 local codec=require('lua_repl_mcp.codec')
 local contracts=require('lua_repl_mcp.contracts')
 local null=require('lua_repl_mcp').null
-local M={version='2025-11-25'}
+-- Fixed discovery schemas are protocol-owned, independent of user D.
+local M={version='2025-11-25',discovery_depth=16}
 local function object(v) return type(v)=='table' and v~=null and codec.kind(v)~='array' end
 local function rpc(id,code,message)
   return {jsonrpc='2.0',id=id or null,error={code=code,message=message}}
@@ -86,7 +87,9 @@ function M.new(config)
       config.submit(id,p.name,input,assert(codec.json_data(text,{max_depth=(config.max_depth or 128)+4,max_bytes=config.input_bytes,checkpoint=checkpoint})))
       return nil
     end
-    local args,e=contracts.validate(p.name,input,{max_depth=config.max_depth or 128})
+    -- This exact body passed bounded decode above. Fresh structure/depth
+    -- validation must not re-charge expanded canonical escape bytes.
+    local args,e=contracts.validate(p.name,input,{max_depth=config.max_depth or 128,max_bytes=math.huge})
     if not args then
       return ok(M.tool_result(p.name=='repl_execute' and require('lua_repl_mcp.errors').failure(e) or {error=e}))
     end

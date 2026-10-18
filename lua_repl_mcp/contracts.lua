@@ -87,6 +87,8 @@ function M.from_json(tool,text,options)
   options=options or {}
   local data,e=codec.decode(text,{max_depth=(options.max_depth or 128)+2,max_bytes=options.max_bytes,checkpoint=options.checkpoint})
   if data==nil then return nil,errors.new('invalid_arguments',e.reason,'validation','not_started',{path=e.path}) end
-  return M.validate(tool,data,options)
+  -- Raw ingress bytes were charged by decode. Canonical escapes may expand;
+  -- keep fresh structure/depth validation without admitting the same data twice.
+  return M.validate(tool,data,{max_depth=options.max_depth,max_bytes=math.huge,checkpoint=options.checkpoint})
 end
 return M

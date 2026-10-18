@@ -20,7 +20,8 @@ function M.serve(adapter,options)
     for _,k in ipairs({'input_bytes','response_bytes','read_bytes'}) do
       if options[k]~=nil then assert(math.type(options[k])=='integer' and options[k]>0,'invalid handler limit') end
     end
-    frames.limit=options.input_bytes or frames.limit
+    local input_bytes=options.input_bytes or frames.limit
+    frames.limit=input_bytes
     local read_bytes=options.read_bytes or 65536
     local response_bytes=options.response_bytes or 128*1048576
     local eval_options=require('lua_repl_mcp.limits').evaluator(options.evaluator)
@@ -33,7 +34,7 @@ function M.serve(adapter,options)
       return v,e
     end
     local function send(response)
-      local encoded=codec.encode(response,{max_depth=eval_options.max_depth+4,max_bytes=response_bytes})
+      local encoded=codec.encode(response,{max_depth=math.max(eval_options.max_depth+4,protocol.discovery_depth),max_bytes=response_bytes})
       local original=encoded~=nil
       if not encoded then
         local errors=require('lua_repl_mcp.errors')
@@ -60,7 +61,7 @@ function M.serve(adapter,options)
       instructions=options.instructions or 'Trusted code runs in the host global environment. Explicit return is required. Close returns control to the parent; no host termination or managed cancellation.',
       call=function(name,args)
         if name=='repl_close' then return {status='closing'},'close' end
-        return evaluator.execute(args,eval_options)
+        return evaluator.execute(args,eval_options,math.huge)
       end,
     })
     while true do

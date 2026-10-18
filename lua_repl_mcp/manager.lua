@@ -36,11 +36,12 @@ function M.new(o)
  return setmetatable({backend=backend,clock=o.clock or backend.clock,
   limits=limits,limit_options=o.limits and require('lua_repl_mcp.limits').authored(limits),admission=admission,slots={ordinary=0,control=0,kill=0},requests={},sessions={},order={},starting={},next_id=0,prefix='session-'..serial..'-',closed=false},C)
 end
-function C:allocate(options)
- if #self.order>=self.admission.sessions then return nil end
+function C:allocate(options,original)
+ if #self.order>=self.admission.sessions or
+  (self.backend.can_allocate and not self.backend:can_allocate()) then return nil end
  self.next_id=self.next_id+1
  local id=self.prefix..self.next_id
- local s={limits=self.limits,id=id,worker=self.backend:allocate(options or {}),generation=0,
+ local s={limits=self.limits,id=id,worker=self.backend:allocate(options or {},nil,original),generation=0,
   cwd=(options or {}).cwd or (self.backend.cwd or require('posix.unistd').getcwd())}
  self.sessions[id]=s; self.order[#self.order+1]=s
  return s
@@ -97,7 +98,10 @@ function C:accept(tool,input,request_id,original,checkpoint,validation_only)
  assert(not self.committing,'response commit must not reenter manager')
  self:refresh()
  local a,err
- if original and tool=='session_execute' then
+ if original and tool=='session_create' then
+  a,err=require('lua_repl_mcp.worker_protocol').creation_arguments(original,self.limits)
+  if not a then err=errors.new('invalid_arguments',tostring(err),'validation','not_started') end
+ elseif original and tool=='session_execute' then
   -- Resolve and validate the immutable authoritative body BEFORE admission.
   -- The mirror may transfer it directly, including deferred startup dispatch.
   a,err=require('lua_repl_mcp.worker_protocol').execution_arguments(original,self.limits,checkpoint)
@@ -132,7 +136,7 @@ function C:accept(tool,input,request_id,original,checkpoint,validation_only)
  end
  local s
  if tool=='session_create' or (tool=='session_execute' and a.session_id==null) then
-  s=self:allocate(tool=='session_create' and a or a.create_options)
+  s=self:allocate(tool=='session_create' and a or a.create_options,original)
   if not s then r.response=failure('limit_exceeded'); return r end
   r.creation=true
  else s=self.sessions[a.session_id] end

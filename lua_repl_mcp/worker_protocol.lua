@@ -53,6 +53,24 @@ function M.execution_arguments(request,limits,checkpoint)
   if not a then return nil,'invalid original arguments' end
   return a
 end
+-- Creation derives its options only from the immutable bounded ingress body.
+function M.creation_arguments(request,limits)
+ local r=c.json_value(request)
+ if not r or c.json_bytes(request)>limits.input_bytes or r.jsonrpc~='2.0' or
+  r.method~='tools/call' or type(r.params)~='table' then return nil,'invalid original creation' end
+ local tool=r.params.name
+ if tool~='session_create' and tool~='session_execute' then return nil,'invalid creation tool' end
+ local input=r.params.arguments
+ if input==nil then input={} end
+ local a,e=require('lua_repl_mcp.contracts').validate(tool,input,
+  {max_depth=limits.max_depth,max_bytes=math.huge})
+ if not a then return nil,e end
+ if tool=='session_execute' then
+  if a.session_id~=require('lua_repl_mcp').null then return nil,'not implicit creation' end
+  return a.create_options or {}
+ end
+ return a
+end
 function M.execution_input(v,limits,checkpoint)
  if v.request then
   if v.input then return nil,'conflicting execution representation' end
