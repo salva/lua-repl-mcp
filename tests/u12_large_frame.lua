@@ -11,10 +11,13 @@ x.u.read=function(_,n)
  local s=frame:sub(offset,offset+n-1); offset=offset+#s; return s
 end
 local ok,err=pcall(function()
- repeat wire.receive(rx,function(items,done)
+ local deadline=x.now()+30
+ repeat
+  assert(x.now()<deadline,'large frame validation watchdog')
+  wire.receive(rx,function(items,done)
   assert(not seen and done and items[1].id==1 and #items[1].payload==size)
   seen=true
- end) until offset>#frame
+ end) until seen
  assert(seen,'large legal frame was not delivered')
  print('PASS configured_guardian_report_17MiB_above_public_input_decode_default')
 end)
