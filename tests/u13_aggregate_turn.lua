@@ -10,10 +10,10 @@ for i=1,8 do s.workers[i]={state='idle',read_fd=100+i,buffer='',pending='',creat
 local ok,err=pcall(function()
  s:step(0)
  assert(count<=65536,'aggregate turn reads '..count..' bytes; expected shared ingress unit')
- local first=s.workers[1].buffer
+ local first=s.workers[1].buffer_bytes
  s:step(0)
- assert(s.workers[1].buffer==first,'round robin must advance past previous ingress owner')
- assert(#s.workers[2].buffer>0,'second admitted worker must progress')
+ assert(s.workers[1].buffer_bytes==first,'round robin must advance past previous ingress owner')
+ assert((s.workers[2].buffer_bytes or 0)>0,'second admitted worker must progress')
 end)
 x.u.read=read; x.p.poll=poll
 assert(ok,err)

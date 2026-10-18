@@ -15,7 +15,7 @@ function M.new(options)
 end
 local function close(w)
  for _,key in ipairs({'read_fd','write_fd'}) do if w[key] then x.u.close(w[key]); w[key]=nil end end
- w.pending=''; w.buffer=''; w.validation=nil; w.validation_rest=nil
+ w.pending=''; w.buffer=''; w.buffer_parts=nil; w.buffer_bytes=0; w.validation=nil; w.validation_rest=nil
 end
 -- One signal per eligible turn. Phase/deadline use the original monotonic
 -- origin; a delayed turn never resets the total bound or replays missed ticks.
@@ -175,11 +175,16 @@ function S:drain(w)
   while w.read_fd do
    local nl=rest:find('\n',1,true)
    local part=nl and rest:sub(1,nl-1) or rest
-   if #w.buffer+#part>self.limits.worker_bytes then return self:abort(w,'corrupt_worker') end
-   w.buffer=w.buffer..part
-   self.buffer_high_water=math.max(self.buffer_high_water,#w.buffer)
+   local size=(w.buffer_bytes or #w.buffer)+#part
+   if size>self.limits.worker_bytes then return self:abort(w,'corrupt_worker') end
+   if not w.buffer_parts then
+    w.buffer_parts={}; if #w.buffer>0 then w.buffer_parts[1]=w.buffer end; w.buffer=''
+   end
+   if #part>0 then w.buffer_parts[#w.buffer_parts+1]=part end
+   w.buffer_bytes=size
+   self.buffer_high_water=math.max(self.buffer_high_water,size)
    if not nl then break end
-   local frame=w.buffer; w.buffer=''
+   local frame=table.concat(w.buffer_parts); w.buffer_parts=nil; w.buffer_bytes=0
    w.validation=coroutine.create(function() return p.decode(frame,self.limits,coroutine.yield) end)
    rest=rest:sub(nl+1)
    if rest~='' then w.validation_rest=rest end

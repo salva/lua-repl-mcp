@@ -1006,5 +1006,12 @@
     "deadline": 30,
     "run": true,
     "expected_status": 0
+  },
+  {
+    "path": "u13_native_allocation.lua",
+    "kind": "process",
+    "deadline": 60,
+    "run": true,
+    "expected_status": 0
   }
 ]
