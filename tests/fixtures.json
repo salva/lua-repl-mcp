@@ -983,5 +983,13 @@
     "deadline": 30,
     "run": true,
     "expected_status": 0
+  },
+  {
+    "path": "u13_stdio_preparation.py",
+    "kind": "process",
+    "wrapper": "self",
+    "deadline": 120,
+    "run": true,
+    "expected_status": 0
   }
 ]

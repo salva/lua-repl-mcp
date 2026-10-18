@@ -26,8 +26,8 @@ g.new=function(o)
    marked=true; barrier:write('P'); barrier:flush()
   end
  end
- local execute=b.execute
- b.execute=function(self,...) armed=true; return execute(self,...) end
+ local execute=b.execute_owned
+ b.execute_owned=function(self,...) armed=true; return execute(self,...) end
  return b
 end
 require('lua_repl_mcp.server').main()
