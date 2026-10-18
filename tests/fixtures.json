@@ -999,5 +999,12 @@
     "deadline": 120,
     "run": true,
     "expected_status": 0
+  },
+  {
+    "path": "u13_public_framing.lua",
+    "kind": "pure",
+    "deadline": 30,
+    "run": true,
+    "expected_status": 0
   }
 ]

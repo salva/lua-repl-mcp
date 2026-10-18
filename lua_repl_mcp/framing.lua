@@ -1,49 +1,59 @@
 -- Byte framing only: never decode trailing data during lifecycle handoff.
 local M={}
 function M.new(limit)
-  local self={buffer='',limit=limit}
-  -- Inspect incoming bytes before concatenation. Retain only the legal prefix
-  -- plus one overflow sentinel, even when a caller supplies a huge chunk.
-  -- Earlier complete frames remain readable; overflow is sticky at its frame.
+  local self={limit=limit,bytes=0,ready=0}
+  local parts,partial={},0
+  local frames,first,last={},1,0
+  local function tail() return table.concat(parts) end
+  local function snapshot()
+    local out={}
+    for i=first,last do out[#out+1]=frames[i]; out[#out+1]='\n' end
+    out[#out+1]=tail()
+    return table.concat(out)
+  end
+  -- Compatibility inspection only. Runtime owners use byte/ready counters;
+  -- observing the old buffer must not force prefix copies on every IO turn.
+  setmetatable(self,{__index=function(_,key) if key=='buffer' then return snapshot() end end})
   function self:feed(bytes)
     if self.overflow then return nil,'input frame limit exceeded' end
-    -- Anchor the last-newline scan. An unanchored greedy pattern retries
-    -- every suffix when a partial frame has no newline (quadratic work).
-    local last=self.buffer:match('^.*()\n')
-    local length=#self.buffer-(last or 0)
     local pos=1
     while pos<=#bytes do
       local p=bytes:find('\n',pos,true)
       local count=(p and p-1 or #bytes)-pos+1
-      if length+count>self.limit then
-        local keep=pos+self.limit-length
-        self.buffer=self.buffer..bytes:sub(1,keep)
+      if partial+count>self.limit then
+        -- One sentinel byte, no bytes beyond the first overflowing frame.
+        local keep=self.limit-partial+1
+        parts[#parts+1]=bytes:sub(pos,pos+keep-1)
+        partial=partial+keep; self.bytes=self.bytes+keep
         self.overflow=true
         return nil,'input frame limit exceeded'
       end
+      if count>0 then
+        parts[#parts+1]=(pos==1 and count==#bytes) and bytes or bytes:sub(pos,pos+count-1)
+        partial=partial+count; self.bytes=self.bytes+count
+      end
       if not p then break end
-      length=0; pos=p+1
+      last=last+1; frames[last]=tail()
+      parts={}; partial=0
+      self.ready=self.ready+1; self.bytes=self.bytes+1
+      pos=p+1
     end
-    self.buffer=self.buffer..bytes
     return true
   end
   function self:pop()
-    local p=self.buffer:find('\n',1,true)
-    if (p and p-1 or #self.buffer)>self.limit then return nil,'input frame limit exceeded' end
-    if not p then return nil end
-    local frame=self.buffer:sub(1,p-1)
-    self.buffer=self.buffer:sub(p+1)
-    return frame
+    if self.ready>0 then
+      local frame=frames[first]; frames[first]=nil; first=first+1
+      self.ready=self.ready-1; self.bytes=self.bytes-#frame-1
+      if self.ready==0 then frames={}; first=1; last=0 end
+      return frame
+    end
+    if self.overflow then return nil,'input frame limit exceeded' end
+    return nil
   end
   function self:handoff()
     local messages={}
-    local pos=1
-    while true do
-      local p=self.buffer:find('\n',pos,true)
-      if not p then break end
-      messages[#messages+1]=self.buffer:sub(pos,p-1); pos=p+1
-    end
-    return messages,self.buffer:sub(pos)
+    for i=first,last do messages[#messages+1]=frames[i] end
+    return messages,tail()
   end
   return self
 end

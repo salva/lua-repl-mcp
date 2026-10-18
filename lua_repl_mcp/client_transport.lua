@@ -132,12 +132,12 @@ function C:step(on_frame,progress)
  local chunk,err
  -- Drain buffered complete frames before asking the adapter for more. Otherwise
  -- a flood of short frames could grow a backlog faster than the tick quota.
- if not ingress or self.input.buffer:find('\n',1,true) then err='again'
- else chunk,err=self.io.read(math.min(65536,self.input.limit-#self.input.buffer+1)) end
+ if not ingress or self.input.ready>0 then err='again'
+ else chunk,err=self.io.read(math.min(65536,self.input.limit-self.input.bytes+1)) end
  if chunk then
   if #chunk==0 or #chunk>65536 then self:close('invalid read'); return false end
   local ok=self.input:feed(chunk)
-  self.input_high_water=math.max(self.input_high_water,#self.input.buffer)
+  self.input_high_water=math.max(self.input_high_water,self.input.bytes)
   if not ok then self:close('input bound'); return false end
  elseif err~='again' then self:close(err or 'eof'); return false end
  for _=1,ingress and 16 or 0 do

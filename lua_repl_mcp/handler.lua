@@ -79,7 +79,7 @@ function M.serve(adapter,options)
         end
       else
         -- Read no more than the remaining frame bound plus a delimiter byte.
-        local n=math.min(read_bytes,frames.limit-#frames.buffer+1)
+        local n=math.min(read_bytes,frames.limit-frames.bytes+1)
         local bytes,e=io_call('read',n)
         if bytes==nil then
           if e=='eof' then return finish('eof') end
