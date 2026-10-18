@@ -1,5 +1,22 @@
 # Saivage deployment and launch
 
+## Operator-requested shutdown — 2026-10-18
+
+The operator requested that all publishable project work be on GitHub and the
+dedicated instance shut down. Verified exact project `lua-repl-mcp` at its current
+`10.0.3.18` address; normal supported Stop returned stopped (contained:false,
+already idle), runtime null, no active agents and no managed processes. Stopped
+`saivage.service`, then gracefully stopped only `saivage-lua-repl-mcp` with classic
+LXC. `lxc-info` confirmed **STOPPED**. No reset or deletion was performed; private
+project-local state/credentials and the dedicated runtime mount remain preserved.
+
+After shutdown, the worktree was clean, HEAD matched `origin/master` at `38e12f2`,
+and no local branch/tag commits were absent from origin. Publication verification
+is recorded in `PUBLISHING.md`; this shutdown receipt is also committed/pushed.
+Ignored runtime state, credentials and private scratch evidence are intentionally
+not published. Earlier active-launch statements below are historical receipts,
+not current running status. Restart/resume requires a new operator request.
+
 ## Authorized scope
 
 The operator authorized a separate instance, copying credentials from the
