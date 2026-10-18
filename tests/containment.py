@@ -37,6 +37,24 @@ def children():
     return [int(p) for p in Path(f'/proc/{os.getpid()}/task/{os.getpid()}/children').read_text().split()]
 
 
+def reap_adopted_children(fixture_pid):
+    """Wait only exited adoptees, never live work or the fixture's exit status.
+
+    Holding adopted zombies until final cleanup falsely keeps process groups
+    present during actual client containment checks. This is parent wait
+    ownership, not external disposal or evidence of product-owned reap.
+    """
+    for pid in children():
+        if pid == fixture_pid:
+            continue
+        try:
+            info = os.waitid(os.P_PID, pid, os.WEXITED | os.WNOHANG | os.WNOWAIT)
+            if info:
+                os.waitpid(pid, os.WNOHANG)
+        except ChildProcessError:
+            pass
+
+
 def run(command, timeout):
     if sys.platform != 'linux' or not hasattr(os, 'pidfd_open'):
         print('BLOCKED Linux subreaper/pidfd containment unavailable', file=sys.stderr)
@@ -77,6 +95,7 @@ def run(command, timeout):
             if info:
                 result = info.si_status if info.si_code == os.CLD_EXITED else 128 + info.si_status
                 break
+            reap_adopted_children(child.pid)
             time.sleep(.01)
         if interrupted:
             result = 128 + interrupted[0]

@@ -16,6 +16,37 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class Containment(unittest.TestCase):
+    def test_adopted_zombie_reaped_before_fixture_exit(self):
+        work = Path(os.environ['SAIVAGE_CARD_WORK_ROOT']) / 'u13-containment'
+        work.mkdir(exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=work) as d:
+            path = Path(d)
+            exited = "import os,time; open(%r,'w').write(str(os.getpid())); time.sleep(.1)" % str(path/'exited')
+            live = "import os,time; open(%r,'w').write(str(os.getpid())); time.sleep(60)" % str(path/'live')
+            intermediate = "import os,subprocess,sys; os.setsid(); subprocess.Popen([sys.executable,'-c',%r]); subprocess.Popen([sys.executable,'-c',%r])" % (exited, live)
+            driver = '''import os,subprocess,sys,time
+from pathlib import Path
+p=Path(%r)
+subprocess.run([sys.executable,'-c',%r],check=True)
+end=time.monotonic()+3
+while not (p/'exited').exists() or not (p/'live').exists():
+ assert time.monotonic()<end
+ time.sleep(.01)
+dead=int((p/'exited').read_text()); live=int((p/'live').read_text())
+while Path('/proc/'+str(dead)).exists():
+ assert time.monotonic()<end, 'adopted zombie held until fixture exit'
+ time.sleep(.01)
+assert Path('/proc/'+str(live)).exists(), 'live adoptee signalled during observation'
+(p/'observed').write_text('before fixture exit')
+os._exit(7)
+''' % (str(path), intermediate)
+            self.assertEqual(run([sys.executable, '-c', driver], 5), 7)
+            self.assertTrue((path/'observed').exists())
+            for name in ('exited', 'live'):
+                self.assertFalse(Path('/proc/'+(path/name).read_text()).exists())
+            with self.assertRaises(ChildProcessError):
+                os.waitpid(-1, os.WNOHANG)
+
     def test_crash_timeout_nested_and_escape(self):
         work = Path(os.environ['SAIVAGE_CARD_WORK_ROOT']) / 'u13-containment'
         work.mkdir(exist_ok=True)
@@ -87,7 +118,8 @@ class Containment(unittest.TestCase):
         self.assertEqual({r['path'] for r in rows if r['path'].endswith('.lua')}, {p.name for p in (ROOT/'tests').glob('*.lua')})
         self.assertEqual(len(rows),len({r['path'] for r in rows}))
         for row in rows:
-            self.assertTrue((ROOT/'tests'/row['wrapper']).is_file(),row)
+            wrapper = row.get('wrapper', 'u9_suite.py')
+            self.assertTrue((ROOT/'tests'/(row['path'] if wrapper == 'self' else wrapper)).is_file(), row)
             self.assertGreater(row['deadline'],0)
             if row['expected_status']:
                 self.assertTrue(row['expected_assertion'])

@@ -1055,6 +1055,14 @@
     "expected_status": 0
   },
   {
+    "path": "simplicity_resolved_cancel.lua",
+    "kind": "pure",
+    "wrapper": "u9_suite.py",
+    "deadline": 45,
+    "run": true,
+    "expected_status": 0
+  },
+  {
     "path": "simplicity_shutdown_bound.lua",
     "kind": "process",
     "wrapper": "u9_suite.py",

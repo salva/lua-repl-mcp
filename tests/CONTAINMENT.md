@@ -13,7 +13,12 @@ sets PR_SET_CHILD_SUBREAPER before spawning. It observes only its own direct
 children and signals through pidfds; adopted escaped-session descendants are
 killed/reaped after their parents, never selected by name or stale PID/PGID.
 A five-second cleanup observation limit reports failure rather than confirming
-an unkillable child. Kernel pidfd/subreaper absence returns 125 (blocked), not a
+an unkillable child. While the fixture runs, the owner nonblockingly waits only
+already-exited adoptees, excluding the immediate fixture child whose status is
+retained for result capture. This prevents harness-owned zombies from falsely
+keeping dead groups present during actual client containment checks. It neither
+signals live adoptees nor proves product-owned worker/guardian reap; those
+assertions must still precede harness cleanup. Kernel pidfd/subreaper absence returns 125 (blocked), not a
 weaker POSIX fallback. SIGTERM/SIGINT to the owner triggers cleanup; SIGKILL of
 the external owner itself cannot be recovered by that owner. This is not a
 sandbox or a claim about arbitrary hostile same-UID processes.
@@ -40,6 +45,20 @@ python3 tests/u13_containment.py
 python3 docs/check_contracts.py
 git diff --check
 ```
+
+Current local Saivage client-component qualification (requires the offline clean
+install at `$SAIVAGE_CARD_WORK_ROOT/current-qualification/rocks`):
+
+```
+cd "$SAIVAGE_CARD_WORK_ROOT/current-qualification/outside"
+python3 /work/lua-repl-mcp/tests/containment.py 100 node /work/lua-repl-mcp/tests/simplicity_client.mjs
+```
+
+This explicitly imports the existing local production client, not a protocol
+simulator or an authenticated agent/UI session. It uses its own disposable
+client root and does not change shared runtime/provider configuration. A real
+shell-start barrier precedes active kill. Exited adopted shell children are
+waited by the test owner; direct worker/guardian reap remains product-owned.
 
 Fault tests cover aggregate crash, nested-wrapper crash followed by aggregate
 timeout, owner signal, TERM-ignore/new-session descendant adoption, immediate
