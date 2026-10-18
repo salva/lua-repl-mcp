@@ -46,13 +46,13 @@ try:
     # Worst measured numeric spelling, exact legal I including trailing space.
     text='{"jsonrpc":"2.0","id":4,"method":"ping","extra":['+','.join(['1e-7']*800001)+']}'
     text+=' '*(16777216-len(text)); assert len(text)==16777216
-    started=time.monotonic(); send(text)
+    started=time.monotonic(); send(text); sent=time.monotonic()
     import select
     assert select.select([r],[],[],20)[0] and os.read(r,1)==b'P','decode checkpoint watchdog'
     # Later complete controls remain in wire order, not classified from partial JSON.
     send(json.dumps(dict(jsonrpc='2.0',id=5,method='tools/call',params=dict(name='session_list',arguments={}))))
     wait_disappeared(worker,original,started+32)
-    reaped=time.monotonic()-started
+    observed=time.monotonic(); reaped=observed-started
     for id in (4,5):
         value=json.loads(frame(p.stdout,timeout=30)); assert value['id']==id,value
     elapsed=time.monotonic()-started
@@ -60,7 +60,7 @@ try:
     # Dead allocation still accepts explicit cleanup and reports truthfully.
     killed=rpc(6,'session_kill',dict(session_id=session)); assert killed.get('process_exit_confirmed') or killed.get('error',{}).get('code')=='unknown_session',killed
     p.stdin.close(); assert p.wait(timeout=35)==0,p.stderr.read()
-    print('PASS installed_exact_I_decode_later_list_kill_original_deadline_reap bytes=16777216 elapsed=%.3f reaped=%.3f'%(elapsed,reaped),flush=True)
+    print('PASS installed_exact_I_decode_later_list_kill_original_deadline_reap bytes=16777216 elapsed=%.3f send=%.3f identity_absent_observed=%.3f post_send_wait=%.3f'%(elapsed,sent-started,reaped,observed-sent),flush=True)
 finally:
     if p.poll() is None: p.kill()
     p.wait(timeout=5)
