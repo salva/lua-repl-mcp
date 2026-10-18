@@ -52,3 +52,14 @@ Final [report](99-REPORT.md), [inventory](00-INDEX.md) and
 [metaplan](99-METAPLAN.md) complete. Independent skeptical triage and final plan
 review session `ses_eb218e6cbffenkwpQUkHYMPzHu` approved with no actionable scoped
 changes; [receipt](97-PLAN-REVIEW.md). User confirmation before fixes remains open.
+
+## Subsequent simplicity-first review
+
+The operator explicitly prioritized a simple MCP and safe coarse edge-case
+handling. Fresh Astra `ses_eb1e3795cffeno8qxGQSAC4Ueg` completed an additional
+[simplicity review](96-SIMPLICITY-REVIEW.md). It recommends revising the previously
+approved plan: prefer temporary allocation rejection to seamless retirement,
+optional metadata omission, and reconsider recovery/precision contracts. Several
+reductions require owner decisions; no requirements were silently changed.
+**The earlier plan approval is not approval to implement new retirement machinery.**
+Fixing remains on hold until decisions/revised plan; Saivage was not resumed.

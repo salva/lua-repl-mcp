@@ -1,5 +1,12 @@
 # Cycle 2 focused repair proposal
 
+**Hold for simplicity revision:** the subsequent operator-requested
+[simplicity-first review](96-SIMPLICITY-REVIEW.md) challenges this edition's
+seamless-retirement requirement and recommends safe temporary allocation rejection
+instead. Several additional recovery/precision reductions need owner decisions.
+Do not implement the mechanisms below solely on the earlier approval; no fixer
+has started and the proposed requirements have not yet been changed/adopted.
+
 ## Scope and guardrails
 
 Source baseline `a600754`, already published. This is a proposed correction to
