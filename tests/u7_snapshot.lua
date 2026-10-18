@@ -16,15 +16,16 @@ m:commit(run,function() return true end)
 local s=m.sessions[id]
 s.worker.state='idle'; s.worker.result={status='completed',values=c.array({null,c.object({}),c.array({}),42})}
 m:refresh()
--- Oversized ownership metadata must not turn snapshotting into serialization,
+-- Oversized retained values must not turn snapshotting into serialization,
 -- nor consuming a preflight replacement into consuming the retained result.
-s.execution.payload.notice=string.rep('c',5*1048576)
+local retained=s.execution.payload.values
+s.execution.payload.values=c.array({string.rep('c',5*1048576)})
 local t=transport.new(m,{read=function() return nil,'again' end,write=function() return nil,'again' end})
 t:submit('overflow','session_wait',{session_id=id,wait_timeout_ms=0})
 assert(t:step(function() end) and not t.closed)
 assert(c.decode(t.queue[1].text).result.structuredContent.error.code=='limit_exceeded')
 assert(s.execution.payload and m.slots.ordinary==0)
-s.execution.payload.notice=nil
+s.execution.payload.values=retained
 local wait=m:accept('session_wait',{session_id=id,wait_timeout_ms=0})
 local preview=m:preview(wait)
 assert(preview.values[1]==null and c.kind(preview.values[2])=='object' and c.kind(preview.values[3])=='array')

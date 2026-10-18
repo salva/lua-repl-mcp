@@ -24,7 +24,11 @@ local ok,err=xpcall(function()
   -- Avoid closing a nonexistent OS descriptor; record owning abort semantics.
   function s:abort(worker,cause) worker.failure=cause; worker.read_fd=nil end
   function s:receive() end
-  s:drain(w)
+  local turns=0
+  repeat
+   s:drain(w); turns=turns+1
+   assert(turns<10000,'frame admission/validation watchdog')
+  until w.failure or (delimiter and not w.validation)
   if delta<=0 then assert(decoded==1 and not w.failure)
   else assert(decoded==0 and w.failure=='corrupt_worker') end
   assert(s.buffer_high_water<=limit)
