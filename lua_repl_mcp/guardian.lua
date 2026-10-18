@@ -381,12 +381,25 @@ function B:step(delay)
  end
 end
 function B:shutdown()
+ -- Drain and owned wait share one origin, including transport-failure paths.
+ -- No guardian report is required to reach liveness closure or return control.
+ if not self.finalize_deadline then self.finalize_deadline=self.clock()+31 end
  if not self.closed then
   for _,w in ipairs(self.workers) do self:abort(w,'shutdown') end
-  local ok=pcall(function() repeat self:step(5) until #self.workers==0 end)
+  pcall(function()
+   while #self.workers>0 and self.clock()<self.finalize_deadline do
+    self:step(math.min(5,math.max(0,math.floor((self.finalize_deadline-self.clock())*1000))))
+   end
+  end)
   self.closed=true
+  if self.live then x.u.close(self.live); self.live=nil end
   x.u.close(self.channel.fd); x.u.close(self.control_channel.fd)
-  if not ok then return self:finalize() end
+  -- Unreported exit remains unknown even if the guardian is subsequently
+  -- reaped. Never infer a worker wait from descriptor closure or guardian exit.
+  for _,w in ipairs(self.workers) do
+   w.failure=w.failure or 'transport_failed'; w.state='dead'; w.process_exit_confirmed=false
+  end
+  self.workers={}
  end
  local reaped=self:finalize()
  if not reaped then x.u.write(2,'guardian disposal exit unconfirmed\n') end
