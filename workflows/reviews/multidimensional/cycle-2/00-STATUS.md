@@ -24,7 +24,7 @@ Use at most3 correction rounds once authorized; escalate repeated objections.
 - [x] Collect all reports, including inspected limits and fixed/not-issue findings.
 - [x] Map subsystems; critically inventory actual new/residual defects.
 - [x] Consolidate minimal fix plan and independently review/iterate it.
-- [ ] Present results and obtain implementation confirmation.
+- [x] Present results and obtain implementation confirmation (simplicity-first revision).
 - [ ] If authorized, separate Sol fixes and Astra verification/corrections.
 
 ## Review sessions
@@ -62,4 +62,35 @@ approved plan: prefer temporary allocation rejection to seamless retirement,
 optional metadata omission, and reconsider recovery/precision contracts. Several
 reductions require owner decisions; no requirements were silently changed.
 **The earlier plan approval is not approval to implement new retirement machinery.**
-Fixing remains on hold until decisions/revised plan; Saivage was not resumed.
+That was the pre-approval hold; the operator subsequently approved the direction
+and authorized main-planner notification and normal resume, as recorded below.
+
+## Verified simplicity adoption and resume — 2026-10-18
+
+Current execution direction is [SIMPLICITY-PLAN.md](SIMPLICITY-PLAN.md), committed
+`4a04acd`, editorially APPROVED by the fresh simplicity reviewer. It supersedes
+earlier seamless-retirement prescriptions. Main root/U13 were DONE with no runtime,
+active agents or managed processes before supported adoption. No service restart,
+reset, generated-state filesystem edit, model/config/credential change or external
+fixer was used.
+
+Supported Analyst accepted root brief updated/read back:
+`record:///brief.md?card=project&v=13`. It releases prior holds, preserves DONE
+U1–U13 history, adopts temporary capacity rejection/coarse safe failure and small
+repairs, and directs a new bounded follow-up rather than replaying completed work.
+Normal root notification returned queued:true, ID
+`82148578-5412-4f5b-aea3-3d4b0ea4885d`, interruption:not_requested.
+Normal `start_project` returned success/started:true at
+2026-10-18T08:33:25.473Z. Root created/activated `card-g`,
+“Simplicity-first lifecycle, capacity admission and local data repairs”.
+
+Fresh child execution verified at `agent:executor:card-g-a`, active/busy:
+successful `run_command`, process `proc-d5f6c956cdbc`, exit0 at
+2026-10-18T08:36:16.432Z, reading current cancellation/lifecycle requirements.
+Earlier inspection noted guest default lua5.1.5 and available lua5.4; that is
+environment discovery, not claimed product runtime qualification. Real returned
+child tools establish resumption, not completed fixes or acceptance.
+
+Full private supported receipts and current conversations retained under workspace
+`tmp/lua-repl-mcp-container-setup/simplicity-resume/`: adoption-run-response.json,
+fresh-executor.json, verified-resume.json. No secret values printed or committed.
