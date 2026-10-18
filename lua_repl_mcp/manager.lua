@@ -192,8 +192,13 @@ function C:cancel(id)
  local r=self.requests[id]
  if not r or r.done or r.cancelled then return false end
  local e=r.execution
- -- A recorded result is completed even if its response has not committed yet.
- if not r.starting and not r.killing and (e and e.status~='running') then
+ -- Resolved session operations are inert even before response commitment:
+ -- busy/no_execution/create replies have no execution of their own. Never
+ -- retarget cancellation to the session's current (possibly later) execution.
+ -- Starting allocation, accepted kill cleanup and active zero-wait execution
+ -- retain their existing cancellation behavior.
+ if not r.starting and not r.killing and r.session and
+    (not e or e.status~='running') then
   return false
  end
  self.requests[id]=nil; r.cancelled=true; self:release(r)
