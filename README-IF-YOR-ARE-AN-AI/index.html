@@ -40,6 +40,9 @@
                                 <a href="../manager/" class="nav-link">Manager tasks</a>
                             </li>
                             <li class="nav-item">
+                                <a href="../custom-host/" class="nav-link">Custom hosts</a>
+                            </li>
+                            <li class="nav-item">
                                 <a href="../embedding/" class="nav-link">Embedding</a>
                             </li>
                             <li class="nav-item">
@@ -85,7 +88,7 @@
     </div>
 
     
-    <div id="toc-collapse" class="navbar-collapse collapse card bg-light">
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
             <li class="nav-item" data-bs-level="1"><a href="#lua-repl-mcp-installation-and-use-for-ai-clients" class="nav-link">Lua REPL MCP: installation and use for AI clients</a>
@@ -107,6 +110,10 @@
               </ul>
             </li>
             <li class="nav-item" data-bs-level="2"><a href="#data-side-effects-and-recovery" class="nav-link">Data, side effects and recovery</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#managed-custom-host-first-use" class="nav-link">Managed custom-host first use</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -133,6 +140,12 @@ returned, and printed output is not captured.</p>
 <ul>
 <li><strong>Standalone manager:</strong> launch <code>lua-repl-mcp</code> over MCP stdio. Each session has
   an independent persistent Lua process. Choose this for normal MCP-client use.</li>
+<li><strong>Managed custom host:</strong> the manager launches your foreground executable with
+  literal <code>command</code> argv. Chunks run in that program's existing Lua state via
+  <code>lua_repl_mcp.session</code>, using session tools. Destructive cancellation/kill also
+  destroys the application host. See <a href="../custom-host/">custom-host integration</a>
+  for installation, FD3/bootstrap and native adapter requirements. Independent
+  final runtime acceptance remains incomplete.</li>
 <li><strong>Embedded handler:</strong> a Lua host attaches the handler to dedicated protocol
   I/O. Code runs synchronously in that host's existing globals, with access to its
   APIs. This is not a separate worker and cannot preempt blocking host code.</li>
@@ -219,6 +232,33 @@ state-changing operation after a timeout or lost response.</p>
 stdout/stderr paths. Output files must not already exist; defaults discard worker
 output to <code>/dev/null</code>. There is no automatic print capture. Manager connection
 loss disposes of its sessions; persistence is not durable across reconnection.</p>
+<h2 id="managed-custom-host-first-use">Managed custom-host first use</h2>
+<p>Prepare your foreground Lua-embedding executable and install the pure modules
+in its actual interpreter, as described in <a href="../custom-host/">custom hosts</a>.
+The manager's LuaRocks environment does not automatically initialize an embedded
+interpreter's package paths; native modules must match that host's Lua ABI.
+A public <code>handler.serve</code> implementation alone is not a managed child.</p>
+<p>After MCP discovery, call <code>session_create</code> with tool arguments (replace paths):</p>
+<pre><code class="language-json">{&quot;command&quot;:[&quot;/opt/example/bin/lua-host&quot;,&quot;--managed-session&quot;,&quot;--label&quot;,&quot;&quot;],&quot;cwd&quot;:&quot;/data/trial&quot;,&quot;stdout_path&quot;:&quot;host-output.log&quot;,&quot;stderr_path&quot;:&quot;host-error.log&quot;}
+</code></pre>
+<p>Arguments are literal UTF-8 strings without NUL, not a shell command. The array
+and first string must be nonempty; later empty strings are allowed. Omit command
+for the default interpreter. It cannot change for an existing allocation.
+For implicit creation, put the object in <code>session_execute.create_options</code> with
+no session ID. In either path, retain the returned ID and use normal execute,
+wait and kill calls. If the host registers <code>host_add</code>, execute
+<code>total = host_add(20, 22); return total</code> and expect <code>[42]</code> when complete; then
+<code>return total</code> confirms persistent state. This example API is host-supplied.</p>
+<p>Set client launch args to <code>--startup-timeout-ms</code>, <code>60000</code> for a longer finite
+startup budget (default 30000 ms, integer 1..2147483647). This covers allocation
+setup and host readiness, not execution. Readiness proves protocol compatibility,
+not application correctness. Inspect startup errors/output, repair installation
+or adapter problems, then create a new session; never replay effects blindly.
+A pending wait is non-destructive; accepted active-request cancellation, hard
+timeout, kill or manager loss destroys the owned host, without rollback or a
+finalizer guarantee. Cooperative <code>stopping</code> in the host adapter is different:
+it cannot preempt Lua/foreign C or wake blocked I/O. The host owns FD3 CLOEXEC,
+wakeup, eventual close and post-return policy; <code>session.serve</code> borrows I/O.</p>
 <h2 id="embedded-host-use">Embedded-host use</h2>
 <p>The embedded handler needs a host running Lua 5.4 or newer supported PUC-Rio Lua,
 with the standard libraries available and dedicated protocol I/O. It does not

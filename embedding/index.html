@@ -40,6 +40,9 @@
                                 <a href="../manager/" class="nav-link">Manager tasks</a>
                             </li>
                             <li class="nav-item">
+                                <a href="../custom-host/" class="nav-link">Custom hosts</a>
+                            </li>
+                            <li class="nav-item">
                                 <a href="./" class="nav-link active" aria-current="page">Embedding</a>
                             </li>
                             <li class="nav-item">
@@ -61,7 +64,7 @@
 
                     <ul class="nav navbar-nav ms-md-auto">
                             <li class="nav-item">
-                                <a rel="prev" href="../manager/" class="nav-link">
+                                <a rel="prev" href="../custom-host/" class="nav-link">
                                     <i class="fa fa-arrow-left"></i> Previous
                                 </a>
                             </li>
@@ -85,7 +88,7 @@
     </div>
 
     
-    <div id="toc-collapse" class="navbar-collapse collapse card bg-light">
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
             <li class="nav-item" data-bs-level="1"><a href="#embed-in-an-existing-lua-host" class="nav-link">Embed in an existing Lua host</a>
@@ -114,7 +117,10 @@
                     <div class="col-md-9" role="main">
 
 <h1 id="embed-in-an-existing-lua-host">Embed in an existing Lua host</h1>
-<p>Choose this when clients need the application's own Lua globals and APIs.
+<p>Choose this when the host owns the public MCP connection and clients need its
+Lua globals and APIs. To launch a supervised application through manager session
+tools instead, use <a href="../custom-host/">managed custom hosts</a>; <code>handler.serve</code> does
+not implement that private managed protocol.
 The handler executes on the invoking thread in the existing global environment,
 without a new interpreter, worker or background thread. It blocks while serving;
 blocking user code cannot be preempted to process close/cancellation.</p>

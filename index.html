@@ -40,6 +40,9 @@
                                 <a href="manager/" class="nav-link">Manager tasks</a>
                             </li>
                             <li class="nav-item">
+                                <a href="custom-host/" class="nav-link">Custom hosts</a>
+                            </li>
+                            <li class="nav-item">
                                 <a href="embedding/" class="nav-link">Embedding</a>
                             </li>
                             <li class="nav-item">
@@ -85,7 +88,7 @@
     </div>
 
     
-    <div id="toc-collapse" class="navbar-collapse collapse card bg-light">
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
             <li class="nav-item" data-bs-level="1"><a href="#persistent-lua-execution-through-mcp" class="nav-link">Persistent Lua execution through MCP</a>
@@ -134,6 +137,11 @@ to untrusted clients. Printed output is not automatically captured.</p>
 <td>Run Lua from an ordinary MCP client</td>
 <td>POSIX session manager</td>
 <td>Independent worker process per session</td>
+</tr>
+<tr>
+<td>Run chunks inside an application's own Lua state through session tools</td>
+<td><a href="custom-host/">Managed custom host</a></td>
+<td>Foreground application process per allocation</td>
 </tr>
 <tr>
 <td>Use an application's existing Lua globals and APIs</td>

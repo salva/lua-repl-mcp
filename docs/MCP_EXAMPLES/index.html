@@ -40,6 +40,9 @@
                                 <a href="../../manager/" class="nav-link">Manager tasks</a>
                             </li>
                             <li class="nav-item">
+                                <a href="../../custom-host/" class="nav-link">Custom hosts</a>
+                            </li>
+                            <li class="nav-item">
                                 <a href="../../embedding/" class="nav-link">Embedding</a>
                             </li>
                             <li class="nav-item">
@@ -85,7 +88,7 @@
     </div>
 
     
-    <div id="toc-collapse" class="navbar-collapse collapse card bg-light">
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
             <li class="nav-item" data-bs-level="1"><a href="#mcp-usage-examples" class="nav-link">MCP usage examples</a>
@@ -115,6 +118,10 @@
               </ul>
             </li>
             <li class="nav-item" data-bs-level="2"><a href="#list" class="nav-link">List</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#managed-custom-host-creation" class="nav-link">Managed custom-host creation</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -239,6 +246,24 @@ nothing; use <code>session_kill</code>. A normal wait deadline is not cancellati
 </code></pre>
 <p>Consumed results and closed sessions are not history. Empty managers return
 <code>{"sessions":[]}</code>.</p>
+<h2 id="managed-custom-host-creation">Managed custom-host creation</h2>
+<p>Use session tools for a prepared foreground executable embedding Lua, not a
+public <code>repl_execute</code> handler. See <a href="../../custom-host/">host integration</a>
+for FD3/bootstrap/module requirements and destructive lifecycle limitations.
+Replace the illustrative executable/directory with your installed host:</p>
+<pre><code class="language-json">{&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;id&quot;:20,&quot;method&quot;:&quot;tools/call&quot;,&quot;params&quot;:{&quot;name&quot;:&quot;session_create&quot;,&quot;arguments&quot;:{&quot;command&quot;:[&quot;/opt/example/bin/lua-host&quot;,&quot;--managed-session&quot;,&quot;--label&quot;,&quot;&quot;],&quot;cwd&quot;:&quot;/data/trial&quot;,&quot;stdout_path&quot;:&quot;host-output.log&quot;,&quot;stderr_path&quot;:&quot;host-error.log&quot;}}}
+</code></pre>
+<p>Expect the normal idle session-create result on readiness. Literal argv has no
+shell expansion; empty later arguments are retained. Output files must not exist.
+For implicit creation:</p>
+<pre><code class="language-json">{&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;id&quot;:21,&quot;method&quot;:&quot;tools/call&quot;,&quot;params&quot;:{&quot;name&quot;:&quot;session_execute&quot;,&quot;arguments&quot;:{&quot;create_options&quot;:{&quot;command&quot;:[&quot;/opt/example/bin/lua-host&quot;,&quot;--managed-session&quot;]},&quot;code&quot;:&quot;total = host_add(20, 22); return total&quot;,&quot;wait_timeout_ms&quot;:1000}}}
+</code></pre>
+<p>If your host implements <code>host_add</code>, completion returns <code>[42]</code>; pending requires
+<code>session_wait</code> with the returned ID. The example API is not provided by this
+package. Never replay to poll. Same-state persistence, single-consumption and
+serialization-after-effects semantics are unchanged. Active cancellation,
+hard deadline, kill and manager loss destroy the owned application host; none
+is an application-level non-destructive Stop or rollback guarantee.</p>
 <h2 id="direct-embedded-handler">Direct embedded handler</h2>
 <pre><code class="language-json">{&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;id&quot;:8,&quot;method&quot;:&quot;tools/call&quot;,&quot;params&quot;:{&quot;name&quot;:&quot;repl_execute&quot;,&quot;arguments&quot;:{&quot;code&quot;:&quot;local x = ...; host_value = x; return host_value&quot;,&quot;args&quot;:[7]}}}
 </code></pre>

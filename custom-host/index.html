@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        <link rel="canonical" href="https://salva.github.io/lua-repl-mcp/custom-host/">
+        <link rel="shortcut icon" href="../img/favicon.ico">
+        <title>Custom hosts - Lua REPL MCP</title>
+        <link href="../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../css/brands.min.css" rel="stylesheet">
+        <link href="../css/solid.min.css" rel="stylesheet">
+        <link href="../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../css/base.css" rel="stylesheet"> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="..">Lua REPL MCP</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href=".." class="nav-link">Home</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../getting-started/" class="nav-link">Getting started</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../manager/" class="nav-link">Manager tasks</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="./" class="nav-link active" aria-current="page">Custom hosts</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../embedding/" class="nav-link">Embedding</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../data-errors/" class="nav-link">Data and errors</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../operations/" class="nav-link">Operations</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../reference/" class="nav-link">Reference</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../README-IF-YOR-ARE-AN-AI/" class="nav-link">LLM guide</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../docs/MCP_EXAMPLES/" class="nav-link">Wire examples</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                            <li class="nav-item">
+                                <a rel="prev" href="../manager/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../embedding/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#run-sessions-inside-your-own-lua-host" class="nav-link">Run sessions inside your own Lua host</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#launch-a-prepared-host" class="nav-link">Launch a prepared host</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#install-modules-for-the-embedding-interpreter" class="nav-link">Install modules for the embedding interpreter</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#adopt-the-launch-endpoint" class="nav-link">Adopt the launch endpoint</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#outcomes-stopping-and-ownership" class="nav-link">Outcomes, stopping and ownership</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="run-sessions-inside-your-own-lua-host">Run sessions inside your own Lua host</h1>
+<p>Use this mode when chunks must see an application's existing Lua globals, native
+functions and ordinary <code>require</code> modules, while an MCP client uses the manager's
+session tools. Each allocation launches one foreground host process. This is not
+a proxy interpreter controlling the application by RPC.</p>
+<p>Choose the default interpreter when no application APIs are needed: omit
+<code>command</code>. Choose the independent <a href="../embedding/">public handler</a> when the host
+owns the MCP connection and must regain control on <code>repl_close</code>. That handler
+speaks public MCP; it is <strong>not</strong> a managed child implementation.</p>
+<p>This capability is a development candidate. Independent final runtime acceptance
+is not complete; validate your own host integration before relying on it.</p>
+<h2 id="launch-a-prepared-host">Launch a prepared host</h2>
+<p>Install the manager using <a href="../getting-started/">getting started</a>. Build/install
+your own Lua-embedding executable and the modules below before requesting a
+session. These are tool arguments, after MCP initialization and discovery:</p>
+<pre><code class="language-json">{&quot;command&quot;:[&quot;/opt/example/bin/lua-host&quot;,&quot;--managed-session&quot;,&quot;--label&quot;,&quot;&quot;],&quot;cwd&quot;:&quot;/data/trial&quot;,&quot;stdout_path&quot;:&quot;host-output.log&quot;,&quot;stderr_path&quot;:&quot;host-error.log&quot;}
+</code></pre>
+<p>Call <code>session_create</code> with those arguments and retain its <code>session_id</code>. Paths and
+host flags are illustrative: replace them with your executable's actual interface
+and an existing directory. Output files must not exist. Relative paths resolve
+against the selected cwd; defaults discard output to <code>/dev/null</code>. Created files
+use exclusive creation with mode 0600 subject to umask; existing input files are
+not replaced. stdout and
+stderr may share the same path. Output is not captured in MCP results.</p>
+<p><code>command</code> is a dense, nonempty array of UTF-8 strings without NUL. Its first
+string must be nonempty; later strings may be empty. Arguments are literal:
+there is no shell expansion, quoting evaluation, pipeline or redirection. Exec
+path resolution occurs after cwd setup; use absolute executable paths for clarity.
+Omission selects the configured/default Lua interpreter. A command is fixed for
+that allocation; different sessions may use different commands. Keep the exact
+host in foreground, not a daemon that escapes supervision.</p>
+<p>For implicit creation, pass the same object as <code>session_execute.create_options</code>
+while omitting <code>session_id</code>. For an existing session, reuse its ID without creation
+options. For example, if your host installs <code>host_add</code> in its Lua state:</p>
+<pre><code class="language-json">{&quot;session_id&quot;:&quot;&lt;returned session_id&gt;&quot;,&quot;code&quot;:&quot;total = host_add(20, 22); return total&quot;,&quot;wait_timeout_ms&quot;:1000}
+</code></pre>
+<p>Expect <code>values: [42]</code> when complete. A later <code>return total</code> in the same session
+returns 42; top-level locals do not persist. A pending reply requires
+<code>session_wait</code>, not resubmission. <code>host_add</code> is an application API you implement,
+not a module supplied by this package.</p>
+<p>The installed manager accepts <code>--startup-timeout-ms N</code> (default 30000, integer
+1..2147483647), for example <code>lua-repl-mcp --startup-timeout-ms 60000</code>. Configure
+these as separate client launch arguments. The finite startup budget begins at
+allocation, covering setup, executable initialization and protocol readiness;
+it is not <code>wait_timeout_ms</code> or the execution hard deadline.</p>
+<h2 id="install-modules-for-the-embedding-interpreter">Install modules for the embedding interpreter</h2>
+<p>The manager/default wrapper requires Lua 5.4 and luaposix 36.3-1. The real native
+host exercised during development embeds Lua 5.4.6. This does not certify arbitrary
+embedding runtimes. Install the local rock using the exact commands in the
+<a href="../README-IF-YOR-ARE-AN-AI/">LLM guide</a>; expose its <code>share/lua/5.4/?.lua</code> and
+<code>share/lua/5.4/?/init.lua</code> to the embedding interpreter's <code>package.path</code>.</p>
+<p>Alternatively copy the pure managed dependency set from a checkout:</p>
+<pre><code class="language-sh">export LUA_REPL_MODULES=&quot;$PWD/.local/managed-lua&quot;
+mkdir -p &quot;$LUA_REPL_MODULES/lua_repl_mcp&quot;
+for module in init session bootstrap worker_protocol codec framing protocol evaluator limits errors contracts direct_schemas; do
+  cp &quot;lua_repl_mcp/$module.lua&quot; &quot;$LUA_REPL_MODULES/lua_repl_mcp/$module.lua&quot;
+done
+</code></pre>
+<p>Prepend that absolute directory's <code>?.lua</code> and <code>?/init.lua</code> patterns to
+<code>package.path</code> <strong>in the host's existing Lua state</strong>. The pure session/bootstrap
+modules do not import luaposix or require native Lua modules. Any optional C
+extensions loaded by your application must match its actual Lua ABI; the manager's
+LuaRocks <code>LUA_CPATH</code> is not proof of compatibility. Do not load Lua 5.4 shared
+modules into a different ABI. Distribution terms for your application are separate
+from module-path setup; installation grants no additional license rights.</p>
+<h2 id="adopt-the-launch-endpoint">Adopt the launch endpoint</h2>
+<p>The version-1 launch ABI supplies one blocking bidirectional Unix stream socket
+on FD3, with configured standard streams on 0/1/2. Read the reserved environment
+strings (the launcher overwrites these values):</p>
+<ul>
+<li><code>LUA_REPL_MCP_SESSION_FD</code> — exactly <code>3</code>.</li>
+<li><code>LUA_REPL_MCP_ALLOCATION_GENERATION</code> — positive allocation generation.</li>
+<li><code>LUA_REPL_MCP_LIMITS</code> — JSON containing all seven connection budgets.</li>
+</ul>
+<p>Decode them with the pure helper; malformed/missing input must fail startup:</p>
+<pre><code class="language-lua">local launch, problem = require('lua_repl_mcp.bootstrap').decode(
+  os.getenv('LUA_REPL_MCP_SESSION_FD'),
+  os.getenv('LUA_REPL_MCP_ALLOCATION_GENERATION'),
+  os.getenv('LUA_REPL_MCP_LIMITS'))
+assert(launch, problem)
+-- host_io and host_cwd below must be supplied by your native integration.
+-- Adopt launch.fd and mark it CLOEXEC before spawning or executing user code.
+local outcome = require('lua_repl_mcp.session').serve(host_io, {
+  allocation_generation = launch.allocation_generation,
+  limits = launch.limits,
+  cwd = host_cwd, -- actual absolute cwd, unchanged from launch until ready
+  stopping = function() return host_stop_requested end,
+})
+-- Host inspects outcome, closes its endpoint and chooses continuation/exit.
+</code></pre>
+<p>This is integration code, not a generic runnable FD adapter: standard Lua file
+I/O cannot portably adopt an inherited socket. Supply <code>host_io</code> using your host's
+native socket APIs on the invoking Lua thread. Decode bounds are FD3, supported
+positive integer generation spelling (at most 19 digits), and at most 4096 bytes
+of exact validated limits JSON. Do not fabricate generations or loosen budgets.</p>
+<p>The adapter contains plain functions, not colon methods:</p>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Required result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>read(n)</code></td>
+<td>1..n bytes; <code>nil</code> on EOF; <code>nil, diagnostic</code> on error</td>
+</tr>
+<tr>
+<td><code>write(bytes)</code></td>
+<td>positive integer bytes written, no more than supplied; or <code>nil, diagnostic</code></td>
+</tr>
+<tr>
+<td><code>flush()</code></td>
+<td><code>true</code>; or <code>nil, diagnostic</code></td>
+</tr>
+</tbody>
+</table>
+<p>Handle interrupted system calls in the native adapter. Short reads/writes are
+supported; empty reads are not progress. Do not wait to fill n bytes when a short
+frame is already available. Do not send application logs on this socket.</p>
+<p>Invoke <code>serve</code> only after application APIs are usable. It emits readiness and
+runs generation-ordered chunks in the calling state; readiness proves protocol
+compatibility, not binary authenticity or application correctness. A public
+<code>handler.serve</code> cannot substitute for this private managed protocol.</p>
+<h2 id="outcomes-stopping-and-ownership">Outcomes, stopping and ownership</h2>
+<p><code>session.serve</code> blocks and borrows the adapter. It returns a table with <code>reason</code>
+(<code>closed</code>, <code>eof</code>, <code>host_stopping</code>, <code>protocol_error</code> or <code>transport_error</code>) and
+available <code>diagnostics</code>. It does not close descriptors, redirect streams, spawn
+threads, exit the process or reset globals. The host owns eventual close and its
+post-return policy. EOF alone does not prove process exit.</p>
+<p><code>stopping</code> is optional (defaults false). It is checked before readiness and each
+execution admission, including buffered commands, and after flushing an active
+result. It cannot preempt Lua/foreign C or wake blocked I/O. Arrange wakeup using
+your own stable descriptor lifetime, for example shutdown followed by close only
+after the serving thread returns. Do not close/reuse an FD while that thread may
+still access it. Private managed close has no acknowledgement and does not execute
+buffered later commands; it is not public <code>repl_close</code>'s handoff contract.</p>
+<p>Wait expiry leaves work running. Accepted active-request cancellation, hard
+execution timeout, <code>session_kill</code> and manager loss instead destroy the owned host
+process/session. They are <strong>not an application's non-destructive Stop button</strong>.
+The manager supervises the exact child, not arbitrary daemonized descendants;
+hard termination cannot guarantee finalizers, rollback or host continuation.
+Check <code>process_exit_confirmed</code> and cleanup notices rather than inferring exit
+from a removed session or EOF.</p>
+<p>Ordinary syntax/runtime/serialization errors normally leave a healthy session
+usable. Return JSON scalars/tables, not opaque userdata or native objects; keep
+those in host globals and return IDs or summaries explicitly. Serialization
+failure occurs after effects and discards the complete return payload. Results
+are consumed once; a new accepted execution replaces an unread result. Never
+replay a state-changing chunk after a lost reply just to get a result.</p>
+<p>Startup failure may report <code>handshake_failed</code>, early EOF or process exit rather
+than a detailed host diagnosis. Inspect known output/file receipts and repair the
+host's module path, ABI, adapter or initialization before allocating a fresh
+session. Late readiness cannot revive an aborted allocation. Retain external
+application effects for reconciliation; neither startup disposal nor killing a
+session promises to undo them. See <a href="../manager/">manager tasks</a> and
+<a href="../data-errors/">data and errors</a> for result and recovery details.</p></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../js/base.js"></script>
+
+        <div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>
