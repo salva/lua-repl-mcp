@@ -45,7 +45,10 @@ brief document9/head revision14, and queued notification
 `4897f92d-5c6a-4267-8084-b9d7a6d37478`. The brief explicitly authorizes improving
 the issue proposal rather than treating its instructions as final. A separate
 single `start_project` succeeded at **09:14:08.714 UTC**, resuming the SAME
-project. Do not repeat Run/reset/init/restart without a new operator request.
+project. Fresh original-root tools settled from09:14:14 onward, reading LAUNCH,
+the new SPEC16, PLAN and worker source. At09:14:38 runtime remained running at
+project, PID208 and errors empty. This proves real resumed activity, not extension
+completion. Do not repeat Run/reset/init/restart without a new operator request.
 The extension is not yet implemented or accepted by this restart receipt.
 
 ## Operator-requested shutdown — 2026-10-18
