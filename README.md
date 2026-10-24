@@ -20,6 +20,7 @@ to obtain results.
 | Interface | Use it when | State and lifecycle |
 | --- | --- | --- |
 | Standalone session manager | Connecting a normal MCP client | One worker process per session; explicit kill disposes of its state |
+| Managed custom host | Running chunks in an application's own Lua state through session tools | One foreground host per allocation; kill/cancellation destroys that host |
 | Embedded handler | Exposing an existing Lua application's APIs | Runs synchronously in the host interpreter; close returns control to the host |
 
 Globals persist within a session or host interpreter; top-level locals do not.
@@ -48,6 +49,12 @@ Use `session_kill` when finished. Results are consumed once, so save returned
 payloads rather than expecting a later wait to repeat them.
 
 ## Usage and reference
+
+See [custom hosts](site-docs/custom-host.md) for literal `command` argv, inherited
+FD3, pure session/bootstrap modules and native adapter ownership. Omit `command`
+for the default interpreter. A public embedded handler alone is not a managed
+child. Independent final runtime acceptance of custom hosts remains incomplete;
+this is not a production-readiness claim.
 
 - [Task-oriented documentation](https://salva.github.io/lua-repl-mcp/)
 

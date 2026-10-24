@@ -5,6 +5,7 @@ root=pathlib.Path(__file__).resolve().parents[1]
 schema=json.loads((root/'docs/schemas/api.json').read_text())
 names={'getting-started':['session_execute','session_execute','session_kill'],
        'manager':['session_execute','session_execute','session_wait'],
+       'custom-host':['session_create','session_execute'],
        'data-errors':['session_execute']}
 count=0
 for page,tools in names.items():

@@ -1,6 +1,9 @@
 # Embed in an existing Lua host
 
-Choose this when clients need the application's own Lua globals and APIs.
+Choose this when the host owns the public MCP connection and clients need its
+Lua globals and APIs. To launch a supervised application through manager session
+tools instead, use [managed custom hosts](custom-host.md); `handler.serve` does
+not implement that private managed protocol.
 The handler executes on the invoking thread in the existing global environment,
 without a new interpreter, worker or background thread. It blocks while serving;
 blocking user code cannot be preempted to process close/cancellation.

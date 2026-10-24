@@ -8,6 +8,12 @@ returned, and printed output is not captured.
 
 - **Standalone manager:** launch `lua-repl-mcp` over MCP stdio. Each session has
   an independent persistent Lua process. Choose this for normal MCP-client use.
+- **Managed custom host:** the manager launches your foreground executable with
+  literal `command` argv. Chunks run in that program's existing Lua state via
+  `lua_repl_mcp.session`, using session tools. Destructive cancellation/kill also
+  destroys the application host. See [custom-host integration](site-docs/custom-host.md)
+  for installation, FD3/bootstrap and native adapter requirements. Independent
+  final runtime acceptance remains incomplete.
 - **Embedded handler:** a Lua host attaches the handler to dedicated protocol
   I/O. Code runs synchronously in that host's existing globals, with access to its
   APIs. This is not a separate worker and cannot preempt blocking host code.
@@ -114,6 +120,40 @@ Use `session_create` or execute's `create_options` to select `cwd` and explicit
 stdout/stderr paths. Output files must not already exist; defaults discard worker
 output to `/dev/null`. There is no automatic print capture. Manager connection
 loss disposes of its sessions; persistence is not durable across reconnection.
+
+## Managed custom-host first use
+
+Prepare your foreground Lua-embedding executable and install the pure modules
+in its actual interpreter, as described in [custom hosts](site-docs/custom-host.md).
+The manager's LuaRocks environment does not automatically initialize an embedded
+interpreter's package paths; native modules must match that host's Lua ABI.
+A public `handler.serve` implementation alone is not a managed child.
+
+After MCP discovery, call `session_create` with tool arguments (replace paths):
+
+```json
+{"command":["/opt/example/bin/lua-host","--managed-session","--label",""],"cwd":"/data/trial","stdout_path":"host-output.log","stderr_path":"host-error.log"}
+```
+
+Arguments are literal UTF-8 strings without NUL, not a shell command. The array
+and first string must be nonempty; later empty strings are allowed. Omit command
+for the default interpreter. It cannot change for an existing allocation.
+For implicit creation, put the object in `session_execute.create_options` with
+no session ID. In either path, retain the returned ID and use normal execute,
+wait and kill calls. If the host registers `host_add`, execute
+`total = host_add(20, 22); return total` and expect `[42]` when complete; then
+`return total` confirms persistent state. This example API is host-supplied.
+
+Set client launch args to `--startup-timeout-ms`, `60000` for a longer finite
+startup budget (default 30000 ms, integer 1..2147483647). This covers allocation
+setup and host readiness, not execution. Readiness proves protocol compatibility,
+not application correctness. Inspect startup errors/output, repair installation
+or adapter problems, then create a new session; never replay effects blindly.
+A pending wait is non-destructive; accepted active-request cancellation, hard
+timeout, kill or manager loss destroys the owned host, without rollback or a
+finalizer guarantee. Cooperative `stopping` in the host adapter is different:
+it cannot preempt Lua/foreign C or wake blocked I/O. The host owns FD3 CLOEXEC,
+wakeup, eventual close and post-return policy; `session.serve` borrows I/O.
 
 ## Embedded-host use
 

@@ -1,5 +1,10 @@
 # Work with managed sessions
 
+Creation may select a literal `command` argv instead of the default interpreter.
+See [custom hosts](custom-host.md) for same-Lua-state application integration.
+The same session semantics apply, but destructive session operations then destroy
+that application host process.
+
 Each session is an independent persistent Lua worker. A session belongs to one
 client connection. Globals/functions survive calls, but top-level locals and
 consumed result payloads do not. There are no public task IDs or detached sessions.

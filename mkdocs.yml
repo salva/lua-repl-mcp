@@ -14,6 +14,7 @@ nav:
   - Home: index.md
   - Getting started: getting-started.md
   - Manager tasks: manager.md
+  - Custom hosts: custom-host.md
   - Embedding: embedding.md
   - Data and errors: data-errors.md
   - Operations: operations.md

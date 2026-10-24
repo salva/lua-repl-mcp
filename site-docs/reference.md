@@ -29,6 +29,11 @@ the same payload. Clients may prefix tool names in their UI: use discovery.
 
 ## Compatibility
 
+For literal `command`, `--startup-timeout-ms`, the version-1 environment/FD ABI,
+`bootstrap.decode` and borrowed `session.serve`, see [custom hosts](custom-host.md).
+These use session tools, not the public handler's two tools. Final independent
+runtime acceptance of this development candidate remains incomplete.
+
 The local-source package is 0.1.0-1; the verified standalone target uses Linux,
 Lua 5.4.6 and luaposix 36.3-1. The pure-Lua handler has separate historical
 qualification on Lua 5.5; that does not establish Lua 5.5 native-manager support.

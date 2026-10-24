@@ -14,7 +14,7 @@ from urllib.parse import unquote, urlsplit
 import yaml
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-PAGES = ('index getting-started manager embedding data-errors operations reference').split()
+PAGES = ('index getting-started manager custom-host embedding data-errors operations reference').split()
 ALLOW = [*(f'site-docs/{p}.md' for p in PAGES), 'README-IF-YOR-ARE-AN-AI.md',
          'docs/MCP_EXAMPLES.md', 'docs/schemas/api.json']
 ATTR = 'Built with [Saivage](https://github.com/salva/saivage-v3).'

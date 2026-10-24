@@ -170,6 +170,32 @@ nothing; use `session_kill`. A normal wait deadline is not cancellation.
 Consumed results and closed sessions are not history. Empty managers return
 `{"sessions":[]}`.
 
+## Managed custom-host creation
+
+Use session tools for a prepared foreground executable embedding Lua, not a
+public `repl_execute` handler. See [host integration](../site-docs/custom-host.md)
+for FD3/bootstrap/module requirements and destructive lifecycle limitations.
+Replace the illustrative executable/directory with your installed host:
+
+```json
+{"jsonrpc":"2.0","id":20,"method":"tools/call","params":{"name":"session_create","arguments":{"command":["/opt/example/bin/lua-host","--managed-session","--label",""],"cwd":"/data/trial","stdout_path":"host-output.log","stderr_path":"host-error.log"}}}
+```
+
+Expect the normal idle session-create result on readiness. Literal argv has no
+shell expansion; empty later arguments are retained. Output files must not exist.
+For implicit creation:
+
+```json
+{"jsonrpc":"2.0","id":21,"method":"tools/call","params":{"name":"session_execute","arguments":{"create_options":{"command":["/opt/example/bin/lua-host","--managed-session"]},"code":"total = host_add(20, 22); return total","wait_timeout_ms":1000}}}
+```
+
+If your host implements `host_add`, completion returns `[42]`; pending requires
+`session_wait` with the returned ID. The example API is not provided by this
+package. Never replay to poll. Same-state persistence, single-consumption and
+serialization-after-effects semantics are unchanged. Active cancellation,
+hard deadline, kill and manager loss destroy the owned application host; none
+is an application-level non-destructive Stop or rollback guarantee.
+
 ## Direct embedded handler
 
 ```json

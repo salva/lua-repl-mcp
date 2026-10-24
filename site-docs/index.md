@@ -13,6 +13,7 @@ to untrusted clients. Printed output is not automatically captured.
 | Your goal | Choose | State belongs to |
 | --- | --- | --- |
 | Run Lua from an ordinary MCP client | POSIX session manager | Independent worker process per session |
+| Run chunks inside an application's own Lua state through session tools | [Managed custom host](custom-host.md) | Foreground application process per allocation |
 | Use an application's existing Lua globals and APIs | Embedded handler | The invoking host interpreter |
 
 ```text

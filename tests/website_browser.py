@@ -26,7 +26,7 @@ try:
             page=browser.new_page(viewport=size)
             failures=[]
             page.on('response',lambda r: failures.append(r.url) if r.status>=400 else None)
-            for path,title in [('', 'Persistent Lua execution'),('getting-started/','Install and get'),('manager/','Work with managed'),('embedding/','Embed in an existing')]:
+            for path,title in [('', 'Persistent Lua execution'),('getting-started/','Install and get'),('manager/','Work with managed'),('custom-host/','Run sessions inside'),('embedding/','Embed in an existing')]:
                 page.goto(base+path);page.locator('h1').filter(has_text=title).wait_for()
                 assert page.evaluate('document.documentElement.scrollWidth <= innerWidth'),(mode,path,'overflow')
                 page.screenshot(path=str(work/f'{mode}-{path.strip("/") or "home"}.png'),scale='css',full_page=True)
@@ -51,7 +51,7 @@ try:
             assert found, 'installation link unreachable with keyboard'
             page.wait_for_url('**/getting-started/')
             assert not failures, failures
-            print('PASS',mode,'home/install/manager/embedding, navigation, code layout, keyboard traversal')
+            print('PASS',mode,'home/install/manager/custom-host/embedding, navigation, code layout, keyboard traversal')
             page.close()
         browser.close()
 finally:server.shutdown();server.server_close()
