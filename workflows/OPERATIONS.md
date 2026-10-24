@@ -1,5 +1,53 @@
 # Saivage deployment and launch
 
+## Latest-version migration and extension restart — 2026-10-24
+
+The operator requested restart for GitHub issue #1, then authorized migration to
+the latest committed Saivage. Pinned source at selection:
+`5aee6e63acea51816064af7f756ffb24587f5d4a`. The same dedicated container is running
+at **http://10.0.3.19:8080/** (DHCP; rediscover before future operations), service
+`saivage.service`, guest user `salva`, Node 24.16.0, project `/work/lua-repl-mcp`.
+Persistent `20261024-release.conf` selects the independent guest release
+`/opt/saivage-lua-repl-mcp-releases/20261024-5aee6e63`. Older pins/addresses below
+are historical, not current configuration.
+
+The old configured host runtime mount directory was missing and initially
+prevented container boot. Its exact path was recreated as an empty legacy mount
+placeholder; `/opt/saivage` is NOT the selected runtime. Container configuration
+was not changed. Do not remove that placeholder while the mount entry exists.
+
+A complete stopped project copy passed SHA-256 equality for 51,087 regular files,
+3,335,830,517 bytes before state conversion. Backup, original precutover state,
+migration scripts, record-version map and receipts are preserved under
+`/home/salva/g/ml/tmp/lua-repl-mcp-restart-20261024/`. This is not automatic rollback
+authority. External offline migration adopted conversation12, card4, accepted4,
+record-head3, shared-envelope2 and workflow3, plus current bundled prompt deltas
+while retaining project customizations. Root completion assessment was adopted
+for future execution; historical node names/verdicts remain unchanged. Typed
+accepted-document ordinals were mapped; quoted historical numbers remain history.
+
+Exact old/new strict readers validated equal 43 cards, 257 history artifacts,
+261 accepted records, 64 conversation segments/16,097 rows, 4,489 provider rows
+and 45 app rows. Content fidelity passed; credentials/identity remained byte-equal.
+The abandoned lifecycle lock was preserved outside the canonical namespace only
+after confirming the container was stopped; no reset/history deletion occurred.
+Full new-release build and 89 focused tests passed. All 26,641 release files and
+66 symlinks matched the installed copy. Full release/browser E2E is not claimed.
+
+One service start at 09:09:39 UTC reached readiness; PID208, NRestarts0. The
+temporary no-restart startup guard was removed after checks, restoring the
+existing on-failure policy. Host health/readiness, UI and
+`/docs/spec/system-specification.html` passed; the unprefixed old docs URL was404.
+No provider/model/auth changes or sibling service changes were made.
+
+Supported Analyst operations reopened the existing completed root, accepted
+brief document9/head revision14, and queued notification
+`4897f92d-5c6a-4267-8084-b9d7a6d37478`. The brief explicitly authorizes improving
+the issue proposal rather than treating its instructions as final. A separate
+single `start_project` succeeded at **09:14:08.714 UTC**, resuming the SAME
+project. Do not repeat Run/reset/init/restart without a new operator request.
+The extension is not yet implemented or accepted by this restart receipt.
+
 ## Operator-requested shutdown — 2026-10-18
 
 The operator requested that all publishable project work be on GitHub and the
