@@ -23,4 +23,16 @@ local records={}; for line in output:gmatch('[^\n]+') do records[#records+1]=ass
 assert(#records==2 and records[1].type=='ready' and records[2].result.values[1]==1)
 assert(session.serve({read=function() return nil end,write=function(s) return #s end,flush=function() return true end},{allocation_generation=1,cwd='/host',limits=authored}).reason=='eof')
 assert(session.serve({read=function() error('bad read') end,write=function(s) return #s end,flush=function() return true end},{allocation_generation=1,cwd='/host',limits=authored}).reason=='transport_error')
+-- Ordinary thrown strings keep their diagnostics at all protected callback sites.
+for _,site in ipairs{'read','write','flush','stopping'} do
+ local io={read=function() return nil end,write=function(s) return #s end,flush=function() return true end,
+  close=function() error('borrowed close') end}
+ local options={allocation_generation=1,cwd='/host',limits=authored}
+ local callback=function() error('ordinary '..site,0) end
+ if site=='stopping' then options.stopping=callback else io[site]=callback end
+ local out=session.serve(io,options)
+ assert(out.reason==(site=='stopping' and 'protocol_error' or 'transport_error'))
+ assert(out.diagnostics=='ordinary '..site)
+end
+print('PASS ordinary string failures preserve local reasons and diagnostics at all four callback sites')
 print('PASS pure session/bootstrap, same-state once-only, partial writes, buffered stopping and borrowed ownership')

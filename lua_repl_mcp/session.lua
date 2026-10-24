@@ -1,6 +1,7 @@
 -- Private managed protocol in the invoking host state. All I/O is borrowed.
 local p=require('lua_repl_mcp.worker_protocol')
 local evaluator=require('lua_repl_mcp.evaluator')
+local errors=require('lua_repl_mcp.errors')
 local M={}
 function M.serve(io,options)
  local function finish(reason,diagnostics) return {reason=reason,diagnostics=diagnostics} end
@@ -64,6 +65,7 @@ function M.serve(io,options)
   end
  end)
  if ok then return outcome end
- return finish(transport and 'transport_error' or 'protocol_error',tostring(outcome))
+ -- Error values belong to the host; never invoke their conversion metamethods.
+ return finish(transport and 'transport_error' or 'protocol_error',errors.describe(outcome))
 end
 return M
