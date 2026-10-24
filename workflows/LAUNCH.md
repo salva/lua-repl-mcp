@@ -1,5 +1,24 @@
 # Authorized implementation launch
 
+## Custom-host extension continuation — 2026-10-24
+
+The operator requested restarting this preserved project, then explicitly
+authorized migration to the latest committed Saivage version. Continue the same
+project and history; do not reset or recreate the existing completed work.
+
+Implement the custom Lua-host managed-session extension introduced in
+`docs/SPEC.md` §16 from GitHub issue #1. The extension is authorized, but the
+ticket's detailed instructions are a revisable proposal, not final requirements.
+Agents may improve the design, API, sequencing and acceptance details when they
+find issues, documenting justified changes in SPEC/PLAN and keeping executable
+contracts and user documentation coherent. Prior ticket review is not runtime
+acceptance and does not prohibit improvements. Assess current source, update the
+plan, implement, independently review, and validate the resulting capability with
+real process/embedding boundaries. Preserve existing supported behavior unless a
+deliberate justified change is documented. Commit coherent completed work; do not
+push or publish. Earlier completed delivery and repair receipts remain history,
+not a reason to skip the new extension or to redo unrelated completed work.
+
 ## Current simplicity-first continuation
 
 After U13 completion and cycle2 review, the operator approved
