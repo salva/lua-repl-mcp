@@ -1612,6 +1612,14 @@ behavior preserved. No application-specific native APIs belong in this repositor
 Current source basis: lua-repl-mcp `f06212e532f8e1df416a3465dd2d9f552845c0d7`,
 especially server.lua, guardian.lua, worker_supervisor.lua, worker_main.lua,
 worker_protocol.lua, contracts.lua, evaluator.lua, limits.lua and SPEC §10.3.
-This is a source-grounded proposal, not runtime acceptance. Distribution terms for
+This runtime slice implements the proposed version1 ABI with a common pre-exec
+`worker_setup`, a single FD3 socket, pure `session.serve` and `bootstrap.decode`.
+`bootstrap.decode(fd_string, generation_string, limits_json)` returns a detached
+`{fd, allocation_generation, limits}` record or nil plus a diagnostic. Hosts read
+the reserved environment strings themselves and own endpoint CLOEXEC and closing.
+The default wrapper handles these responsibilities using luaposix. The internal
+`worker_main.run` test wrapper may still request setup explicitly, but production
+launch never duplicates setup after exec. This is author implementation evidence,
+not independent native-installed acceptance. Distribution terms for
 embedding applications are an owner decision; this issue does not change the
 package's current Proprietary declaration.

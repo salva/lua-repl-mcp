@@ -2,7 +2,7 @@ local codec=require('lua_repl_mcp.codec')
 local errors=require('lua_repl_mcp.errors')
 local null=require('lua_repl_mcp').null
 local M={}
-local creation={cwd=true,stdin_path=true,stdout_path=true,stderr_path=true}
+local creation={cwd=true,stdin_path=true,stdout_path=true,stderr_path=true,command=true}
 local tools={
  session_create=creation,
  session_execute={code=true,args=true,session_id=true,wait_timeout_ms=true,execution_timeout_ms=true,create_options=true},
@@ -27,8 +27,20 @@ end
 local function create(t,path)
   object(t,path,creation)
   for k in next,creation do
-    stringfield(t,k,false,true,path)
-    if t[k] and t[k]:find('\0',1,true) then invalid(codec.pointer(path,k),'path contains NUL') end
+    if k~='command' then
+      stringfield(t,k,false,true,path)
+      if t[k] and t[k]:find('\0',1,true) then invalid(codec.pointer(path,k),'path contains NUL') end
+    end
+  end
+  local argv=rawget(t,'command')
+  if argv~=nil then
+    local p=codec.pointer(path,'command')
+    if type(argv)~='table' or codec.kind(argv)~='array' or #argv==0 then invalid(p,'expected nonempty argv array') end
+    for i,v in ipairs(argv) do
+      if type(v)~='string' or (i==1 and #v==0) or not codec.valid_utf8(v) or v:find('\0',1,true) then
+        invalid(codec.pointer(p,i-1),'invalid command argument')
+      end
+    end
   end
 end
 local function timeout(v,min,path)

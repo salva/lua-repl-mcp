@@ -1,5 +1,49 @@
 # Implementation plan
 
+## U14 — Managed custom Lua hosts (current extension)
+
+The U14 implementation now shares the private managed loop in
+`lua_repl_mcp.session` and the version-1 launch decoder in
+`lua_repl_mcp.bootstrap`. SPEC §16 describes the implemented runtime ABI; native
+installed acceptance and independent review remain separate gates.
+
+Use the smallest coherent extension of the existing manager: literal bounded
+`command` argv on explicit/implicit creation, common supervised pre-exec stdio
+setup, one inherited bidirectional endpoint, and a pure borrowed-I/O managed
+session loop shared by default and custom hosts. Retain the existing private
+protocol and exact-child guardian lifetime model rather than introducing a broker,
+new recovery framework or application-specific manager APIs. FD3/bootstrap and
+CLI details may be refined if implementation evidence warrants a simpler safe
+contract; document actual decisions in SPEC and executable schemas together.
+The independent public handler remains a separate supported interface.
+
+Execution is serialized across overlapping source edits:
+
+1. One implementation owner reconciles ingress/contracts, guardian/supervisor,
+   descriptor/setup ownership, pure session/bootstrap module, default wrapper,
+   packaging and focused regressions as one coherent executable capability.
+2. Independent review assesses that actual delta against preserved identity,
+   effects, budgets, readiness, cleanup and borrowed-I/O semantics. Corrections go
+   back to the implementation owner, not peer whole-file rewrites.
+3. Independent acceptance exercises a real native Lua host via the installed MCP
+   manager, explicit/implicit creation, same-state native/module access and
+   continuation. It covers relevant failure, FD, partial I/O, startup, stopping,
+   cancellation/deadline/kill/manager-loss cases and default/native-free handler
+   regressions, recording exact input, versions and clean-install paths. Actual
+   process reaping must be observed before harness cleanup, not inferred from EOF.
+4. Update user-first README, exact AI guide, guides/examples/API/site on the
+   demonstrated contract; validate links/downloads/public-work isolation and
+   affected local build/browser/examples. No publication or licensing change.
+5. After repairs and documentation settle, run applicable combined regression,
+   package and installed acceptance gates on identified final inputs, retaining
+   applicable unchanged evidence. Planning approval is never runtime acceptance.
+
+Required details remain in the accepted extension brief and SPEC §16: immutable
+validated detached argv before effects, ordinary contention without unrelated
+loss, original TERM20/KILL10/retry1/30s cleanup, truthful possible effects and
+single consumption, actual owned-child reap, and unchanged public handler host
+ownership. No extra acceptance campaign or blanket embedding/capacity reduction.
+
 ## Authority, scope, and execution policy
 
 Implement `docs/SPEC.md`, using `docs/schemas/api.json` and the normative wire

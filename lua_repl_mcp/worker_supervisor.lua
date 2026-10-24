@@ -14,7 +14,11 @@ function M.new(options)
   interpreter=options.interpreter or 'lua5.4',launch=options.launch},S)
 end
 local function close(w)
- for _,key in ipairs({'read_fd','write_fd'}) do if w[key] then x.u.close(w[key]); w[key]=nil end end
+ local closed={}
+ for _,key in ipairs({'read_fd','write_fd'}) do
+  local fd=w[key]; if fd and not closed[fd] then x.u.close(fd); closed[fd]=true end
+  w[key]=nil
+ end
  w.pending=''; w.buffer=''; w.buffer_parts=nil; w.buffer_bytes=0; w.validation=nil; w.validation_rest=nil
 end
 -- One signal per eligible turn. Phase/deadline use the original monotonic
@@ -62,36 +66,42 @@ function S:allocate(options,started,original)
  local function own(fd) if fd then owned[fd]=true end; return fd end
  local function release(fd) if owned[fd] then x.u.close(fd); owned[fd]=nil end end
  local ok,err=pcall(function()
- local r,write=x.u.pipe(); own(r); own(write)
+ local r,wr=require('posix.sys.socket').socketpair(require('posix.sys.socket').AF_UNIX,require('posix.sys.socket').SOCK_STREAM,0)
+ own(r); own(wr)
  if not r then w.state='dead'; w.failure='spawn_failed'; return end
- local read,wr=x.u.pipe(); own(read); own(wr)
- if not read then w.state='dead'; w.failure='spawn_failed'; return end
- for _,fd in ipairs({r,write,read,wr}) do x.clo(fd,true) end
+ for _,fd in ipairs({r,wr}) do x.clo(fd,true) end
  local pid=x.u.fork()
  if pid==0 then
   local ok=pcall(function()
   x.s.signal(x.s.SIGINT,x.s.SIG_DFL); x.s.signal(x.s.SIGTERM,x.s.SIG_DFL)
   -- Avoid overlapping 0/1/2 even if caller started with closed standard FDs.
-  local a=assert(x.f.fcntl(r,x.f.F_DUPFD,3)); local b=assert(x.f.fcntl(wr,x.f.F_DUPFD,3))
-  x.close_except(a,b); x.clo(a,false); x.clo(b,false)
-  local fd=x.f.open('/dev/null',x.f.O_RDWR)
-  if not fd then x.u._exit(126) end
-  for n=0,2 do assert(x.u.dup2(fd,n)) end
-  if fd>2 then x.u.close(fd) end
-  if self.launch then self.launch(a,b,w.allocation_generation,options); x.u._exit(0) end
-  local script="package.path="..string.format('%q',package.path)..";package.cpath="..string.format('%q',package.cpath)..";require('lua_repl_mcp.worker_main').main("..a..","..b..","..w.allocation_generation..",assert(require('lua_repl_mcp.codec').decode("..string.format('%q',assert(c.encode(options)))..")),assert(require('lua_repl_mcp.codec').decode("..string.format('%q',assert(c.encode(self.limit_options or {})))..")))"
-  x.u.execp(self.interpreter,{'-e',script})
-  x.write_all(b,assert(p.encode(p.record('startup_error',w.allocation_generation,{reason='spawn_failed',message='worker exec failed'}),self.limits)))
+  local a=assert(x.f.fcntl(wr,x.f.F_DUPFD,4))
+  x.close_except(a)
+  assert(x.u.dup2(a,3)); x.u.close(a); x.clo(3,false)
+  if not require('lua_repl_mcp.worker_setup').setup(3,w.allocation_generation,options,self.limits) then x.u._exit(126) end
+  if self.launch then self.launch(3,3,w.allocation_generation,options); x.u._exit(0) end
+  local env=require('posix.stdlib')
+  assert(env.setenv('LUA_REPL_MCP_SESSION_FD','3',true))
+  assert(env.setenv('LUA_REPL_MCP_ALLOCATION_GENERATION',tostring(w.allocation_generation),true))
+  assert(env.setenv('LUA_REPL_MCP_LIMITS',assert(c.encode(self.limit_options)),true))
+  if options.command then
+   local argv={}; for i=2,#options.command do argv[#argv+1]=options.command[i] end
+   x.u.execp(options.command[1],argv)
+  else
+   local script="package.path="..string.format('%q',package.path)..";package.cpath="..string.format('%q',package.cpath)..";require('lua_repl_mcp.worker_main').main()"
+   x.u.execp(self.interpreter,{'-e',script})
+  end
+  x.write_all(3,assert(p.encode(p.record('startup_error',w.allocation_generation,{reason='spawn_failed',message='worker exec failed'}),self.limits)))
   x.u._exit(127)
   end)
   x.u._exit(ok and 0 or 126)
  end
  if pid and pid>0 then w.pid=pid end -- ownership before any fallible parent setup
- release(r); release(wr)
+ release(wr)
  if not pid then w.state='dead'; w.failure='spawn_failed'; return end
- w.pid=pid; w.read_fd=read; w.write_fd=write
- x.nonblock(read); x.nonblock(write)
- owned[read]=nil; owned[write]=nil -- descriptor ownership transfers to worker
+ w.pid=pid; w.read_fd=r; w.write_fd=r
+ x.nonblock(r)
+ owned[r]=nil -- descriptor ownership transfers to worker
  end)
  for fd in pairs(owned) do pcall(x.u.close,fd) end
  if not ok then
@@ -165,7 +175,13 @@ function S:drain(w)
   local text,_,err
   if w.validation_rest then text=w.validation_rest; w.validation_rest=nil
   else text,_,err=x.u.read(w.read_fd,math.min(65536,budget)) end
-  if not text then if x.retryable(err) then return end; return self:abort(w,'transport_failed') end
+  if not text then
+   if x.retryable(err) then return end
+   -- A stream peer can exit with an unread command, producing ECONNRESET
+   -- instead of a zero-length read. This is peer loss, never exit proof.
+   if err==x.e.ECONNRESET then w.eof=true; w.control_eof=true; return end
+   return self:abort(w,'transport_failed')
+  end
   if text=='' then
    -- Endpoint closure is a logical worker loss, not proof of an OS exit.
    -- Keep it distinct from a locally failed/closed channel. wait alone owns
@@ -223,7 +239,10 @@ function S:step(timeout_ms)
    if now>=w.deadline then self:abort(w,'startup_timeout') else delay=math.min(delay,math.max(0,math.ceil((w.deadline-now)*1000))) end
   end
   if w.read_fd then poll[w.read_fd]={events={IN=true}} end
-  if w.write_fd and #w.pending>0 then poll[w.write_fd]={events={OUT=true}} end
+  if w.write_fd and #w.pending>0 then
+   poll[w.write_fd]=poll[w.write_fd] or {events={}}
+   poll[w.write_fd].events.OUT=true
+  end
  end
  x.p.poll(poll,delay)
  for _,w in ipairs(workers) do

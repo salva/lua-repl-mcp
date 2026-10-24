@@ -53,7 +53,16 @@ function M.serve(io,options)
  if not ok then error(err,0) end
  return transport and transport.closed
 end
-function M.main()
+function M.main(argv)
+ local options={}
+ argv=argv or {}
+ local i=1
+ while i<=#argv do
+  assert(argv[i]=='--startup-timeout-ms' and argv[i+1] and argv[i+1]:match('^[0-9]+$'),'usage: lua-repl-mcp [--startup-timeout-ms N]')
+  local n=tonumber(argv[i+1])
+  assert(math.type(n)=='integer' and n>=1 and n<=2147483647,'invalid startup timeout')
+  options.startup_timeout_ms=n; i=i+2
+ end
  local x=require('lua_repl_mcp.worker_posix')
  local requested
  x.s.signal(x.s.SIGPIPE,x.s.SIG_IGN)
@@ -73,7 +82,7 @@ function M.main()
  local backend
  local ok,err=pcall(function()
  x.nonblock(0); x.nonblock(1)
- backend=require('lua_repl_mcp.guardian').new()
+ backend=require('lua_repl_mcp.guardian').new(options)
  M.serve({read=read,write=write,stopping=function() return requested end,pause=function()
   -- A short bounded poll avoids spinning while workers progress independently.
   x.p.poll({[0]={events={IN=true}}},5)

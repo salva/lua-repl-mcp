@@ -19,7 +19,7 @@ local function execute(s,w,code)
  assert(s:execute(w,{code=code})); until_(s,function() return w.state~='running' end)
  assert(w.state=='idle',w.failure); return w.result
 end
-local function reap(s,w) until_(s,function() return w.reaped end); assert(not x.w.wait(w.pid,x.w.WNOHANG)) end
+local function reap(s,w) until_(s,function() return w.reaped and w.state=='dead' end); assert(not x.w.wait(w.pid,x.w.WNOHANG)) end
 local function read(path) local f=assert(io.open(path,'rb')); local v=f:read('a'); f:close(); return v end
 local function put(path,text) local f=assert(io.open(path,'wb')); f:write(text); f:close() end
 local function test(name,fn)
@@ -81,7 +81,7 @@ local ok,err=xpcall(function()
   local s=new({interpreter='/absent/u4-lua'}); local w=s:allocate(); reap(s,w); assert(w.failure=='spawn_failed')
   s=new(); w=s:allocate({cwd=dir..'/absent'}); reap(s,w); assert(w.failure=='cwd_setup_failed',tostring(w.failure))
   w=s:allocate({cwd=dir,stdout_path='retained',stderr_path='absent/file'})
-  reap(s,w); assert(w.failure=='stdio_setup_failed' and #w.created_paths==1)
+  reap(s,w); assert(w.failure=='stdio_setup_failed' and #w.created_paths==1, tostring(w.failure)..' paths='..#w.created_paths..' message='..tostring(w.startup_message))
   assert(read(dir..'/retained')=='' and not w.files_complete)
   w=s:allocate({stdin_path=dir..'/absent'}); reap(s,w); assert(w.failure=='stdio_setup_failed')
  end)
@@ -182,8 +182,8 @@ local ok,err=xpcall(function()
    if pid==0 then x.p.poll({},2000); x.u._exit(0) end
    x.u._exit(0)
   end)
-  local w=s:allocate(); local start=x.now(); reap(s,w)
-  assert(x.now()-start<1.5 and not w.eof,'exit must not depend on inherited EOF')
+  local w=s:allocate(); local start=x.now(); until_(s,function() return w.reaped end)
+  assert(x.now()-start<1.5 and not w.eof,'exit observation must not depend on inherited EOF')
  end)
  test('control_cloexec_and_unrelated_inherited_descriptor_closed',function()
   -- Deliberately non-CLOEXEC sentinel from the manager is not inherited.
@@ -193,12 +193,12 @@ local ok,err=xpcall(function()
    local u=require('posix.unistd'); local f=require('posix.fcntl')
    local controls=0
    for fd=3,128 do local flags=f.fcntl(fd,f.F_GETFD); if flags then assert(flags & f.FD_CLOEXEC ~= 0); controls=controls+1 end end
-   assert(controls==2,controls)
+   assert(controls==1,controls)
    local ok=os.execute("sh -c 'for f in /proc/self/fd/*; do case $f in */0|*/1|*/2|*/3) ;; *) exit 19;; esac; done'")
    return ok,controls
   ]])
   x.u.close(sentinel)
-  assert(result.status=='completed' and result.values[1]==true and result.values[2]==2)
+  assert(result.status=='completed' and result.values[1]==true and result.values[2]==1)
  end)
  test('bounded_nonblocking_write_and_drain_second_worker',function()
   local s=fixture(function(a,b,g) send(b,'ready',g); x.p.poll({},10000) end)

@@ -153,6 +153,12 @@ def regressions(validators):
     for value in (-1, 0.5, 2147483648):
         expect("session_execute", {"code": "", "wait_timeout_ms": value}, False)
     expect("session_execute", {"code": "", "execution_timeout_ms": 0}, False)
+    for argv in (["host", "a b", "$HOME", ""], ["host"]):
+        expect("session_create", {"command": argv})
+        expect("session_execute", {"code": "", "create_options": {"command": argv}})
+    for argv in ([], [""], ["host", 1], ["host", "a\u0000b"], "host", None):
+        expect("session_create", {"command": argv}, False)
+    expect("repl_execute", {"code": "", "command": ["host"]}, False)
     expect("session_execute", {"code": "", "create_options": {}})
     expect("session_execute", {"code": "", "session_id": "s1", "create_options": {}}, False)
     for name in ("session_wait", "session_kill"):
