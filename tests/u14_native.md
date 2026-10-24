@@ -52,8 +52,13 @@ on unread trailing commands is permitted and does not masquerade as exit proof.
 The client also exercises active request cancellation, continued independent
 session use, and unavailable result after single consumption.
 
-Not covered by these fixtures: native late-readiness variants or an installation
-outside the checkout filesystem. The preexisting partial-acquisition test was updated
+Not covered by these fixtures: an installation outside the checkout filesystem.
+The card-scoped execution contract requires disposable extraction/install work
+under SAIVAGE_CARD_WORK_ROOT, which here resolves inside the checkout. This
+literal acceptance requirement is not satisfied by the installed-only path test.
+Native readiness matrix now includes malformed/version/generation records and
+late initialization, with confirmed disposal and partial setup-file receipt.
+The preexisting partial-acquisition test was updated
 from obsolete two-pipe injection points to socketpair/two-CLOEXEC/one-nonblock
 points; it retains exact pre/post FD-count and fake-child ownership assertions.
 Existing default tests cover additional shared primitives, not stronger custom

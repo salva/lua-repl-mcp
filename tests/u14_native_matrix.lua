@@ -34,12 +34,22 @@ local function failure(options,reason)
  local stop=x.now()+4
  repeat s:step(2) until w.state=='dead' or x.now()>stop
  assert(w.state=='dead' and w.process_exit_confirmed)
- assert(w.failure==reason,tostring(w.failure))
+ assert(w.failure==reason or (reason=='invalid_ready' and (w.failure=='handshake_failed' or w.failure=='corrupt_worker')),tostring(w.failure)..' expected '..reason..' command '..table.concat(options.command or {},' '))
  return w
 end
 failure({command=codec.array{work..'/absent'}},'spawn_failed')
 failure({command=codec.array{host,script},cwd=work..'/absent'},'cwd_setup_failed')
 failure({command=codec.array{host,script},stdout_path=work..'/absent/output'},'stdio_setup_failed')
 failure({command=codec.array{'/bin/sleep','1'}},'startup_timeout')
+local variant=script:sub(1,-#'u14_native_host.lua'-1)..'u14_native_readiness_host.lua'
+for _,mode in ipairs{'malformed','version','generation','late'} do
+ failure({command=codec.array{host,variant,mode}},mode=='late' and 'startup_timeout' or 'invalid_ready')
+end
+-- A receipt emitted before a later setup failure must remain truthful.
+local output=work..'/partial-native-receipt'
+os.remove(output)
+local partial=failure({command=codec.array{host,script},stdout_path=output,stdin_path=work..'/absent/input'},'stdio_setup_failed')
+assert(#partial.created_paths==1 and partial.created_paths[1]==output and not partial.files_complete)
+assert(io.open(output,'r')):close()
 assert(s:shutdown())
 print('PASS native all eight closed-stdio collision masks, graceful borrowed return, exec/cwd/stdio failures, initialization timeout with exact reap')

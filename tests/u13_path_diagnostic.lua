@@ -16,9 +16,9 @@ local ok,err=pcall(function()
  assert(#assert(c.encode(options))==I)
  local start=x.now()
  local rejected=take(m:accept('session_create',options))
- -- Linux exec argument ceiling rejects the complete bootstrap before cwd setup.
- -- This is an honest spawn failure, not evidence that a filesystem path exists.
- assert(rejected.error and rejected.error.reason=='spawn_failed' and rejected.process_exit_confirmed)
+ -- Common setup now precedes exec: the oversized path fails in chdir,
+ -- without placing the request in argv or claiming filesystem existence.
+ assert(rejected.error and rejected.error.reason=='cwd_setup_failed' and rejected.process_exit_confirmed)
  print('OBS maximum_library_creation_path_input='..I..' bytes='..#options.cwd..' seconds='..(x.now()-start))
  local setup=take(m:accept('session_create',{cwd='/'..string.rep('x',4096)}))
  assert(setup.error.reason=='cwd_setup_failed' and setup.process_exit_confirmed)

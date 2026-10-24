@@ -7,7 +7,9 @@ def identity(pid):
     try:
         fields = Path(f'/proc/{pid}/stat').read_text().rsplit(')', 1)[1].split()
         return fields[19], fields[0], int(fields[1])
-    except FileNotFoundError:
+    except (FileNotFoundError, ProcessLookupError):
+        # procfs can open stat, then report ESRCH if that identity is reaped
+        # before read. Both observations mean that sampled identity is gone.
         return None
 
 
