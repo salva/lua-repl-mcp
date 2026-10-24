@@ -61,6 +61,22 @@ try:
     for code, error in [('local =', 'lua_syntax_error'), ('effects=(effects or 0)+1; error("once")', 'lua_runtime_error'), ('effects=effects+1; return function() end', 'result_serialization_error')]:
         assert execute(code)['error']['code'] == error
     assert execute('return effects,host_value')['values'] == [2, 210]
+    assert call('session_wait', session_id=sid)['error']['code']=='result_unavailable'
+    # Active cancellation owns the in-flight request, not a later generation.
+    cancelled_sid=call('session_create', command=command)['session_id']
+    seq+=1
+    cancel_id=seq
+    p.stdin.write((json.dumps(dict(jsonrpc='2.0',id=cancel_id,method='tools/call',params=dict(
+        name='session_execute',arguments=dict(session_id=cancelled_sid,code='host_block()',wait_timeout_ms=None))))+'\n').encode())
+    # A ping after execute is an ordering barrier: acceptance precedes cancellation.
+    rpc('ping', {})
+    p.stdin.write((json.dumps(dict(jsonrpc='2.0',method='notifications/cancelled',params=dict(requestId=cancel_id)))+'\n').encode())
+    cancel_deadline=time.monotonic()+5
+    while cancelled_sid in {s['session_id'] for s in call('session_list')['sessions']}:
+        assert time.monotonic()<cancel_deadline, 'cancelled native session not disposed'
+        time.sleep(.01)
+    assert call('session_kill',session_id=cancelled_sid)['error']['code']=='unknown_session'
+    assert execute('return host_api(0)')['values']==[100]
     assert execute('return os.execute("test ! -e /proc/self/fd/3")')['values'][0] is True
     pending=call('session_execute', session_id=sid, code='host_block()', wait_timeout_ms=0)
     assert pending['status']=='running'
