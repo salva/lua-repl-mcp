@@ -1401,3 +1401,217 @@ not qualify it for public staging.
 Website work is limited to content, assets, minimal local build configuration
 and local validation. Publishing workflows, pushes, repository settings and
 deployment are out of scope and must not become acceptance blockers.
+
+## 16. Proposed extension: managed sessions in custom Lua hosts
+
+### 16.1 Authority and revision policy
+
+The owner requested this extension on 2026-10-24, based on
+[GitHub issue #1](https://github.com/salva/lua-repl-mcp/issues/1),
+“Support managed sessions in custom Lua host programs via an inherited socket FD”.
+The issue's full proposal is reproduced below as retrieved on that date.
+
+**The extension is authorized work, but the ticket's instructions and design are
+a proposal, not final requirements.** Saivage agents may revise the proposed API,
+implementation, sequencing and acceptance details to improve them or resolve
+issues they discover. Assess them against the current source and existing
+contracts; record justified changes in this specification and the implementation
+plan, keep schemas and documentation coherent, and independently validate the
+delivered capability. The ticket's prior design-review approval is historical
+context, not a constraint on improvements or evidence of runtime acceptance.
+Preserve existing supported behavior unless a deliberate, justified change is
+documented. Do not treat the proposal as already implemented.
+
+### 16.2 Imported issue proposal (revisable)
+
+#### Enhancement: managed sessions in custom host programs through an inherited socket
+
+Revision1 requirements, 2026-10-23. Prepared at the project owner’s request and
+reviewed by an independent Astra reviewer with no material findings; coordinator
+final design assessment: worth implementing. This is design approval only, not
+implementation or runtime acceptance. The requirements are standalone and require
+no private application inputs or deployment state.
+
+#### Goal
+
+An MCP client should use the existing session manager to launch a custom program
+which embeds Lua. Pass that program one inherited bidirectional socket FD and let
+it run the managed session module in its own Lua state. Executed chunks must see
+that host's globals, C functions and ordinary `require` modules.
+
+This is different from launching another standalone Lua interpreter to control the
+application through RPC, or exposing a fixed catalogue of application-specific
+MCP tools. The manager stays application-independent. Existing default standalone
+Lua sessions and the independent public embedded handler remain supported.
+
+#### Public creation contract
+
+Add optional `command` to `session_create` and implicit
+`session_execute.create_options`. It is a dense nonempty JSON argv array; element1
+is a nonempty executable string, remaining strings may be empty. Strings must be
+valid UTF-8 and contain no NUL. Reject invalid input before child/file effects.
+Bound input through the existing connection budgets, not unbounded command storage.
+
+Example proposed tool arguments:
+
+```json
+{
+  "command": ["/opt/example/bin/lua-host", "--managed-session", "--label", ""],
+  "cwd": "/data/trial",
+  "stdout_path": "host-output.log",
+  "stderr_path": "host-error.log"
+}
+```
+
+Direct fork/exec the selected executable with literal arguments, no implicit shell.
+Use POSIX exec-path resolution after requested cwd setup. The exact child remains
+the supervised session process: hosts run in foreground rather than daemonizing
+away from that ownership. Do not add process-tree registries or a new broker.
+Omitted command selects the existing configured/default Lua interpreter. Command
+is immutable for an allocation; independent sessions may select different hosts.
+The manager already executes trusted full-access code; this adds no sandbox.
+
+Validate/detach the field through schemas, contracts, explicit and implicit
+creation, immutable original-ingress-body derivation, guardian allocation and the
+native supervisor. The current internal launch test hook is not a public feature.
+
+Expose the existing finite startup timeout as `--startup-timeout-ms N` on the
+installed CLI: default30000, integer range1..2147483647, validated before guardian
+construction. The existing library option and monotonic allocation-origin semantics
+remain. This covers custom executable initialization as well as module readiness.
+
+#### Descriptor and launch ABI
+
+Use one Unix stream socketpair for both default and custom workers. Supervisor
+owns a nonblocking endpoint; child owns a blocking endpoint mapped to FD3. Preserve
+configured standard streams on0/1/2 and close unrelated inherited manager/guardian
+descriptors, including liveness writers. Handle endpoint already3 and initially
+closed0/1/2 without dup/close alias bugs.
+
+Supply reserved environment values, overwritten by launcher:
+
+- `LUA_REPL_MCP_SESSION_FD=3`
+- `LUA_REPL_MCP_ALLOCATION_GENERATION`: existing positive allocation generation
+- `LUA_REPL_MCP_LIMITS`: JSON with the seven authored connection budgets
+
+These names define the version1 launch ABI. Publish a small pure bootstrap decoder
+accepting supplied strings; require all fields, FD3, integral supported generation,
+and the existing exact connection limit validation. Bound limits JSON to4096 bytes
+and generation/FD spelling to supported decimal lengths. Unknown/malformed fields
+fail startup. No arbitrary request body is placed in the environment.
+
+The host adopts the endpoint and marks it CLOEXEC promptly before running submitted
+code or spawning subprocesses. The host supplies actual absolute cwd, preserving
+launcher cwd until ready. It owns eventual close; the session loop borrows I/O.
+
+Move common cwd/stdio setup into the supervised fork child before either exec.
+Preserve exclusive0600-subject-to-umask output creation, same-path stdout/stderr
+sharing, existing input files, `/dev/null` defaults, relative path semantics and
+per-created-file receipts. Potentially blocking setup stays in that child. No
+host output may contaminate manager MCP stdout. Emit file_created/startup_error
+before exec; host becomes the sole subsequent writer after successful exec.
+Retain known partial file reports and bounded child disposal on failure.
+
+Consolidate supervisor descriptor ownership into one endpoint, close it once, and
+merge poll IN/OUT interests rather than overwriting an entry. Preserve partial
+writes, incremental parsing, fairness, exit draining and waitpid identity.
+
+#### Reusable managed session module
+
+Extract worker_main's framed loop into a pure-Lua callable module using the same
+evaluator, strict codec, worker_protocol, limits and errors:
+
+```lua
+local outcome = require('lua_repl_mcp.session').serve(io_adapter, {
+  allocation_generation = generation,
+  limits = authored_limits,
+  cwd = actual_absolute_cwd,
+  stopping = host_stopping -- optional plain function, defaults false
+})
+```
+
+Use the established plain-function read/write/flush adapter convention, handling
+partial I/O, EOF and errors. No luaposix import, stream redirection, shutdown,
+descriptor close, process exit or thread creation in this pure module. Default
+worker_main becomes bootstrap/adapter/process-lifetime glue around it. Native
+hosts supply their own adapter; luaposix remains a manager/default-wrapper dependency.
+
+Check stopping before ready and every execution admission, including buffered
+frames, and after writing/flushing an active result. Stopping is cooperative: it
+does not preempt evaluation or wake a blocked read/write. Hosts arrange wakeup using
+their own stable descriptor lifetime (e.g. shutdown then close after worker return).
+Return local outcome closed, eof, host_stopping, protocol_error or transport_error
+with available diagnostic information. Do not close the borrowed stream on return.
+
+The host invokes serve only after its APIs are usable. Module emits ready then
+handles one generation-ordered execution at a time using the existing evaluator.
+Keep private worker protocol1 record shapes/semantics: file_created, ready,
+startup_error, execute, result, close with allocation/execution generations.
+Strict ready/version/generation validation is the hello and allocation identity
+check; product-specific discovery or a new handshake layer is unnecessary.
+It proves protocol readiness, not binary authenticity or application correctness.
+
+Private close sends no acknowledgement and ends this managed allocation; buffered
+later commands are not executed. This is distinct from the public embedded
+handler's `repl_close` acknowledgement and trailing-byte handoff contract, which
+remain unchanged. Implementing only that public handler does not make a program
+a conforming managed child; it must run the managed session module/protocol.
+
+Host initialization failures may use existing startup_error/handshake_failed.
+An early exit/missing module can instead produce EOF/exit; report only known facts.
+Late ready cannot revive an aborted allocation, and no submitted code runs before
+valid readiness. Avoid compatibility readers: if implementation actually changes
+wire meaning, update the single version and all producers/consumers explicitly.
+The present proposal does not require such a change.
+
+#### Preserve execution and lifecycle semantics
+
+- Same host `_G`, compile once, explicit returns and positional nil/null mapping;
+  globals/functions persist, independent chunk locals do not. No output capture.
+- Ordinary syntax/runtime/serialization errors are consumable results and do not
+  close a healthy session. Unsupported userdata/functions/binary values are not
+  silently stringified. Keep opaque host objects in globals and return JSON scalars.
+- Serialization failure happens after effects; never replay execution to obtain a
+  representable result. Lost replies do not establish whether host effects occurred.
+- Wait timeout is pending, not execution cancellation. Single-consumer results,
+  result/deadline ordering and completed-request cancellation remain unchanged.
+- Active cancellation, hard execution deadline, session_kill and manager loss
+  destroy the owned host process/session under existing guardian semantics. They
+  are not an application's non-destructive Stop operation or a rollback guarantee.
+- EOF is not proof of process exit. Preserve exact-child TERM/KILL/reaping, honest
+  unconfirmed exit, manager-death cleanup, and independent-session responsiveness.
+- Graceful host return is host-owned cleanup; arbitrary Lua/foreign C may prevent
+  cooperation, and hard process termination cannot guarantee finalizers run.
+
+#### Delivery and acceptance
+
+Deliver generic module/manager changes as one coherent capability with default
+behavior preserved. No application-specific native APIs belong in this repository.
+
+1. Run `python3 docs/check_contracts.py`; update SPEC, API JSON schemas and generated
+   manager schemas together. Cover immutable original-body explicit/implicit paths.
+2. Use a tiny **real executable embedding Lua5.4** with a native function/global.
+   An actual MCP client creates it, evaluates that API across chunks, and observes
+   host continuation after serve returns. No proxy Lua process or mock-only proof.
+3. Re-run relevant default-worker/manager/guardian/direct-handler/import-isolation
+   regressions. Test actual stdio files, permissions, partial startup receipts,
+   startup timeout, exec failure, malformed/wrong-version/generation/late ready,
+   fragmented input/output, FD3 collisions, merged poll readiness and subprocess
+   CLOEXEC. Validate CLI startup option propagation using the installed executable.
+4. Exercise busy independent sessions, pending waits, single-consumer outcomes,
+   ordinary errors with once-only effects, peer loss, cooperative stopping with
+   buffered commands, cancellation/hard timeout/kill and actual manager SIGKILL
+   cleanup. Do not invent stronger process-tree cleanup guarantees for tests.
+5. Document exact install/module paths and tested Lua/luaposix versions. Keep pure
+   host modules independent of native Lua ABI dependencies; optional C extensions
+   require the actual embedding ABI. Add new modules to the existing rockspec.
+6. Update README, AI-facing guide, MCP examples, SPEC/PLAN, website/reference pages
+   and API descriptions. Explain custom host versus default interpreter versus
+   public embedded handler; remove old duplicated setup/two-pipe worker paths.
+
+Current source basis: lua-repl-mcp `f06212e532f8e1df416a3465dd2d9f552845c0d7`,
+especially server.lua, guardian.lua, worker_supervisor.lua, worker_main.lua,
+worker_protocol.lua, contracts.lua, evaluator.lua, limits.lua and SPEC §10.3.
+This is a source-grounded proposal, not runtime acceptance. Distribution terms for
+embedding applications are an owner decision; this issue does not change the
+package's current Proprietary declaration.
