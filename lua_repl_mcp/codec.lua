@@ -3,16 +3,18 @@
 local null = require('lua_repl_mcp').null
 local M = {}
 local shapes = setmetatable({}, {__mode='k'})
--- Private immutable encoded JSON data, created only after strict decoding.
+-- Validated private text and decoded snapshot: derivations clone the snapshot
+-- rather than repeatedly parsing the same numeric tokens. Neither representation
+-- is exposed to callers; original wire bytes remain the sole encode form.
 -- Not a string value and never a user-table/metatable convention.
 local encoded_data=setmetatable({}, {__mode='k'})
 function M.json_data(text,options)
  local v,e=M.decode(text,options); if v==nil then return nil,e end
- local token={}; encoded_data[token]={text=text,depth=(options and options.max_depth) or 128}; return token
+ local token={}; encoded_data[token]={text=text,value=v,depth=(options and options.max_depth) or 128}; return token
 end
 function M.json_value(token,checkpoint)
  local v=encoded_data[token]
- if v then return M.decode(v.text,{max_bytes=#v.text,max_depth=v.depth,checkpoint=checkpoint}) end
+ if v then return M.clone(v.value,{max_bytes=math.huge,max_depth=v.depth,checkpoint=checkpoint}) end
 end
 function M.json_bytes(token) local v=encoded_data[token]; return v and #v.text end
 local safe = 9007199254740991
@@ -37,6 +39,14 @@ end
 -- Inspect exact decimal digits BEFORE tonumber. Exponents are saturated, not
 -- expanded; neither a huge token nor a huge exponent creates huge zero strings.
 local function token_number(token, path)
+  -- A finite nonintegral conversion cannot hide an out-of-range mathematical
+  -- integer: those magnitudes have integral binary64 spacing. Keep the exact
+  -- decimal inspection below for every integral conversion (including rounding
+  -- onto a safe boundary), underflow, overflow and zero.
+  local converted=tonumber(token)
+  if converted and converted%1~=0 and converted~=math.huge and converted~=-math.huge and converted==converted then
+    return converted
+  end
   local mant, exp = token:match('^(.-)[eE]([+-]?%d+)$')
   mant = mant or token
   local e = 0
@@ -168,6 +178,14 @@ function M.decode(text, options)
       local b=text:byte(i)
       if b~=32 and b~=9 and b~=13 and b~=10 then break end
       i=i+1; progress()
+      b=text:byte(i)
+      if b~=32 and b~=9 and b~=13 and b~=10 then break end
+      -- Scan a bounded byte slice in C, retaining cooperative checkpoints even
+      -- for a maximum request's legal trailing whitespace.
+      local last=math.min(n,i+65535)
+      local first=text:sub(i,last):find('[^ \t\r\n]')
+      if first then i=i+first-1; progress(); return end
+      i=last+1; progress()
     end
   end
   local function bad(reason,path) fail(reason .. ' at byte ' .. i,path) end
@@ -233,20 +251,21 @@ function M.decode(text, options)
     else
       local start=i
       if c=='-' then i=i+1 end
-      c=text:sub(i,i)
-      if c=='0' then i=i+1
-      elseif c:match('[1-9]') and c~='' then
-        repeat i=i+1; progress() until not text:sub(i,i):match('%d')
+      local b=text:byte(i)
+      local function digit() local d=text:byte(i); return d and d>=48 and d<=57 end
+      if b==48 then i=i+1
+      elseif b and b>=49 and b<=57 then
+        repeat i=i+1; progress() until not digit()
       else bad('expected value',path) end
-      if text:sub(i,i)=='.' then
-        i=i+1; if not text:sub(i,i):match('%d') then bad('expected fraction',path) end
-        repeat i=i+1; progress() until not text:sub(i,i):match('%d')
+      if text:byte(i)==46 then
+        i=i+1; if not digit() then bad('expected fraction',path) end
+        repeat i=i+1; progress() until not digit()
       end
-      c=text:sub(i,i)
-      if c=='e' or c=='E' then
-        i=i+1; c=text:sub(i,i); if c=='+' or c=='-' then i=i+1 end
-        if not text:sub(i,i):match('%d') then bad('expected exponent',path) end
-        repeat i=i+1; progress() until not text:sub(i,i):match('%d')
+      b=text:byte(i)
+      if b==101 or b==69 then
+        i=i+1; b=text:byte(i); if b==43 or b==45 then i=i+1 end
+        if not digit() then bad('expected exponent',path) end
+        repeat i=i+1; progress() until not digit()
       end
       return token_number(text:sub(start,i-1),path)
     end
@@ -255,7 +274,7 @@ function M.decode(text, options)
     ws(); progress(); local start=i
     local v=parse_value(path,depth)
     if options.json_path and path==options.json_path then
-     local token={}; encoded_data[token]={text=text:sub(start,i-1),depth=options.max_depth or 128}; return token
+     local token={}; encoded_data[token]={text=text:sub(start,i-1),value=v,depth=options.max_depth or 128}; return token
     end
     return v
   end
