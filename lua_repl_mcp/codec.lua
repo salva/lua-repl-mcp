@@ -321,8 +321,14 @@ function M.clone(value,options)
     elseif t=='boolean' then add(v and 4 or 5,path); return v
     elseif t=='number' then
       number(v,path)
-      local text=math.type(v)=='integer' and tostring(v) or string.format('%.17g',v)
-      add(#text,path); return v
+      -- Immutable wire-origin derivations have already charged original bytes;
+      -- an explicitly unbounded copy needs validation, not numeric formatting.
+      -- Finite library-origin budgets still charge canonical encoded size.
+      if maxbytes~=math.huge then
+        local text=math.type(v)=='integer' and tostring(v) or string.format('%.17g',v)
+        add(#text,path)
+      end
+      return v
     elseif t~='table' then fail('unsupported '..t,path) end
     if depth>maxdepth then fail('nesting limit exceeded',path) end
     if active[v] then fail('cycle',path) end
