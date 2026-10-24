@@ -8,14 +8,16 @@ local function count()
  for _ in require('posix.dirent').files('/proc/self/fd') do n=n+1 end
  return n
 end
-for _,point in ipairs{'pipe1','pipe2','clo1','clo2','clo3','clo4','fork','nb1','nb2'} do
+local socket=require('posix.sys.socket')
+local native_pair=socket.socketpair
+for _,point in ipairs{'pair','clo1','clo2','fork','nb1'} do
  local before=count(); local calls={}; local sent=0
  local b=S.new{}
  local function hit(kind)
   calls[kind]=(calls[kind] or 0)+1
   if point==kind..calls[kind] or point==kind then error('injected '..point) end
  end
- x.u.pipe=function() hit('pipe'); return pipe() end
+ socket.socketpair=function(...) hit('pair'); return native_pair(...) end
  x.clo=function(...) hit('clo'); return clo(...) end
  x.u.fork=function() hit('fork'); return 123456 end
  x.nonblock=function(...) hit('nb'); return nb(...) end
@@ -29,6 +31,7 @@ for _,point in ipairs{'pipe1','pipe2','clo1','clo2','clo3','clo4','fork','nb1','
    b:step(0); assert(w.reaped and w.process_exit_confirmed)
   else assert(w.state=='dead' and not w.pid and sent==0) end
  end)
+ socket.socketpair=native_pair
  x.u.pipe=pipe; x.clo=clo; x.u.fork=fork; x.nonblock=nb; x.s.kill=kill; x.w.wait=wait
  assert(ok,err); assert(count()==before,'descriptor leak at '..point)
  print('PASS partial_native_'..point..'_no_fd_leak_child_owned')

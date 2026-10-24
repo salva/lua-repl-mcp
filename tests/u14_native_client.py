@@ -2,6 +2,10 @@
 Usage: python3 tests/u14_native_client.py WORK_ROOT CHECKOUT
 WORK_ROOT contains rocks/, host, and outside/ from the documented clean build.
 """
+from containment import enter
+enter(90)
+from reap_oracle import identity, wait_disappeared
+import signal
 import json
 import os
 from pathlib import Path
@@ -57,6 +61,16 @@ try:
     for code, error in [('local =', 'lua_syntax_error'), ('effects=(effects or 0)+1; error("once")', 'lua_runtime_error'), ('effects=effects+1; return function() end', 'result_serialization_error')]:
         assert execute(code)['error']['code'] == error
     assert execute('return effects,host_value')['values'] == [2, 210]
+    assert execute('return os.execute("test ! -e /proc/self/fd/3")')['values'][0] is True
+    pending=call('session_execute', session_id=sid, code='host_block()', wait_timeout_ms=0)
+    assert pending['status']=='running'
+    assert call('session_wait', session_id=sid, wait_timeout_ms=1)['status']=='running'
+    assert call('session_execute', session_id=sid, code='return 1')['error']['code']=='session_busy'
+    killed=call('session_kill', session_id=sid)
+    assert killed['process_exit_confirmed']
+    # New healthy allocation for cooperative continuation assertions below.
+    sid=call('session_create', command=command)['session_id']
+    assert execute('host_value=210; return host_value')['values']==[210]
     receipt = str(w/'outside/continuation')
     Path(receipt).unlink(missing_ok=True)
     assert execute('host_receipt=...;host_stopping=true;return host_api(1)', args=[receipt])['values'] == [101]
@@ -74,10 +88,20 @@ try:
     assert timed['error']['code'] == 'execution_timeout', timed
     assert timed['process_exit_confirmed'], timed
     print('PASS installed actual MCP explicit/implicit native API, literal argv, cross-chunk state, module, short native I/O, errors once-only, cooperative host continuation, confirmed kill and foreign-C deadline')
+    # Observe exact child's disappearance BEFORE containment's final cleanup.
+    victim=call('session_execute', create_options=dict(command=command), code='return host_pid()', wait_timeout_ms=None)
+    child=victim['values'][0]
+    original=identity(child)
+    assert original and original[2] != p.pid  # guardian is the owning parent
+    os.kill(p.pid, signal.SIGKILL)
+    assert p.wait(timeout=3) == -signal.SIGKILL
+    wait_disappeared(child, original, time.monotonic()+32)
+    print('PASS manager SIGKILL: exact native child identity disappeared before harness cleanup')
 finally:
     p.stdin.close()
     try:
-        assert p.wait(timeout=12)==0, p.stderr.read().decode()
+        result=p.wait(timeout=12)
+        assert result in (0, -signal.SIGKILL), p.stderr.read().decode()
     finally:
         if p.poll() is None:
             p.kill(); p.wait()

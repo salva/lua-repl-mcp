@@ -36,9 +36,16 @@ syntax/runtime/serialization errors and once-only effects; cooperative stopping
 after flush; continued host state/borrowed FD ownership; confirmed kill; hard
 deadline interrupting a genuinely foreign-C blocking API.
 
-Not covered by this fixture: custom closed-standard-FD collision matrix, native
-subprocess FD inspection, cancellation/pending single-consumer permutations,
-SIGKILL manager exact-child oracle, native startup/late-readiness variants,
-external-to-project-filesystem installation, or full project/package acceptance.
-Existing default U4/U5/U6 and pure U14 tests cover related primitives but do not
-silently substitute for these custom-host acceptance obligations.
+The fixture now also asserts subprocess CLOEXEC, pending/busy semantics while
+foreign-C is active, and actual manager SIGKILL with exact native child identity
+disappearance observed before containment final cleanup. `u14_native_matrix.lua`
+covers all eight closed-stdio masks, graceful close, exec/cwd/stdio failure and
+initialization timeout on that same installed production candidate.
+
+Not covered by these fixtures: cancellation/single-consumer permutations,
+native late-readiness variants, blocked-I/O wakeup, or an installation outside
+the checkout filesystem. The preexisting partial-acquisition test was updated
+from obsolete two-pipe injection points to socketpair/two-CLOEXEC/one-nonblock
+points; it retains exact pre/post FD-count and fake-child ownership assertions.
+Existing default tests cover additional shared primitives, not stronger custom
+host assertions than actually executed.

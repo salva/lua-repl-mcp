@@ -27,6 +27,7 @@ static int api(lua_State *L) {
  if(L!=owner) return luaL_error(L,"wrong Lua state");
  lua_pushinteger(L,luaL_checkinteger(L,1)+100); return 1;
 }
+static int pid(lua_State *L) { lua_pushinteger(L,getpid()); return 1; }
 static int block(lua_State *L) { (void)L; for(;;) pause(); return 0; }
 static void global(const char *name,lua_CFunction f) {
  lua_pushcfunction(owner,f); lua_setglobal(owner,name);
@@ -39,7 +40,7 @@ int main(int argc,char **argv) {
  luaL_openlibs(owner);
  char cwd[4096]; if(!getcwd(cwd,sizeof cwd)) return 5;
  lua_pushstring(owner,cwd); lua_setglobal(owner,"host_cwd");
- global("host_api",api); global("host_block",block);
+ global("host_api",api); global("host_pid",pid); global("host_block",block);
  global("native_read",read_part); global("native_write",write_part); global("native_flush",flush);
  lua_pushinteger(owner,10); lua_setglobal(owner,"host_value");
  lua_createtable(owner,argc-2,0);

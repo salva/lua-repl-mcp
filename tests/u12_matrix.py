@@ -87,7 +87,9 @@ end
             fifo = tmp/'fifo'
             os.mkfifo(fifo)
             if state in ('startup','spawn'):
-                send('tools/call',dict(name='session_create', arguments=dict(stdin_path=str(fifo))))
+                options = dict(stdin_path=str(fifo)) if state == 'startup' else {}
+                # Setup now precedes exec; a FIFO here would mask the exec hook.
+                send('tools/call',dict(name='session_create', arguments=options))
                 deadline = time.monotonic()+8
                 while not children(guardian):
                     assert time.monotonic()<deadline, 'spawn barrier'
