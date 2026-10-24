@@ -1,5 +1,37 @@
 # Operator-owned GitHub publication
 
+## Custom-host extension publication — 2026-10-24
+
+- Owner authorized source push and GitHub Pages update after project completion.
+  Supported root assessment is DONE; accepted runtime/package input is
+  `cbe1c44dbe05f2b2046dd0f50b74290f84cd7093`, unchanged by evidence-only
+  `d5c81039af568c7e79a7816ef3b78c92afdf1e27`. Pushed that source snapshot to
+  `origin/master` normally, without force. This receipt is a later work-doc-only
+  commit, not a new runtime/site input.
+- Publication scan passed:202 source commits/473 tracked paths/949 historical
+  blobs, and3 Pages commits/36 tracked paths/59 historical blobs. All checked
+  author/committer identities match the configured owner; no selected private-path
+  or token/private-key-pattern findings. Pattern checks are precautionary, not
+  proof of absence of every secret. Ignored runtime/auth/dependency trees excluded.
+- Isolated pinned-source build used Python3.14.4/MkDocs1.6.1 and pinned
+  `requirements-docs.txt`. Two strict builds produced identical35 artifacts,
+  11 HTML pages,337 local links/assets/fragments, exact schema download and public
+  content-boundary checks. Contracts passed14schemas/7Tools/2discovery/25examples/
+  136regressions. These are publication checks, not a new full runtime-suite run.
+- Existing `gh-pages` history advanced normally to
+  `0aec1a95b323a44ee6ef144811469d4b0400d2dd`; tree contains exactly35 audited
+  generated files plus `.nojekyll`, including the new custom-host guide.
+  Source and Pages commits use the documented owner identity.
+- GitHub Pages [deployment40130210769](https://github.com/salva/lua-repl-mcp/actions/runs/40130210769)
+  completed successfully for that exact Pages commit. All35 live HTTP artifacts
+  matched the pinned build's SHA-256 manifest. Site:
+  <https://salva.github.io/lua-repl-mcp/>. Existing branch/root/HTTPS settings were
+  inspected, not changed.
+- Receipts, isolated source/Pages checkouts, build logs, dependency versions,
+  scan and live verification are retained under workspace
+  `tmp/lua-repl-mcp-publication-20261024/`. No release/tag, LuaRocks publication,
+  license change, issue closure, service restart/Run or runtime-state change.
+
 ## Refresh receipt — simplicity continuation, 2026-10-18
 
 - Operator authorized push and publication. Pinned source
